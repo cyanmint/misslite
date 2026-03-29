@@ -1,12 +1,10 @@
 diff --git a/packages/frontend/vite.config.ts b/packages/frontend/vite.config.ts
-index 260d121..a88ac0c 100644
+index 260d121..13ac431 100644
 --- a/packages/frontend/vite.config.ts
 +++ b/packages/frontend/vite.config.ts
-@@ -181,6 +181,3 @@ export function getConfig(): UserConfig {
- 			rollupOptions: {
--				input: {
--					i18n: './src/i18n.ts',
+@@ -182,4 +182,4 @@ export function getConfig(): UserConfig {
+ 				input: {
++					main: 'index.html',
+ 					i18n: './src/i18n.ts',
 -					entry: './src/_boot_.ts',
--				},
-+				input: 'index.html',
- 				external: externalPackages.map(p => p.match),
+ 				},
