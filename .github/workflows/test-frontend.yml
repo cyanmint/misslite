@@ -19,6 +19,9 @@ on:
       - '.github/workflows/test-frontend.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   patch-and-build:
     name: Verify patches apply & build
@@ -53,8 +56,8 @@ jobs:
           cd misskey-build
           test -f packages/frontend/index.html || { echo "FAIL: index.html missing"; exit 1; }
           grep -q '_boot_' packages/frontend/index.html || { echo "FAIL: boot script missing from index.html"; exit 1; }
-          grep -q "input: 'index.html'" packages/frontend/vite.config.ts || { echo "FAIL: vite input not set to index.html"; exit 1; }
-          grep -q "webroot" packages/frontend/vite.config.ts || { echo "FAIL: vite outDir not set to webroot"; exit 1; }
+          grep -q "main: 'index.html'" packages/frontend/vite.config.ts || { echo "FAIL: vite input not set to index.html"; exit 1; }
+          grep -q "base: '/'" packages/frontend/vite.config.ts || { echo "FAIL: vite base not set to /"; exit 1; }
           test -f packages/frontend/public/config.js || { echo "FAIL: config.js missing"; exit 1; }
           test -f packages/frontend/public/app.webmanifest || { echo "FAIL: app.webmanifest missing"; exit 1; }
           test -f packages/frontend/src/utility/domain-sanitize.ts || { echo "FAIL: domain-sanitize.ts missing"; exit 1; }
