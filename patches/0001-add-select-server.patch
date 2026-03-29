@@ -1,0 +1,1086 @@
+--- a/packages/frontend-shared/js/config.ts
++++ b/packages/frontend-shared/js/config.ts
+@@ -1,18 +1,116 @@
+ /*
+  * SPDX-FileCopyrightText: syuilo and misskey-project
+  * SPDX-License-Identifier: AGPL-3.0-only
++ *
++ * NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
++ * The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
++ */
++
++/*
++ * SPDX-FileCopyrightText: syuilo and misskey-project
++ * SPDX-License-Identifier: AGPL-3.0-only
+  */
+ 
+ // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+-const address = new URL(window.document.querySelector<HTMLMetaElement>('meta[property="instance_url"]')?.content || window.location.href);
++const address = new URL(window.location.href);
+ const siteName = window.document.querySelector<HTMLMetaElement>('meta[property="og:site_name"]')?.content;
+ 
++// Get runtime configuration from config.js (if available)
++const runtimeConfig = (window as any).MISSKEY_CONFIG || {};
++// Default to true if config.js doesn't exist or doesn't specify
++const allowApiSelection = runtimeConfig.allowApiSelection !== false;
++const defaultApiUrl = runtimeConfig.defaultApiUrl || '';
++
++// Check for API domain from query string (entire query string is the domain)
++// Format: https://frontend.com/?misskey.io (not ?api=misskey.io)
++// Handle both search string and pathname-embedded query cases
++let queryString = window.location.search.slice(1); // Remove leading '?'
++
++// Fallback: check if pathname contains query-like pattern (/?domain)
++// This handles cases where browser or server interprets /?domain incorrectly
++if (!queryString && window.location.pathname.startsWith('/?') && window.location.pathname.length > 2) {
++	queryString = window.location.pathname.substring(2); // Extract domain from /?domain
++	console.log('[Misskey Config] Extracted domain from pathname:', queryString);
++}
++
++const apiDomainFromQuery = queryString && queryString.trim() !== '' ? queryString.trim() : null;
++
++// If query string specifies a domain and API selection is allowed, save it to localStorage
++if (apiDomainFromQuery && allowApiSelection) {
++	localStorage.setItem('customApiDomain', apiDomainFromQuery);
++}
++
++// Check for user-selected custom API from localStorage
++const storedApiDomain = allowApiSelection ? localStorage.getItem('customApiDomain') : null;
++
++// Priority: 
++// If allowApiSelection=false: always use defaultApiUrl (ignore query string)
++// If allowApiSelection=true: query string > user selection > runtime config > default (current origin)
++const determineApiDomain = (): string => {
++	// If API selection is disabled, always use configured value
++	if (!allowApiSelection) {
++		return defaultApiUrl || window.location.hostname;
++	}
++	
++	// Use query parameter if available
++	if (apiDomainFromQuery) {
++		return apiDomainFromQuery;
++	}
++	
++	// Otherwise use stored domain or default
++	return storedApiDomain || defaultApiUrl || window.location.hostname;
++};
++
++const apiDomain = determineApiDomain();
++
++// Construct API URL and WebSocket origin from domain
++const determineApiUrl = (): string => {
++	const domain = apiDomain;
++	// If it already has protocol and /api, use as-is (backward compatibility)
++	if (domain.startsWith('http') && domain.includes('/api')) {
++		return domain;
++	}
++	// If domain equals the current hostname (no custom domain configured), use the
++	// current origin so that the correct protocol and port are preserved.
++	// e.g. http://localhost:61812 → http://localhost:61812/api (not https://localhost/api)
++	if (domain === window.location.hostname) {
++		return `${window.location.origin}/api`;
++	}
++	// Otherwise construct from a custom domain (always HTTPS for remote servers)
++	const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
++	const url = `https://${cleanDomain}/api`;
++	console.log('[Misskey Config] API URL:', url, { apiDomain, origin: window.location.origin });
++	return url;
++};
++
++const determineWsOrigin = (): string => {
++	const domain = apiDomain;
++	// If it already has protocol, extract origin
++	if (domain.startsWith('http')) {
++		try {
++			return new URL(domain).origin;
++		} catch {
++			return window.location.origin;
++		}
++	}
++	// If domain equals the current hostname, use the current origin (preserves port)
++	if (domain === window.location.hostname) {
++		return window.location.origin;
++	}
++	// Otherwise construct from a custom domain (always HTTPS for remote servers)
++	const cleanDomain = domain.replace(/\/.*$/, '');
++	const origin = `https://${cleanDomain}`;
++	console.log('[Misskey Config] WebSocket Origin:', origin, { apiDomain, origin: window.location.origin });
++	return origin;
++};
++
+ export const host = address.host;
+ export const hostname = address.hostname;
+ export const url = address.origin;
+ export const port = address.port;
+-export const apiUrl = window.location.origin + '/api';
+-export const wsOrigin = window.location.origin;
++export const apiUrl = determineApiUrl();
++export const wsOrigin = determineWsOrigin();
++export const allowCustomApiSelection = allowApiSelection;
+ export const lang = localStorage.getItem('lang') ?? 'en-US';
+ export const langs = _LANGS_;
+ export const version = _VERSION_;
+@@ -21,3 +119,13 @@
+ export const debug = localStorage.getItem('debug') === 'true';
+ export const isSafeMode = localStorage.getItem('isSafeMode') === 'true';
+ export const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion)').matches;
++
++// API server hostname - derived from apiUrl for separated deployments
++// This should be used for constructing URLs to API server resources (notes, well-known, etc.)
++export const apiHost = (() => {
++	try {
++		return new URL(apiUrl).hostname;
++	} catch {
++		return hostname; // fallback to frontend hostname if apiUrl is invalid
++	}
++})();
+--- a/packages/frontend/src/boot/common.ts
++++ b/packages/frontend/src/boot/common.ts
+@@ -1,11 +1,19 @@
+ /*
+  * SPDX-FileCopyrightText: syuilo and misskey-project
+  * SPDX-License-Identifier: AGPL-3.0-only
++ *
++ * NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
++ * The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
++ */
++
++/*
++ * SPDX-FileCopyrightText: syuilo and misskey-project
++ * SPDX-License-Identifier: AGPL-3.0-only
+  */
+ 
+ import { watch, version as vueVersion } from 'vue';
+ import { compareVersions } from 'compare-versions';
+-import { version, lang, apiUrl, isSafeMode } from '@@/js/config.js';
++import { version, lang, apiUrl, isSafeMode, allowCustomApiSelection } from '@@/js/config.js';
+ import defaultLightTheme from '@@/themes/l-light.json5';
+ import defaultDarkTheme from '@@/themes/d-green-lime.json5';
+ import { storeBootloaderErrors } from '@@/js/store-boot-errors';
+@@ -30,6 +38,7 @@
+ import { prefer } from '@/preferences.js';
+ import { $i } from '@/i.js';
+ import { launchPlugins } from '@/plugin.js';
++import { sanitizeDomain } from '@/utility/domain-sanitize.js';
+ 
+ export async function common(createVue: () => Promise<App<Element>>) {
+ 	console.info(`Misskey v${version}`);
+@@ -88,7 +97,7 @@
+ 					window.setTimeout(resolve, 500);
+ 				});
+ 				// fetch with cache: 'no-store' to ensure the latest locale is fetched
+-				await window.fetch(`/assets/locales/${lang}.${version}.json`, { cache: 'no-store' }).then(async res => res.status === 200 && await res.text());
++				await window.fetch(`/locales/${lang}.${version}.json`, { cache: 'no-store' }).then(async res => res.status === 200 && await res.text());
+ 				window.location.reload();
+ 			}
+ 		});
+@@ -117,12 +126,128 @@
+ 	await store.ready;
+ 	await deckStore.ready;
+ 
++	//#region Handle API server from query string
++	// Query string format: ?misskey.io (entire query string is the domain)
++	const queryString = window.location.search.slice(1); // Remove leading '?'
++	const apiFromQuery = queryString && queryString.trim() !== '' ? queryString.trim() : null;
++	
++	if (apiFromQuery && allowCustomApiSelection) {
++		// Get current stored domain (not full URL)
++		const currentApiDomain = localStorage.getItem('customApiDomain');
++		
++		// Normalize domain from query
++		const newDomain = apiFromQuery.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
++		
++		// Check if this is first visit (no stored domain) or domain change
++		if (!currentApiDomain) {
++			// First visit with query string - set domain immediately, no validation needed
++			console.info(`[Misskey] First visit with query string API domain: ${newDomain}`);
++			localStorage.setItem('customApiDomain', newDomain);
++		} else {
++			// Normalize current domain for comparison
++			const currentDomain = currentApiDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
++			
++			// Check if API server has changed
++			if (newDomain !== currentDomain) {
++				console.info(`[Misskey] API server change requested from query string: ${newDomain}`);
++				
++				// IMPORTANT: Don't commit the domain change yet!
++				// Store it temporarily and validate the new API server first
++				localStorage.setItem('_pendingApiDomain', newDomain);
++				
++				// Try to fetch instance metadata from the new API server to validate it works
++				// We'll check if it succeeded after the fetch completes
++			}
++			// If domain unchanged, continue with query string in URL
++		}
++	}
++	//#endregion
++
+ 	const fetchInstanceMetaPromise = fetchInstance();
+ 
+-	fetchInstanceMetaPromise.then(() => {
++	fetchInstanceMetaPromise.then((instanceData) => {
+ 		miLocalStorage.setItem('v', instance.version);
++		
++		// Check if we have a pending API domain change to validate
++		const pendingDomain = localStorage.getItem('_pendingApiDomain');
++		
++		if (pendingDomain) {
++			// Check if this fetch was successful
++			if (!instanceData) {
++				// New API server failed - don't commit the change
++				console.error(`[Misskey] Failed to connect to new API server: ${pendingDomain}`);
++				localStorage.removeItem('_pendingApiDomain');
++				
++				// Reload to revert to the previous working server
++				window.location.reload();
++				return; // Don't proceed with the domain change
++			}
++			
++			// New API server works! Now commit the domain change
++			const currentDomain = localStorage.getItem('customApiDomain') || window.location.hostname;
++			console.info(`[Misskey] Successfully validated new API server: ${pendingDomain}, committing change`);
++			
++			// Save current session for old server
++			const currentAccount = localStorage.getItem('account');
++			if (currentAccount) {
++				const sessionKey = `session_${sanitizeDomain(currentDomain)}`;
++				localStorage.setItem(sessionKey, currentAccount);
++				console.info(`[Misskey] Saved session for ${currentDomain}`);
++			}
++			
++			// Commit the domain change
++			localStorage.setItem('customApiDomain', pendingDomain);
++			localStorage.removeItem('_pendingApiDomain');
++			
++			// Try to restore session for new server
++			const savedSessionKey = `session_${sanitizeDomain(pendingDomain)}`;
++			const savedSession = localStorage.getItem(savedSessionKey);
++			
++			if (savedSession) {
++				localStorage.setItem('account', savedSession);
++				console.info(`[Misskey] Restored session for ${pendingDomain}`);
++			} else {
++				localStorage.removeItem('account');
++				console.info(`[Misskey] No saved session for ${pendingDomain}`);
++			}
++			
++			// Reload to apply the change
++			window.location.reload();
++			return;
++		}
++		
++		// No pending domain change - continue with normal flow
++	}).catch((error) => {
++		console.error('Failed to load instance metadata:', error);
++		
++		// Check if this was a pending domain change
++		const pendingDomain = localStorage.getItem('_pendingApiDomain');
++		
++		if (pendingDomain) {
++			// Failed to validate new server - reload to revert to previous
++			localStorage.removeItem('_pendingApiDomain');
++			window.location.reload();
++			return;
++		}
++		
++		// For first visit errors, fetchInstance returns minimal config as fallback
++		// so this catch should rarely be reached. Just log and continue.
++		console.warn('[Misskey] Using fallback instance config due to error:', error);
+ 	});
+ 
++	// If there's a query string (new API server), wait for instance fetch before continuing
++	// This ensures we don't try to render the app with empty instance data
++	if (apiFromQuery && allowCustomApiSelection) {
++		try {
++			await fetchInstanceMetaPromise;
++			console.info('[Misskey] Instance metadata loaded, continuing boot');
++		} catch (error) {
++			// fetchInstance now returns minimal config as fallback, so we can continue
++			// This allows the app to work even when /api/meta has CORS issues
++			console.warn('[Misskey] Using fallback instance config, continuing boot:', error);
++		}
++	}
++
+ 	//#region loginId
+ 	const params = new URLSearchParams(window.location.search);
+ 	const loginId = params.get('loginId');
+--- a/packages/frontend/src/components/MkVisitorDashboard.vue
++++ b/packages/frontend/src/components/MkVisitorDashboard.vue
+@@ -1,36 +1,49 @@
+ <!--
+ SPDX-FileCopyrightText: syuilo and misskey-project
+ SPDX-License-Identifier: AGPL-3.0-only
++
++NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
++The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
++-->
++
++<!--
++SPDX-FileCopyrightText: syuilo and misskey-project
++SPDX-License-Identifier: AGPL-3.0-only
+ -->
+ 
+ <template>
+-<div v-if="instance" :class="$style.root">
++<div :class="$style.root">
+ 	<div :class="[$style.main, $style.panel]">
+-		<img :src="instance.iconUrl || '/favicon.ico'" alt="" :class="$style.mainIcon"/>
++		<img :src="instance?.iconUrl || '/favicon.ico'" alt="" :class="$style.mainIcon"/>
+ 		<button class="_button _acrylic" :class="$style.mainMenu" @click="showMenu"><i class="ti ti-dots"></i></button>
+ 		<div :class="$style.mainFg">
+ 			<h1 :class="$style.mainTitle">
+ 				<!-- 背景色によってはロゴが見えなくなるのでとりあえず無効に -->
+-				<!-- <img class="logo" v-if="instance.logoImageUrl" :src="instance.logoImageUrl"><span v-else class="text">{{ instanceName }}</span> -->
++				<!-- <img class="logo" v-if="instance?.logoImageUrl" :src="instance.logoImageUrl"><span v-else class="text">{{ instanceName }}</span> -->
+ 				<MkA to="/">{{ instanceName }}</MkA>
+ 			</h1>
+ 			<div :class="$style.mainAbout">
+ 				<!-- eslint-disable-next-line vue/no-v-html -->
+-				<div v-html="instance.description || i18n.ts.headlineMisskey"></div>
++				<div v-html="instance?.description || i18n.ts.headlineMisskey"></div>
+ 			</div>
+-			<div v-if="instance.disableRegistration || instance.federation !== 'all'" :class="$style.mainWarn" class="_gaps_s">
+-				<MkInfo v-if="instance.disableRegistration" warn>{{ i18n.ts.invitationRequiredToRegister }}</MkInfo>
+-				<MkInfo v-if="instance.federation === 'specified'" warn>{{ i18n.ts.federationSpecified }}</MkInfo>
+-				<MkInfo v-else-if="instance.federation === 'none'" warn>{{ i18n.ts.federationDisabled }}</MkInfo>
++			<div v-if="connectionError || (instance && (instance.disableRegistration || instance.federation !== 'all'))" :class="$style.mainWarn" class="_gaps_s">
++				<MkInfo v-if="connectionError" warn>
++					<b>Service Unavailable</b><br>
++					Cannot connect to the API server. Please configure a different server or try again later.
++				</MkInfo>
++				<MkInfo v-else-if="instance.disableRegistration" warn>{{ i18n.ts.invitationRequiredToRegister }}</MkInfo>
++				<MkInfo v-if="!connectionError && instance.federation === 'specified'" warn>{{ i18n.ts.federationSpecified }}</MkInfo>
++				<MkInfo v-else-if="!connectionError && instance.federation === 'none'" warn>{{ i18n.ts.federationDisabled }}</MkInfo>
+ 			</div>
+ 			<div class="_gaps_s" :class="$style.mainActions">
+-				<MkButton :class="$style.mainAction" full rounded gradate data-cy-signup style="margin-right: 12px;" @click="signup()">{{ i18n.ts.joinThisServer }}</MkButton>
++				<MkButton :class="$style.mainAction" full rounded @click="configureApiServer()"><i class="ti ti-server"></i> {{ i18n.ts._apiServer?.title ?? 'Change API Server' }}</MkButton>
++				<MkButton :class="$style.mainAction" full rounded gradate data-cy-signup style="margin-right: 12px;" :disabled="connectionError" @click="signup()">{{ i18n.ts.joinThisServer }}</MkButton>
+ 				<MkButton :class="$style.mainAction" full rounded link to="https://misskey-hub.net/servers/">{{ i18n.ts.exploreOtherServers }}</MkButton>
+-				<MkButton :class="$style.mainAction" full rounded data-cy-signin @click="signin()">{{ i18n.ts.login }}</MkButton>
++				<MkButton :class="$style.mainAction" full rounded data-cy-signin :disabled="connectionError" @click="signin()">{{ i18n.ts.login }}</MkButton>
+ 			</div>
+ 		</div>
+ 	</div>
+-	<div v-if="stats && instance.clientOptions.showActivitiesForVisitor !== false" :class="$style.stats">
++	<div v-if="stats && (!instance || instance.clientOptions?.showActivitiesForVisitor !== false)" :class="$style.stats">
+ 		<div :class="[$style.statsItem, $style.panel]">
+ 			<div :class="$style.statsItemLabel">{{ i18n.ts.users }}</div>
+ 			<div :class="$style.statsItemCount"><MkNumber :value="stats.originalUsersCount"/></div>
+@@ -40,22 +53,32 @@
+ 			<div :class="$style.statsItemCount"><MkNumber :value="stats.originalNotesCount"/></div>
+ 		</div>
+ 	</div>
+-	<div v-if="instance.policies.ltlAvailable && instance.clientOptions.showTimelineForVisitor !== false" :class="[$style.tl, $style.panel]">
++	<div v-else-if="!stats && (!instance || instance.clientOptions?.showActivitiesForVisitor !== false)" :class="$style.stats">
++		<div :class="[$style.statsItem, $style.panel]">
++			<div :class="$style.statsItemLabel">{{ i18n.ts.users }}</div>
++			<div :class="$style.statsItemCount">{{ i18n.ts.loading }}</div>
++		</div>
++		<div :class="[$style.statsItem, $style.panel]">
++			<div :class="$style.statsItemLabel">{{ i18n.ts.notes }}</div>
++			<div :class="$style.statsItemCount">{{ i18n.ts.loading }}</div>
++		</div>
++	</div>
++	<div v-if="instance?.policies?.ltlAvailable && instance.clientOptions?.showTimelineForVisitor !== false" :class="[$style.tl, $style.panel]">
+ 		<div :class="$style.tlHeader">{{ i18n.ts.letsLookAtTimeline }}</div>
+ 		<div :class="$style.tlBody">
+ 			<MkStreamingNotesTimeline src="local"/>
+ 		</div>
+ 	</div>
+-	<div v-if="instance.clientOptions.showActivitiesForVisitor !== false" :class="$style.panel">
++	<div v-if="!instance || instance.clientOptions?.showActivitiesForVisitor !== false" :class="$style.panel">
+ 		<XActiveUsersChart/>
+ 	</div>
+ </div>
+ </template>
+ 
+ <script lang="ts" setup>
+-import { ref } from 'vue';
++import { defineAsyncComponent, ref } from 'vue';
+ import * as Misskey from 'misskey-js';
+-import { instanceName } from '@@/js/config.js';
++import { instanceName, allowCustomApiSelection } from '@@/js/config.js';
+ import type { MenuItem } from '@/types/menu.js';
+ import XSigninDialog from '@/components/MkSigninDialog.vue';
+ import XSignupDialog from '@/components/MkSignupDialog.vue';
+@@ -70,11 +93,20 @@
+ import XActiveUsersChart from '@/components/MkVisitorDashboard.ActiveUsersChart.vue';
+ import { openInstanceMenu } from '@/ui/_common_/common.js';
+ 
++const props = withDefaults(defineProps<{
++	connectionError?: boolean;
++}>(), {
++	connectionError: false,
++});
++
+ const stats = ref<Misskey.entities.StatsResponse | null>(null);
+ 
+-if (instance.clientOptions.showActivitiesForVisitor !== false) {
++if (instance.clientOptions?.showActivitiesForVisitor !== false) {
+ 	misskeyApi('stats', {}).then((res) => {
+ 		stats.value = res;
++	}).catch((error) => {
++		console.error('Failed to fetch stats:', error);
++		// Stats will remain null, which is fine
+ 	});
+ }
+ 
+@@ -94,9 +126,15 @@
+ 	});
+ }
+ 
+-function showMenu(ev: PointerEvent) {
++function showMenu(ev: MouseEvent) {
+ 	openInstanceMenu(ev);
+ }
++
++function configureApiServer() {
++	os.popup(defineAsyncComponent(() => import('@/components/MkApiServerDialog.vue')), {}, {
++		closed: () => {},
++	});
++}
+ </script>
+ 
+ <style lang="scss" module>
+--- a/packages/frontend/src/pages/welcome.setup.vue
++++ b/packages/frontend/src/pages/welcome.setup.vue
+@@ -1,6 +1,14 @@
+ <!--
+ SPDX-FileCopyrightText: syuilo and misskey-project
+ SPDX-License-Identifier: AGPL-3.0-only
++
++NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
++The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
++-->
++
++<!--
++SPDX-FileCopyrightText: syuilo and misskey-project
++SPDX-License-Identifier: AGPL-3.0-only
+ -->
+ 
+ <template>
+@@ -47,6 +55,9 @@
+ 				<div>Welcome to Misskey!</div>
+ 				<div :class="$style.version">v{{ version }}</div>
+ 			</div>
++			<div v-if="allowCustomApiSelection" style="position: absolute; top: 16px; right: 16px;">
++				<MkButton rounded @click="configureApiServer"><i class="ti ti-server"></i> {{ i18n.ts._apiServer?.title ?? 'API Server' }}</MkButton>
++			</div>
+ 			<div style="padding: 16px 32px 32px 32px;">
+ 				<form v-if="!accountCreated" class="_gaps_m" @submit.prevent="createAccount()">
+ 					<div style="text-align: center;" class="_gaps_s">
+@@ -60,7 +71,7 @@
+ 					<MkInput v-model="username" pattern="^[a-zA-Z0-9_]{1,20}$" :spellcheck="false" required data-cy-admin-username>
+ 						<template #label>{{ i18n.ts.username }} <div v-tooltip:dialog="i18n.ts.usernameInfo" class="_button _help"><i class="ti ti-help-circle"></i></div></template>
+ 						<template #prefix>@</template>
+-						<template #suffix>@{{ host }}</template>
++						<template #suffix>@{{ apiHost }}</template>
+ 					</MkInput>
+ 					<MkInput v-model="password" type="password" data-cy-admin-password>
+ 						<template #label>{{ i18n.ts.password }}</template>
+@@ -89,7 +100,7 @@
+ 
+ 					<Suspense>
+ 						<template #default>
+-							<MkServerSetupWizard :token="token!" @finished="onWizardFinished"/>
++							<MkServerSetupWizard :token="token" @finished="onWizardFinished"/>
+ 						</template>
+ 						<template #fallback>
+ 							<MkLoading/>
+@@ -124,8 +135,9 @@
+ </template>
+ 
+ <script lang="ts" setup>
+-import { ref } from 'vue';
+-import { host, version } from '@@/js/config.js';
++import { computed, ref, defineAsyncComponent } from 'vue';
++import * as Misskey from 'misskey-js';
++import { host, apiHost, version } from '@@/js/config.js';
+ import MkButton from '@/components/MkButton.vue';
+ import MkInput from '@/components/MkInput.vue';
+ import * as os from '@/os.js';
+@@ -135,6 +147,14 @@
+ import MkLink from '@/components/MkLink.vue';
+ import MkServerSetupWizard from '@/components/MkServerSetupWizard.vue';
+ 
++const allowCustomApiSelection = (window as any).MISSKEY_CONFIG?.allowApiSelection !== false;
++
++function configureApiServer() {
++	os.popup(defineAsyncComponent(() => import('@/components/MkApiServerDialog.vue')), {}, {
++		closed: () => {},
++	});
++}
++
+ const username = ref('');
+ const password = ref('');
+ const setupPassword = ref('');
+@@ -142,7 +162,7 @@
+ const accountCreated = ref(false);
+ const step = ref(0);
+ 
+-let token: string | null = null;
++let token;
+ 
+ function createAccount() {
+ 	if (accountCreating.value) return;
+@@ -190,7 +210,6 @@
+ }
+ 
+ function finish() {
+-	if (token == null) return;
+ 	login(token);
+ }
+ </script>
+--- a/packages/frontend/src/pages/explore.vue
++++ b/packages/frontend/src/pages/explore.vue
+@@ -1,6 +1,14 @@
+ <!--
+ SPDX-FileCopyrightText: syuilo and misskey-project
+ SPDX-License-Identifier: AGPL-3.0-only
++
++NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
++The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
++-->
++
++<!--
++SPDX-FileCopyrightText: syuilo and misskey-project
++SPDX-License-Identifier: AGPL-3.0-only
+ -->
+ 
+ <template>
+@@ -18,12 +26,14 @@
+ </template>
+ 
+ <script lang="ts" setup>
+-import { computed, watch, ref, useTemplateRef } from 'vue';
++import { computed, watch, ref, useTemplateRef, defineAsyncComponent } from 'vue';
+ import XFeatured from './explore.featured.vue';
+ import XUsers from './explore.users.vue';
+ import XRoles from './explore.roles.vue';
+ import { definePage } from '@/page.js';
+ import { i18n } from '@/i18n.js';
++import * as os from '@/os.js';
++import type { PageHeaderItem } from '@/types/page-header.js';
+ 
+ const props = withDefaults(defineProps<{
+ 	initialTab?: string;
+@@ -33,7 +43,27 @@
+ 
+ const tab = ref(props.initialTab);
+ 
+-const headerActions = computed(() => []);
++function configureApiServer() {
++	os.popup(defineAsyncComponent(() => import('@/components/MkApiServerDialog.vue')), {}, {
++		closed: () => {},
++	});
++}
++
++const headerActions = computed(() => {
++	const actions: PageHeaderItem[] = [];
++	
++	// Add API server configuration option if allowed
++	const allowCustomApiSelection = (window as any).MISSKEY_CONFIG?.allowApiSelection !== false;
++	if (allowCustomApiSelection) {
++		actions.push({
++			icon: 'ti ti-server',
++			text: i18n.ts._apiServer.title,
++			handler: () => configureApiServer(),
++		});
++	}
++	
++	return actions;
++});
+ 
+ const headerTabs = computed(() => [{
+ 	key: 'featured',
+--- /dev/null
++++ b/packages/frontend/src/components/MkApiServerDialog.vue
+@@ -0,0 +1,271 @@
++<!--
++SPDX-FileCopyrightText: syuilo and misskey-project
++SPDX-License-Identifier: AGPL-3.0-only
++
++NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
++The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
++-->
++
++<template>
++<MkModalWindow
++	ref="dialogEl"
++	:withOkButton="false"
++	:okButtonDisabled="false"
++	:canClose="!isFirstVisit"
++	@close="cancel"
++	@closed="$emit('closed')"
++>
++	<template #header>{{ i18n.ts._apiServer?.title ?? 'API Server Settings' }}</template>
++
++	<div style="padding: 20px;">
++		<MkInfo v-if="isFirstVisit" style="margin-bottom: 20px;">
++			{{ i18n.ts._apiServer?.firstVisitMessage ?? 'Welcome! Please confirm the API server configuration to continue.' }}
++		</MkInfo>
++		<MkInfo v-else style="margin-bottom: 20px;">
++			{{ i18n.ts._apiServer?.description ?? 'Configure connection to a custom API server.' }}
++		</MkInfo>
++
++		<MkSwitch v-model="useCustomApi" style="margin-bottom: 20px;" @update:modelValue="onToggleCustomApi">
++			<template #label>{{ i18n.ts._apiServer?.useCustomServer ?? 'Use custom API server' }}</template>
++		</MkSwitch>
++
++		<div class="_gaps_m" :style="{ '--dialog-accent': '#86b300' }">
++			<MkInput v-model="customApiDomain" :disabled="!useCustomApi">
++				<template #label>{{ i18n.ts._apiServer?.apiDomain ?? 'API Server Domain' }}</template>
++				<template #caption>{{ i18n.ts._apiServer?.apiDomainCaption ?? 'Domain name only (e.g., misskey.io). HTTPS and /api are added automatically.' }}</template>
++			</MkInput>
++
++			<div v-if="useCustomApi" style="padding: 10px; background: var(--MI_THEME-panel, rgba(255,255,255,0.05)); border-radius: 8px; font-size: 0.9em; border: 1px solid var(--dialog-accent, #86b300); border-opacity: 0.3;">
++				<div><strong style="color: var(--dialog-accent, #86b300);">{{ i18n.ts._apiServer?.apiUrl ?? 'API URL' }}:</strong> {{ customApiUrl }}</div>
++				<div style="margin-top: 4px;"><strong style="color: var(--dialog-accent, #86b300);">{{ i18n.ts._apiServer?.wsOrigin ?? 'WebSocket' }}:</strong> {{ customWsOrigin }}</div>
++				<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--MI_THEME-divider, rgba(255,255,255,0.1)); color: var(--MI_THEME-fgTransparentWeak, rgba(255,255,255,0.7));">
++					<strong style="color: var(--dialog-accent, #86b300);">Share URL:</strong> {{ shareUrl }}
++				</div>
++			</div>
++
++			<div v-if="useCustomApi" style="display: flex; gap: 10px;">
++				<MkButton primary rounded style="flex: 1; --MI_THEME-buttonBg: var(--dialog-accent, #86b300); --MI_THEME-buttonHoverBg: #9bcc00;" @click="testConnection">
++					<i class="ti ti-refresh"></i> {{ i18n.ts._apiServer?.testConnection ?? 'Test Connection' }}
++				</MkButton>
++				<MkButton danger rounded style="flex: 1;" @click="resetToDefault">
++					<i class="ti ti-x"></i> {{ i18n.ts._apiServer?.resetToDefault ?? 'Reset' }}
++				</MkButton>
++			</div>
++
++			<MkInfo v-if="connectionStatus === 'success'" success>
++				{{ i18n.ts._apiServer?.connectionSuccess ?? 'Successfully connected!' }}
++			</MkInfo>
++			<MkInfo v-if="connectionStatus === 'error'" warn>
++				{{ i18n.ts._apiServer?.connectionError ?? 'Failed to connect. Please check the URL.' }}
++			</MkInfo>
++		</div>
++
++		<div style="margin-top: 20px; display: flex; gap: 10px;">
++			<MkButton primary rounded style="flex: 1; --MI_THEME-buttonBg: var(--dialog-accent, #86b300); --MI_THEME-buttonHoverBg: #9bcc00;" :disabled="!canApply" @click="apply">
++				<i class="ti ti-check"></i> {{ isFirstVisit ? (i18n.ts.confirm ?? 'Confirm') : i18n.ts.apply }}
++			</MkButton>
++			<MkButton v-if="!isFirstVisit" rounded style="flex: 1;" @click="cancel">
++				{{ i18n.ts.cancel }}
++			</MkButton>
++		</div>
++	</div>
++</MkModalWindow>
++</template>
++
++<script lang="ts" setup>
++import { ref, computed } from 'vue';
++import MkModalWindow from '@/components/MkModalWindow.vue';
++import MkSwitch from '@/components/MkSwitch.vue';
++import MkInput from '@/components/MkInput.vue';
++import MkButton from '@/components/MkButton.vue';
++import MkInfo from '@/components/MkInfo.vue';
++import { i18n } from '@/i18n.js';
++import * as os from '@/os.js';
++import { $i } from '@/i.js';
++import { sanitizeDomain } from '@/utility/domain-sanitize.js';
++
++const props = withDefaults(defineProps<{
++	isFirstVisit?: boolean;
++}>(), {
++	isFirstVisit: false,
++});
++
++const emit = defineEmits<{
++	(ev: 'closed'): void;
++}>();
++
++const dialogEl = ref<InstanceType<typeof MkModalWindow>>();
++const useCustomApi = ref(localStorage.getItem('customApiDomain') !== null);
++// Default to frontend hostname
++const defaultDomain = window.location.hostname;
++const customApiDomain = ref(localStorage.getItem('customApiDomain') || defaultDomain);
++const connectionStatus = ref<'idle' | 'success' | 'error'>('idle');
++
++// Computed values for display only
++const customApiUrl = computed(() => {
++	const domain = customApiDomain.value.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
++	return `https://${domain}/api`;
++});
++
++const customWsOrigin = computed(() => {
++	const domain = customApiDomain.value.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
++	return `https://${domain}`;
++});
++
++const shareUrl = computed(() => {
++	const domain = customApiDomain.value.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
++	return `${window.location.origin}/?${domain}`;
++});
++
++const canApply = computed(() => {
++	if (!useCustomApi.value) return true;
++	return customApiDomain.value.length > 0;
++});
++
++function onToggleCustomApi(value: boolean) {
++	if (!value) {
++		customApiDomain.value = defaultDomain;
++		connectionStatus.value = 'idle';
++	} else if (!customApiDomain.value) {
++		// Set default when enabling if empty
++		customApiDomain.value = defaultDomain;
++	}
++}
++
++async function testConnection() {
++	connectionStatus.value = 'idle';
++	
++	if (!customApiDomain.value) {
++		os.alert({
++			type: 'error',
++			text: i18n.ts._apiServer?.pleaseEnterApiUrl ?? 'Please enter an API server domain.',
++		});
++		return;
++	}
++
++	try {
++		const domain = customApiDomain.value.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
++		const metaUrl = `https://${domain}/api/meta`;
++		
++		const response = await window.fetch(metaUrl, {
++			method: 'POST',
++			headers: {
++				'Content-Type': 'application/json',
++			},
++			body: JSON.stringify({ detail: false }),
++		});
++
++		if (response.ok) {
++			connectionStatus.value = 'success';
++		} else {
++			connectionStatus.value = 'error';
++		}
++	} catch (error) {
++		connectionStatus.value = 'error';
++	}
++}
++
++function resetToDefault() {
++	useCustomApi.value = false;
++	customApiDomain.value = defaultDomain;
++	connectionStatus.value = 'idle';
++}
++
++async function apply() {
++	if (useCustomApi.value) {
++		if (!customApiDomain.value) {
++			os.alert({
++				type: 'error',
++				text: i18n.ts._apiServer?.pleaseEnterApiUrl ?? 'Please enter the API server domain.',
++			});
++			return;
++		}
++		// Store just the domain
++		const domain = customApiDomain.value.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
++		
++		// Apply default theme before changing API to prevent theme flash
++		applyDefaultTheme();
++		
++		// Save current session if logged in
++		if ($i) {
++			const currentDomain = localStorage.getItem('customApiDomain') || window.location.hostname;
++			const sessionKey = `session_${sanitizeDomain(currentDomain)}`;
++			const currentAccount = localStorage.getItem('account');
++			if (currentAccount) {
++				localStorage.setItem(sessionKey, currentAccount);
++			}
++		}
++		
++		localStorage.setItem('customApiDomain', domain);
++		
++		// Clean up old storage keys (backward compatibility)
++		localStorage.removeItem('customApiUrl');
++		localStorage.removeItem('customWsOrigin');
++		
++		// Try to restore session for the new domain
++		const savedSessionKey = `session_${sanitizeDomain(domain)}`;
++		const savedSession = localStorage.getItem(savedSessionKey);
++		
++		if (savedSession) {
++			localStorage.setItem('account', savedSession);
++		} else {
++			localStorage.removeItem('account');
++		}
++		
++		// Small delay to ensure theme changes are processed before navigation
++		await new Promise(resolve => window.setTimeout(resolve, 50));
++		
++		// Navigate with query string
++		if (savedSession) {
++			// If session exists, stay on current page by reloading
++			window.location.href = `${window.location.pathname}?${domain}`;
++		} else {
++			// No session, navigate to home/login page
++			window.location.href = `/?${domain}`;
++		}
++	} else {
++		// Apply default theme before resetting
++		applyDefaultTheme();
++		
++		localStorage.removeItem('customApiDomain');
++		localStorage.removeItem('customApiUrl');
++		localStorage.removeItem('customWsOrigin');
++		
++		// Small delay to ensure theme changes are processed
++		await new Promise(resolve => window.setTimeout(resolve, 50));
++		
++		// Reload to default
++		window.location.reload();
++	}
++}
++
++function applyDefaultTheme() {
++	// Clear existing theme to prevent showing wrong theme from old API
++	localStorage.removeItem('theme');
++	localStorage.removeItem('themeId');
++	
++	// Apply default theme immediately to prevent blank white screen
++	const colorScheme = localStorage.getItem('colorScheme') || 'light';
++	const defaultLightBg = '#f3f5f7';
++	const defaultDarkBg = '#0C1210';
++	const defaultFg = colorScheme === 'dark' ? '#c5c5c5' : '#5f5f5f';
++	const defaultPanel = colorScheme === 'dark' ? '#232425' : '#fff';
++	const defaultAccent = '#86b300';
++	
++	// Apply default theme CSS variables
++	window.document.documentElement.style.setProperty('--MI_THEME-bg', colorScheme === 'dark' ? defaultDarkBg : defaultLightBg);
++	window.document.documentElement.style.setProperty('--MI_THEME-fg', defaultFg);
++	window.document.documentElement.style.setProperty('--MI_THEME-panel', defaultPanel);
++	window.document.documentElement.style.setProperty('--MI_THEME-accent', defaultAccent);
++	window.document.documentElement.style.setProperty('--MI_THEME-link', defaultAccent);
++	
++	// Set body and documentElement background
++	const defaultBg = colorScheme === 'dark' ? defaultDarkBg : defaultLightBg;
++	window.document.body.style.background = defaultBg;
++	window.document.documentElement.style.background = defaultBg;
++}
++
++function cancel() {
++	dialogEl.value?.close();
++}
++</script>
+--- /dev/null
++++ b/packages/frontend/src/utility/domain-sanitize.ts
+@@ -0,0 +1,25 @@
++/*
++ * SPDX-FileCopyrightText: syuilo and misskey-project
++ * SPDX-License-Identifier: AGPL-3.0-only
++ *
++ * NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
++ * The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
++ */
++
++/*
++ * SPDX-FileCopyrightText: syuilo and misskey-project
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++/**
++ * Sanitize domain string for safe use as storage key
++ * Removes protocol, path, and special characters
++ * @param domain - Domain string to sanitize (e.g., 'https://example.com/path' or 'example.com')
++ * @returns Sanitized domain safe for use as storage key (e.g., 'example.com')
++ */
++export function sanitizeDomain(domain: string): string {
++	return domain
++		.replace(/^https?:\/\//, '') // Remove protocol
++		.replace(/\/.*$/, '') // Remove path
++		.replace(/[^a-zA-Z0-9.-]/g, '_'); // Replace special chars with underscore
++}
+--- /dev/null
++++ b/packages/frontend/public/config.js
+@@ -0,0 +1,24 @@
++/*
++ * SPDX-FileCopyrightText: syuilo and misskey-project
++ * SPDX-License-Identifier: AGPL-3.0-only
++ * 
++ * NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
++ * The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
++ */
++
++// Frontend Runtime Configuration
++// This file can be modified at deployment time to configure the frontend behavior
++window.MISSKEY_CONFIG = {
++	// Allow users to select custom API server
++	// Default: true (users can select any API server)
++	// Set to false to disable API server selection and use only defaultApiUrl
++	// When true, users see an "API Server" button on the welcome page
++	allowApiSelection: true,
++	
++	// Default API server domain (when not using custom selection)
++	// Leave empty to use the frontend host (window.location.hostname)
++	// Specify just the domain name, e.g., 'misskey.io' or 'api.example.com'
++	// HTTPS is enforced, and /api path is automatically appended
++	// Example: 'misskey.io' will become 'https://misskey.io/api'
++	defaultApiUrl: '',
++};
+--- a/locales/en-US.yml
++++ b/locales/en-US.yml
+@@ -543,7 +543,6 @@
+ fontSize: "Font size"
+ mediaListWithOneImageAppearance: "Height of media lists with one image only"
+ limitTo: "Limit to {x}"
+-showMediaListByGridInWideArea: "Display the media list in a grid when the screen width is wide"
+ noFollowRequests: "You don't have any pending follow requests"
+ openImageInNewTab: "Open images in new tab"
+ dashboard: "Dashboard"
+@@ -1124,6 +1123,7 @@
+ audio: "Audio"
+ audioFiles: "Audio"
+ dataSaver: "Data Saver"
++mediaProxy: "Media Proxy"
+ accountMigration: "Account Migration"
+ accountMoved: "This user has moved to a new account:"
+ accountMovedShort: "This account has been migrated."
+@@ -1407,7 +1407,6 @@
+ frame: "Frame"
+ presets: "Preset"
+ zeroPadding: "Zero padding"
+-nothingToConfigure: "No configurable options available"
+ _imageEditing:
+   _vars:
+     caption: "File caption"
+@@ -1552,9 +1551,6 @@
+   showPageTabBarBottom: "Show page tab bar at the bottom"
+   emojiPaletteBanner: "You can register presets as palettes to display prominently in the emoji picker or customize the appearance of the picker."
+   enableAnimatedImages: "Enable animated images"
+-  settingsPersistence_title: "Persistence of Settings"
+-  settingsPersistence_description1: "Enabling setting persistence prevents configuration information from being lost."
+-  settingsPersistence_description2: "It may not be possible to enable this depending on the environment."
+   _chat:
+     showSenderName: "Show sender's name"
+     sendOnEnter: "Press Enter to send"
+@@ -2546,44 +2542,6 @@
+   clicker: "Clicker"
+   birthdayFollowings: "Today's Birthdays"
+   chat: "Chat with user"
+-_widgetOptions:
+-  showHeader: "Show header"
+-  transparent: "Make background transparent"
+-  height: "Height"
+-  _button:
+-    colored: "Colored"
+-  _clock:
+-    size: "Size"
+-    thickness: "Needle thickness"
+-    thicknessThin: "Thin"
+-    thicknessMedium: "Normal"
+-    thicknessThick: "Thick"
+-    graduations: "Dial markings"
+-    graduationDots: "Dot"
+-    graduationArabic: "Arabic numbers"
+-    fadeGraduations: "Fade the scale"
+-    sAnimation: "Second hand animation"
+-    sAnimationElastic: "Real"
+-    sAnimationEaseOut: "Smooth"
+-    twentyFour: "24 Hour Format"
+-    labelTime: "Time"
+-    labelTz: "Timezone"
+-    labelTimeAndTz: "Time and time zone"
+-    timezone: "Timezone"
+-    showMs: "Show Miliseconds"
+-    showLabel: "Show Label"
+-  _jobQueue:
+-    sound: "Play Sounds"
+-  _rss:
+-    url: "RSS Feed Url"
+-    refreshIntervalSec: "Update interval (in seconds)"
+-    maxEntries: "Maximum number of items to display"
+-  _rssTicker:
+-    shuffle: "Random display order"
+-    duration: "Banner scroll speed (in seconds)"
+-    reverse: "Scroll in the opposite direction"
+-  _birthdayFollowings:
+-    period: "Duration"
+ _cw:
+   hide: "Hide"
+   show: "Show content"
+@@ -2859,14 +2817,6 @@
+   usedAsMinWidthWhenFlexible: "Minimum width will be used for this when the \"Auto-adjust width\" option is enabled"
+   flexible: "Auto-adjust width"
+   enableSyncBetweenDevicesForProfiles: "Enable profile information sync between devices"
+-  showHowToUse: ""
+-  _howToUse:
+-    addColumn_title: "Add column"
+-    addColumn_description: "You can select and add column types."
+-    settings_title: "UI Settings"
+-    settings_description: "You can configure detailed settings for the deck UI."
+-    switchProfile_title: "Profile Switching"
+-    switchProfile_description: "You can save UI layouts as profiles and switch between them at any time."
+   _columns:
+     main: "Main"
+     widgets: "Widgets"
+@@ -3028,6 +2978,8 @@
+       title: "Failed to install theme"
+       description: "A problem occurred during theme installation. Please try again. Error details can be viewed in the Javascript console."
+ _dataSaver:
++  mediaProxyRequired: "Some data saver options require media proxy to be enabled. Please enable media proxy in API Server settings to use these features."
++  requiresMediaProxy: "This option requires media proxy to be enabled."
+   _media:
+     title: "Loading Media"
+     description: "Prevents images/videos from being loaded automatically. Hidden images/videos will be loaded when tapped."
+@@ -3043,6 +2995,11 @@
+   _code:
+     title: "Code highlighting"
+     description: "If code highlighting notations are used in MFM, etc., they will not load until tapped. Syntax highlighting requires downloading the highlight definition files for each programming language. Therefore, disabling the automatic loading of these files is expected to reduce the amount of communication data."
++_mediaProxy:
++  title: "Use media proxy"
++  description: "When enabled, images and media will be proxied through the server for optimization and caching. When disabled, media will be loaded directly from the original source, which may reduce privacy but could improve loading speed if the server's media proxy is slow or unavailable."
++  disabledByServer: "Media proxy has been disabled by the server administrator."
++  disabledByServerDescription: "The server administrator has disabled the media proxy feature. You cannot enable it."
+ _hemisphere:
+   N: "Northern Hemisphere"
+   S: "Southern Hemisphere"
+@@ -3350,6 +3307,7 @@
+   title: "Effects"
+   addEffect: "Add Effects"
+   discardChangesConfirm: "Are you sure you want to leave? You have unsaved changes."
++  nothingToConfigure: "No configurable options available"
+   failedToLoadImage: "Failed to load image"
+   _fxs:
+     chromaticAberration: "Chromatic Aberration"
+@@ -3401,7 +3359,11 @@
+     threshold: "Threshold"
+     centerX: "Center X"
+     centerY: "Center Y"
++    zoomLinesSmoothing: "Smoothing"
++    zoomLinesSmoothingDescription: "Smoothing and zoom line width cannot be used together."
++    zoomLinesThreshold: "Zoom line width"
+     zoomLinesMaskSize: "Center diameter"
++    zoomLinesBlack: "Make black"
+     circle: "Circular"
+ drafts: "Drafts"
+ _drafts:
+@@ -3437,3 +3399,23 @@
+   scanFile: "Scan image from device"
+   raw: "Text"
+   mfm: "MFM"
++_apiServer:
++  title: "API Server Settings"
++  description: "Configure connection to a custom API server. This allows connecting the frontend to a backend server hosted elsewhere."
++  firstVisitMessage: "Welcome! Please confirm the API server configuration to continue."
++  selectionDisabled: "API server selection is disabled in the configuration. Contact your administrator to enable this feature."
++  useCustomServer: "Use custom API server"
++  useCustomServerDescription: "Enable to connect to a different backend server instead of the default one."
++  apiDomain: "API Server Domain"
++  apiDomainCaption: "Domain name only (e.g., misskey.io). HTTPS and /api are added automatically."
++  apiUrl: "API Server URL"
++  apiUrlCaption: "Full URL of the backend API (e.g., https://api.example.com/api)"
++  wsOrigin: "WebSocket Origin"
++  wsOriginCaption: "Origin URL for WebSocket connections (e.g., https://api.example.com)"
++  testConnection: "Test Connection"
++  connectionSuccess: "Successfully connected to the API server!"
++  connectionError: "Failed to connect to the API server. Please check the URL and try again."
++  resetToDefault: "Reset to Default"
++  confirmReset: "Are you sure you want to reset to the default API server? The page will reload."
++  reloadRequired: "After changing API server settings, you need to reload the page for changes to take effect."
++  pleaseEnterApiUrl: "Please enter an API server URL."
