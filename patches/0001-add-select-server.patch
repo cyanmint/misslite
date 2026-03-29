@@ -137,7 +137,7 @@ index 8021c4f..fee426f 100644
 +	}
 +})();
 diff --git a/packages/frontend/src/boot/common.ts b/packages/frontend/src/boot/common.ts
-index 2b522d3..3721227 100644
+index 2b522d3..877269b 100644
 --- a/packages/frontend/src/boot/common.ts
 +++ b/packages/frontend/src/boot/common.ts
 @@ -1,3 +1,11 @@
@@ -174,7 +174,7 @@ index 2b522d3..3721227 100644
  				});
  				// fetch with cache: 'no-store' to ensure the latest locale is fetched
 -				await window.fetch(`/assets/locales/${lang}.${version}.json`, { cache: 'no-store' }).then(async res => res.status === 200 && await res.text());
-+				await window.fetch(`/locales/${lang}.${version}.json`, { cache: 'no-store' }).then(async res => res.status === 200 && await res.text());
++				await window.fetch(`./locales/${lang}.${version}.json`, { cache: 'no-store' }).then(async res => res.status === 200 && await res.text());
  				window.location.reload();
  			}
  		});

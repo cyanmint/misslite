@@ -23,7 +23,7 @@ index 3797dfd..b858074 100644
  	"dependencies": {
  		"cssnano": "7.1.3",
 diff --git a/packages/frontend-shared/js/locale.ts b/packages/frontend-shared/js/locale.ts
-index 38584fb..a9ec5ba 100644
+index 38584fb..ecec80e 100644
 --- a/packages/frontend-shared/js/locale.ts
 +++ b/packages/frontend-shared/js/locale.ts
 @@ -1,3 +1,11 @@
@@ -43,7 +43,7 @@ index 38584fb..a9ec5ba 100644
  
  // ここはビルド時に const locale = JSON.parse("...") みたいな感じで置き換えられるので top-level await は消える
 -export let locale: Locale = await window.fetch(`/assets/locales/${lang}.${version}.json`).then(r => r.json(), () => null);
-+export let locale: Locale = await window.fetch(`/locales/${lang}.${version}.json`).then(r => r.json()).catch(() => null) ?? {};
++export let locale: Locale = await window.fetch(`./locales/${lang}.${version}.json`).then(r => r.json()).catch(() => null) ?? {};
  
  export function updateLocale(newLocale: Locale): void {
  	locale = newLocale;
@@ -62,7 +62,7 @@ index 0f605c7..f439b04 100644
   * @return {Promise<void>}
 diff --git a/packages/frontend/index.html b/packages/frontend/index.html
 new file mode 100644
-index 0000000..bb45bf0
+index 0000000..4a79d56
 --- /dev/null
 +++ b/packages/frontend/index.html
 @@ -0,0 +1,144 @@
@@ -84,9 +84,9 @@ index 0000000..bb45bf0
 +	<meta property="og:site_name" content="Misskey">
 +	<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 +	<meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no">
-+	<link rel="icon" href="/favicon.ico">
-+	<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-+	<link rel="manifest" href="/manifest.json">
++	<link rel="icon" href="./favicon.ico">
++	<link rel="apple-touch-icon" href="./apple-touch-icon.png">
++	<link rel="manifest" href="./app.webmanifest">
 +	<script>
 +		// Normalize URL format: /?domain should be treated as / with ?domain query string
 +		// This fixes cases where browser treats /?domain as path instead of query
@@ -104,7 +104,7 @@ index 0000000..bb45bf0
 +			}
 +		})();
 +	</script>
-+	<script src="/config.js"></script>
++	<script src="./config.js"></script>
 +	<title>Misskey</title>
 +	<style id="splash-style">
 +		/* Default green splash background */
@@ -210,6 +210,200 @@ index 0000000..bb45bf0
 +	<script type="module" src="/src/_boot_.ts"></script>
 +</body>
 +</html>
+diff --git a/packages/frontend/public/app.webmanifest b/packages/frontend/public/app.webmanifest
+new file mode 100644
+index 0000000..168d46b
+--- /dev/null
++++ b/packages/frontend/public/app.webmanifest
+@@ -0,0 +1,45 @@
++{
++  "_comment": "SPDX-FileCopyrightText: syuilo and misskey-project, SPDX-License-Identifier: AGPL-3.0-only. NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright. The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.",
++  "short_name": "Misskey",
++  "name": "Misskey",
++  "start_url": "/",
++  "display": "standalone",
++  "background_color": "#313a42",
++  "theme_color": "#86b300",
++  "icons": [
++    {
++      "src": "/static-assets/icons/192.png",
++      "sizes": "192x192",
++      "type": "image/png",
++      "purpose": "maskable"
++    },
++    {
++      "src": "/static-assets/icons/512.png",
++      "sizes": "512x512",
++      "type": "image/png",
++      "purpose": "maskable"
++    },
++    {
++      "src": "/static-assets/splash.png",
++      "sizes": "300x300",
++      "type": "image/png",
++      "purpose": "any"
++    }
++  ],
++  "share_target": {
++    "action": "/share/",
++    "method": "GET",
++    "enctype": "application/x-www-form-urlencoded",
++    "params": {
++      "title": "title",
++      "text": "text",
++      "url": "url"
++    }
++  },
++  "shortcuts": [
++    {
++      "name": "Safemode",
++      "url": "/?safemode=true"
++    }
++  ]
++}
+diff --git a/packages/frontend/public/config.js b/packages/frontend/public/config.js
+new file mode 100644
+index 0000000..58b5ff9
+--- /dev/null
++++ b/packages/frontend/public/config.js
+@@ -0,0 +1,24 @@
++/*
++ * SPDX-FileCopyrightText: syuilo and misskey-project
++ * SPDX-License-Identifier: AGPL-3.0-only
++ * 
++ * NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
++ * The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
++ */
++
++// Frontend Runtime Configuration
++// This file can be modified at deployment time to configure the frontend behavior
++window.MISSKEY_CONFIG = {
++	// Allow users to select custom API server
++	// Default: true (users can select any API server)
++	// Set to false to disable API server selection and use only defaultApiUrl
++	// When true, users see an "API Server" button on the welcome page
++	allowApiSelection: true,
++	
++	// Default API server domain (when not using custom selection)
++	// Leave empty to use the frontend host (window.location.hostname)
++	// Specify just the domain name, e.g., 'misskey.io' or 'api.example.com'
++	// HTTPS is enforced, and /api path is automatically appended
++	// Example: 'misskey.io' will become 'https://misskey.io/api'
++	defaultApiUrl: '',
++};
+diff --git a/packages/frontend/public/loader/boot.js b/packages/frontend/public/loader/boot.js
+index 8aafb28..545030b 100644
+--- a/packages/frontend/public/loader/boot.js
++++ b/packages/frontend/public/loader/boot.js
+@@ -1,3 +1,11 @@
++/*
++ * SPDX-FileCopyrightText: syuilo and misskey-project
++ * SPDX-License-Identifier: AGPL-3.0-only
++ *
++ * NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
++ * The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
++ */
++
+ /*
+  * SPDX-FileCopyrightText: syuilo and misskey-project
+  * SPDX-License-Identifier: AGPL-3.0-only
+@@ -48,7 +56,7 @@
+ 
+ 	//#region Script
+ 	async function importAppScript() {
+-		await import(CLIENT_ENTRY ? `/vite/${CLIENT_ENTRY.replace('scripts', lang)}` : '/vite/src/_boot_.ts')
++		await import(CLIENT_ENTRY ? `/${CLIENT_ENTRY}` : '/vite/src/_boot_.ts')
+ 			.catch(async e => {
+ 				console.error(e);
+ 				renderError('APP_IMPORT', e);
+@@ -77,12 +85,54 @@
+ 	}
+ 
+ 	//#region Theme
++	// Determine if we should use dark mode
++	const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
++	const savedDarkMode = localStorage.getItem('darkMode');
++	const useDarkMode = savedDarkMode !== null ? savedDarkMode === 'true' : prefersDark;
++	
++	// Default theme colors (pre-compiled from l-light.json5 and d-dark.json5)
++	const defaultLightTheme = {
++		accent: 'rgb(134, 179, 0)',
++		bg: 'rgb(255, 255, 255)',
++		fg: 'rgb(95, 95, 95)',
++		panel: 'rgb(255, 255, 255)',
++		htmlThemeColor: 'rgb(255, 255, 255)',
++		link: 'rgb(68, 164, 193)',
++		modalBg: 'rgba(0, 0, 0, 0.3)',
++	};
++	
++	const defaultDarkTheme = {
++		accent: 'rgb(134, 179, 0)',
++		bg: 'rgb(0, 0, 0)',
++		fg: 'rgb(218, 218, 218)',
++		panel: 'rgb(0, 0, 0)',
++		htmlThemeColor: 'rgb(0, 0, 0)',
++		link: 'rgb(68, 164, 193)',
++		modalBg: 'rgba(0, 0, 0, 0.5)',
++	};
++	
+ 	if (!isSafeMode) {
+ 		const theme = localStorage.getItem('theme');
+ 		if (theme) {
+ 			for (const [k, v] of Object.entries(JSON.parse(theme))) {
+ 				document.documentElement.style.setProperty(`--MI_THEME-${k}`, v.toString());
+ 
++				// HTMLの theme-color 適用
++				if (k === 'htmlThemeColor') {
++					for (const tag of document.head.children) {
++						if (tag.tagName === 'META' && tag.getAttribute('name') === 'theme-color') {
++							tag.setAttribute('content', v);
++							break;
++						}
++					}
++				}
++			}
++		} else {
++			// Apply default theme if no theme is saved
++			const defaultTheme = useDarkMode ? defaultDarkTheme : defaultLightTheme;
++			for (const [k, v] of Object.entries(defaultTheme)) {
++				document.documentElement.style.setProperty(`--MI_THEME-${k}`, v.toString());
++				
+ 				// HTMLの theme-color 適用
+ 				if (k === 'htmlThemeColor') {
+ 					for (const tag of document.head.children) {
+@@ -96,10 +146,13 @@
+ 		}
+ 	}
+ 
+-	const colorScheme = localStorage.getItem('colorScheme');
+-	if (colorScheme) {
+-		document.documentElement.style.setProperty('color-scheme', colorScheme);
++	let colorScheme = localStorage.getItem('colorScheme');
++	if (!colorScheme) {
++		// If no color scheme is saved, use the determined dark mode
++		colorScheme = useDarkMode ? 'dark' : 'light';
+ 	}
++	document.documentElement.style.setProperty('color-scheme', colorScheme);
++	document.documentElement.dataset.colorScheme = colorScheme;
+ 	//#endregion
+ 
+ 	const fontSize = localStorage.getItem('fontSize');
+diff --git a/packages/frontend/public/mockServiceWorker.js b/packages/frontend/public/mockServiceWorker.js
+index 3bb1e66..b743f66 100644
+--- a/packages/frontend/public/mockServiceWorker.js
++++ b/packages/frontend/public/mockServiceWorker.js
+@@ -1,3 +1,11 @@
++/*
++ * SPDX-FileCopyrightText: syuilo and misskey-project
++ * SPDX-License-Identifier: AGPL-3.0-only
++ *
++ * NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
++ * The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
++ */
++
+ /*
+  * SPDX-FileCopyrightText: syuilo and misskey-project
+  * SPDX-License-Identifier: AGPL-3.0-only
 diff --git a/packages/frontend/vite.config.ts b/packages/frontend/vite.config.ts
 index 260d121..c9dea7e 100644
 --- a/packages/frontend/vite.config.ts

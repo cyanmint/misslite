@@ -46,18 +46,10 @@ jobs:
           cd misskey-build
           corepack pnpm install
 
-      - name: Build frontend
+      - name: Build
         run: |
           cd misskey-build
-          node scripts/build-pre.mjs
-          corepack pnpm -F i18n build
-          corepack pnpm -F misskey-js build
-          corepack pnpm -F misskey-bubble-game build
-          corepack pnpm -F misskey-reversi build
-          corepack pnpm -F icons-subsetter build
-          corepack pnpm -F frontend build
-          mkdir -p webroot/locales
-          cp built/_frontend_dist_/locales/*.json webroot/locales/
+          corepack pnpm run build
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
