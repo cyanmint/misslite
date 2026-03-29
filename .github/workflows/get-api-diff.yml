@@ -34,7 +34,12 @@ jobs:
       with:
         ref: ${{ matrix.ref }}
     - name: Copy api.json
-      run: cp api.json ${{ matrix.api-json-name }}
+      run: |
+        if [ -f api.json ]; then
+          cp api.json ${{ matrix.api-json-name }}
+        else
+          echo '{}' > ${{ matrix.api-json-name }}
+        fi
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:

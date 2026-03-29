@@ -64,8 +64,15 @@ export const adminAccountsCreate: Handler = async (db, body, env) => {
 	const initialized = await db.prepare("SELECT value FROM meta WHERE key = 'initialized'").first();
 	if (initialized) return err('Already initialized', 403);
 
-	const setupToken = (body.token ?? '') as string;
-	if (setupToken !== (env.INITIAL_PASSWORD ?? '')) return err('Initial password is incorrect', 403);
+	// setupPassword is the server-side setup secret; password is the admin's login credential.
+	// Mirrors the Misskey frontend field name: body.setupPassword (welcome.setup.vue).
+	const setupPassword = (body.setupPassword ?? null) as string | null;
+	const expectedPassword = (env.INITIAL_PASSWORD ?? null) as string | null;
+	if (expectedPassword != null) {
+		if (setupPassword !== expectedPassword) return err('Initial password is incorrect', 403);
+	} else if (setupPassword != null && setupPassword.trim() !== '') {
+		return err('Initial password is incorrect', 403);
+	}
 
 	const username = (body.username ?? '') as string;
 	if (!username || !/^[a-zA-Z0-9_]{1,20}$/.test(username)) return err('Invalid username');
