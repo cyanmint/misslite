@@ -141,3 +141,7 @@ vite.config.ts.timestamp-*
 # Build outputs
 misskey-build/
 webroot/
+
+# Worker
+worker/node_modules/
+worker/.wrangler/
