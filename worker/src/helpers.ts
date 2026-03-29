@@ -133,6 +133,15 @@ export async function packNote(db: D1Database, n: DbNote): Promise<Record<string
 	};
 }
 
+export async function getMeta(db: D1Database, key: string): Promise<string | null> {
+	const row = await db.prepare('SELECT value FROM meta WHERE key = ?').bind(key).first<{ value: string }>();
+	return row?.value ?? null;
+}
+
+export async function setMeta(db: D1Database, key: string, value: string): Promise<void> {
+	await db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').bind(key, value).run();
+}
+
 export async function getUser(db: D1Database, body: Record<string, unknown>): Promise<DbUser | null> {
 	const token = (body.i ?? body.token ?? '') as string;
 	if (!token) return null;

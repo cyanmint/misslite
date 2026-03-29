@@ -150,6 +150,8 @@ expect(status).toBe(404);
 let inviteCode: string;
 let userToken: string;
 let userId: string;
+let announcementId: string;
+let stateNoteId: string;
 
 it('invite/create generates code', async () => {
 const { status, data } = await callApi('invite/create', { i: adminToken });
@@ -284,5 +286,265 @@ expect(data.isSuspended).toBe(false);
 it('notes/delete by admin', async () => {
 const { status } = await callApi('notes/delete', { i: adminToken, noteId });
 expect(status).toBe(200);
+});
+
+// Re-acquire userToken — the admin/suspend-user test above deleted testuser's sessions
+it('testuser re-signs in for new test block', async () => {
+const { status, data } = await callApi('signin', { username: 'testuser', password: 'userpass' });
+expect(status).toBe(200);
+userToken = data.i;
+});
+
+// ---- New: instance endpoints ----
+
+it('server-info returns machine info', async () => {
+const { status, data } = await callApi('server-info');
+expect(status).toBe(200);
+expect(data.machine).toBe('Cloudflare Workers');
+});
+
+it('announcements returns empty list initially', async () => {
+const { status, data } = await callApi('announcements');
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('admin/announcements/create adds announcement', async () => {
+const { status, data } = await callApi('admin/announcements/create', {
+i: adminToken, title: 'Test Announcement', text: 'Hello everyone',
+});
+expect(status).toBe(200);
+expect(data.title).toBe('Test Announcement');
+announcementId = data.id;
+});
+
+it('announcements returns announcement', async () => {
+const { data } = await callApi('announcements');
+expect(data.length).toBeGreaterThan(0);
+expect(data[0].title).toBe('Test Announcement');
+});
+
+it('admin/announcements/delete removes it', async () => {
+const { status } = await callApi('admin/announcements/delete', { i: adminToken, announcementId });
+expect(status).toBe(200);
+const { data } = await callApi('announcements');
+expect(data.length).toBe(0);
+});
+
+// ---- New: config ----
+
+it('admin/update-meta changes instance name', async () => {
+const { status } = await callApi('admin/update-meta', { i: adminToken, name: 'MyInstance', description: 'A test' });
+expect(status).toBe(200);
+const { data } = await callApi('meta');
+expect(data.name).toBe('MyInstance');
+expect(data.description).toBe('A test');
+});
+
+it('admin/update-meta forbidden for regular user', async () => {
+const { status } = await callApi('admin/update-meta', { i: userToken, name: 'Hacked' });
+expect(status).toBe(403);
+});
+
+// ---- New: signout ----
+
+it('signout invalidates session', async () => {
+// Get a fresh session first
+const { data: signinData } = await callApi('signin', { username: 'testuser', password: 'userpass' });
+const tempToken = signinData.i;
+await callApi('signout', { i: tempToken });
+const { status } = await callApi('i', { i: tempToken });
+expect(status).toBe(401);
+});
+
+// ---- New: change-password ----
+
+it('i/change-password updates password', async () => {
+const { status, data } = await callApi('i/change-password', {
+i: userToken, currentPassword: 'userpass', newPassword: 'newpass456',
+});
+expect(status).toBe(200);
+expect(data.i).toBeTypeOf('string');
+userToken = data.i;
+});
+
+it('signin works with new password', async () => {
+const { status, data } = await callApi('signin', { username: 'testuser', password: 'newpass456' });
+expect(status).toBe(200);
+userToken = data.i;
+});
+
+it('i/change-password rejects wrong current password', async () => {
+const { status } = await callApi('i/change-password', {
+i: userToken, currentPassword: 'wrongpass', newPassword: 'other',
+});
+expect(status).toBe(401);
+});
+
+// ---- New: users/search ----
+
+it('users/search returns matching users', async () => {
+const { status, data } = await callApi('users/search', { query: 'admin' });
+expect(status).toBe(200);
+expect(data.length).toBeGreaterThan(0);
+expect(data[0].username).toBe('admin');
+});
+
+it('users/search returns empty for no match', async () => {
+const { data } = await callApi('users/search', { query: 'xyznosuchuser' });
+expect(data.length).toBe(0);
+});
+
+// ---- New: notes/search ----
+
+it('notes/search finds notes by keyword', async () => {
+// Create a fresh searchable note
+await callApi('notes/create', { i: userToken, text: 'Unique searchable banana content' });
+const { status, data } = await callApi('notes/search', { query: 'banana' });
+expect(status).toBe(200);
+expect(data.length).toBeGreaterThan(0);
+});
+
+it('notes/search returns empty for no match', async () => {
+const { data } = await callApi('notes/search', { query: 'xyznosuchnote9999' });
+expect(data.length).toBe(0);
+});
+
+// ---- New: notes/state ----
+
+it('notes/state returns not favorited initially', async () => {
+// Create a fresh note to test state on
+const { data: noteData } = await callApi('notes/create', { i: userToken, text: 'state test note' });
+stateNoteId = noteData.createdNote.id;
+const { status, data } = await callApi('notes/state', { i: userToken, noteId: stateNoteId });
+expect(status).toBe(200);
+expect(data.isFavorited).toBe(false);
+expect(data.myReaction).toBeNull();
+});
+
+// ---- New: favorites ----
+
+it('notes/favorites/create favorites a note', async () => {
+const { status } = await callApi('notes/favorites/create', { i: userToken, noteId: stateNoteId });
+expect(status).toBe(200);
+});
+
+it('notes/state shows isFavorited=true after favorite', async () => {
+const { data } = await callApi('notes/state', { i: userToken, noteId: stateNoteId });
+expect(data.isFavorited).toBe(true);
+});
+
+it('i/favorites returns favorited notes', async () => {
+const { status, data } = await callApi('i/favorites', { i: userToken });
+expect(status).toBe(200);
+expect(data.length).toBeGreaterThan(0);
+});
+
+it('notes/favorites/delete unfavorites', async () => {
+const { status } = await callApi('notes/favorites/delete', { i: userToken, noteId: stateNoteId });
+expect(status).toBe(200);
+const { data } = await callApi('notes/state', { i: userToken, noteId: stateNoteId });
+expect(data.isFavorited).toBe(false);
+});
+
+// ---- New: notes/reactions list ----
+
+it('notes/reactions lists reactions on a note', async () => {
+await callApi('notes/reactions/create', { i: userToken, noteId: stateNoteId, reaction: '⭐' });
+const { status, data } = await callApi('notes/reactions', { noteId: stateNoteId });
+expect(status).toBe(200);
+expect(data.length).toBeGreaterThan(0);
+expect(data[0].type).toBe('⭐');
+});
+
+// ---- New: notes/conversation ----
+
+it('notes/conversation returns reply chain', async () => {
+const { data: root } = await callApi('notes/create', { i: userToken, text: 'Root note' });
+const rootId = root.createdNote.id;
+const { data: reply } = await callApi('notes/create', { i: userToken, text: 'Reply', replyId: rootId });
+const replyId = reply.createdNote.id;
+const { status, data } = await callApi('notes/conversation', { noteId: replyId });
+expect(status).toBe(200);
+// Conversation returns the parent chain
+expect(data.length).toBeGreaterThan(0);
+expect(data[0].id).toBe(rootId);
+});
+
+// ---- New: notes/mentions ----
+
+it('notes/mentions returns notes mentioning current user', async () => {
+await callApi('notes/create', { i: adminToken, text: `Hello @testuser how are you` });
+const { status, data } = await callApi('notes/mentions', { i: userToken });
+expect(status).toBe(200);
+expect(data.length).toBeGreaterThan(0);
+});
+
+// ---- New: notifications ----
+
+it('i/notifications returns notifications', async () => {
+const { status, data } = await callApi('i/notifications', { i: userToken });
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('notifications/mark-all-as-read marks all read', async () => {
+const { status } = await callApi('notifications/mark-all-as-read', { i: userToken });
+expect(status).toBe(200);
+const { data } = await callApi('i/notifications', { i: userToken, unreadOnly: true });
+expect(data.length).toBe(0);
+});
+
+// ---- New: admin endpoints ----
+
+it('admin/show-moderation-logs returns logs', async () => {
+const { status, data } = await callApi('admin/show-moderation-logs', { i: adminToken });
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+expect(data.length).toBeGreaterThan(0);
+});
+
+it('admin/reset-password resets user password', async () => {
+const { status } = await callApi('admin/reset-password', { i: adminToken, userId, newPassword: 'reset123' });
+expect(status).toBe(200);
+// Old token is now invalid
+const { status: oldStatus } = await callApi('i', { i: userToken });
+expect(oldStatus).toBe(401);
+// Can sign in with new password
+const { status: signinStatus, data } = await callApi('signin', { username: 'testuser', password: 'reset123' });
+expect(signinStatus).toBe(200);
+userToken = data.i;
+});
+
+it('admin/delete-account deletes user', async () => {
+// Create a throwaway user to delete
+const invite2 = await callApi('invite/create', { i: adminToken });
+const ic2 = invite2.data.code;
+const { data: newUser } = await callApi('signup', { username: 'throwaway', password: 'pass', invitationCode: ic2 });
+const throwId = newUser.id;
+const { status } = await callApi('admin/delete-account', { i: adminToken, userId: throwId });
+expect(status).toBe(200);
+const { status: showStatus } = await callApi('users/show', { userId: throwId });
+expect(showStatus).toBe(404);
+});
+
+it('.well-known/nodeinfo returns links', async () => {
+const request = new Request(`${BASE_URL}/.well-known/nodeinfo`, { method: 'GET' });
+const ctx = createExecutionContext();
+const response = await worker.fetch(request, env as unknown as WorkerEnv, ctx);
+await waitOnExecutionContext(ctx);
+const data = await response.json() as any;
+expect(Array.isArray(data.links)).toBe(true);
+expect(data.links[0].rel).toContain('nodeinfo');
+});
+
+it('nodeinfo/2.1 returns software info', async () => {
+const request = new Request(`${BASE_URL}/nodeinfo/2.1`, { method: 'GET' });
+const ctx = createExecutionContext();
+const response = await worker.fetch(request, env as unknown as WorkerEnv, ctx);
+await waitOnExecutionContext(ctx);
+const data = await response.json() as any;
+expect(data.software.name).toBe('misslite');
+expect(data.version).toBe('2.1');
 });
 });

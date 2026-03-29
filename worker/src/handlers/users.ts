@@ -43,3 +43,15 @@ export const showUser: Handler = async (db, body) => {
 	if (!user) return err('No such user', 404);
 	return json(packUser(user, true));
 };
+
+export const searchUsers: Handler = async (db, body) => {
+	const query = ((body.query ?? body.username ?? '') as string).trim();
+	if (!query) return err('query required');
+	const limit = Math.min(Number(body.limit) || 10, 100);
+	const offset = Number(body.offset) || 0;
+	const pattern = '%' + query.replace(/%/g, '\\%').replace(/_/g, '\\_') + '%';
+	const users = await db.prepare(
+		'SELECT * FROM users WHERE (username LIKE ? OR name LIKE ?) ORDER BY username ASC LIMIT ? OFFSET ?'
+	).bind(pattern, pattern, limit, offset).all<DbUser>();
+	return json((users.results ?? []).map(u => packUser(u, true)));
+};

@@ -4,7 +4,7 @@
 
 import type { Handler } from '../types.js';
 import type { DbNote } from '../types.js';
-import { json, err, generateId, packNote, requireUser } from '../helpers.js';
+import { json, err, generateId, packNote, requireUser, getUser } from '../helpers.js';
 
 export const createNote: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
@@ -22,6 +22,29 @@ export const createNote: Handler = async (db, body) => {
 	await db.prepare(
 		'INSERT INTO notes (id, user_id, text, cw, visibility, reply_id, renote_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
 	).bind(id, u.id, text || null, cw, visibility, replyId, renoteId).run();
+
+	// Notify mentioned users (@username)
+	if (text) {
+		const mentions = [...text.matchAll(/@([a-zA-Z0-9_]{1,20})/g)].map(m => m[1].toLowerCase());
+		const unique = [...new Set(mentions)];
+		for (const username of unique) {
+			const mentioned = await db.prepare('SELECT id FROM users WHERE username = ?').bind(username).first<{ id: string }>();
+			if (mentioned && mentioned.id !== u.id) {
+				await db.prepare(
+					'INSERT INTO notifications (id, user_id, type, notifier_id, note_id) VALUES (?, ?, \'mention\', ?, ?)'
+				).bind(generateId(), mentioned.id, u.id, id).run();
+			}
+		}
+	}
+	// Notify parent note author of the reply
+	if (replyId) {
+		const parentNote = await db.prepare('SELECT user_id FROM notes WHERE id = ?').bind(replyId).first<{ user_id: string }>();
+		if (parentNote && parentNote.user_id !== u.id) {
+			await db.prepare(
+				'INSERT INTO notifications (id, user_id, type, notifier_id, note_id) VALUES (?, ?, \'reply\', ?, ?)'
+			).bind(generateId(), parentNote.user_id, u.id, id).run();
+		}
+	}
 
 	const note = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(id).first<DbNote>();
 	const packed = await packNote(db, note!);
@@ -48,6 +71,8 @@ export const deleteNote: Handler = async (db, body) => {
 	if (note.user_id !== u.id && !u.is_admin && !u.is_moderator) return err('Forbidden', 403);
 
 	await db.prepare('DELETE FROM reactions WHERE note_id = ?').bind(noteId).run();
+	await db.prepare('DELETE FROM favorites WHERE note_id = ?').bind(noteId).run();
+	await db.prepare('DELETE FROM notifications WHERE note_id = ?').bind(noteId).run();
 	await db.prepare('DELETE FROM notes WHERE id = ?').bind(noteId).run();
 	return json({});
 };
@@ -88,6 +113,63 @@ export const userNotes: Handler = async (db, body) => {
 	return json(packed);
 };
 
+export const searchNotes: Handler = async (db, body) => {
+	const query = ((body.query ?? '') as string).trim();
+	if (!query) return err('query required');
+	const limit = Math.min(Number(body.limit) || 10, 100);
+	const offset = Number(body.offset) || 0;
+	const pattern = '%' + query.replace(/%/g, '\\%').replace(/_/g, '\\_') + '%';
+	const notes = await db.prepare(
+		"SELECT * FROM notes WHERE visibility = 'public' AND text LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	).bind(pattern, limit, offset).all<DbNote>();
+	const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
+	return json(packed);
+};
+
+export const noteState: Handler = async (db, body) => {
+	const noteId = body.noteId as string;
+	if (!noteId) return err('noteId required');
+	const u = await getUser(db, body);
+	if (!u) return json({ isFavorited: false, isWatching: false, isMutedThread: false, myReaction: null });
+
+	const fav = await db.prepare('SELECT id FROM favorites WHERE user_id = ? AND note_id = ?').bind(u.id, noteId).first();
+	const reaction = await db.prepare('SELECT reaction FROM reactions WHERE user_id = ? AND note_id = ?').bind(u.id, noteId).first<{ reaction: string }>();
+	return json({
+		isFavorited: !!fav,
+		isWatching: false,
+		isMutedThread: false,
+		myReaction: reaction?.reaction ?? null,
+	});
+};
+
+export const noteMentions: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const limit = Math.min(Number(body.limit) || 10, 100);
+	const pattern = `%@${u.username}%`;
+	const notes = await db.prepare(
+		"SELECT * FROM notes WHERE text LIKE ? ORDER BY created_at DESC LIMIT ?"
+	).bind(pattern, limit).all<DbNote>();
+	const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
+	return json(packed);
+};
+
+export const noteConversation: Handler = async (db, body) => {
+	const noteId = body.noteId as string;
+	if (!noteId) return err('noteId required');
+	const limit = Math.min(Number(body.limit) || 10, 30);
+	const chain: DbNote[] = [];
+	let current = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(noteId).first<DbNote>();
+	while (current?.reply_id && chain.length < limit) {
+		const parent = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(current.reply_id).first<DbNote>();
+		if (!parent) break;
+		chain.push(parent);
+		current = parent;
+	}
+	const packed = await Promise.all(chain.map(n => packNote(db, n)));
+	return json(packed);
+};
+
 export const createReaction: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
@@ -96,7 +178,7 @@ export const createReaction: Handler = async (db, body) => {
 	const reaction = (body.reaction ?? '❤') as string;
 	if (!noteId) return err('noteId required');
 
-	const note = await db.prepare('SELECT id FROM notes WHERE id = ?').bind(noteId).first();
+	const note = await db.prepare('SELECT id, user_id FROM notes WHERE id = ?').bind(noteId).first<{ id: string; user_id: string }>();
 	if (!note) return err('No such note', 404);
 
 	const id = generateId();
@@ -105,6 +187,13 @@ export const createReaction: Handler = async (db, body) => {
 			.bind(id, noteId, u.id, reaction).run();
 	} catch {
 		return err('Already reacted');
+	}
+
+	// Notify note author
+	if (note.user_id !== u.id) {
+		await db.prepare(
+			'INSERT INTO notifications (id, user_id, type, notifier_id, note_id, reaction) VALUES (?, ?, \'reaction\', ?, ?, ?)'
+		).bind(generateId(), note.user_id, u.id, noteId, reaction).run();
 	}
 	return json({});
 };
@@ -119,4 +208,57 @@ export const deleteReaction: Handler = async (db, body) => {
 	await db.prepare('DELETE FROM reactions WHERE note_id = ? AND user_id = ?')
 		.bind(noteId, u.id).run();
 	return json({});
+};
+
+export const listReactions: Handler = async (db, body) => {
+	const noteId = body.noteId as string;
+	if (!noteId) return err('noteId required');
+	const limit = Math.min(Number(body.limit) || 10, 100);
+	const reactions = await db.prepare(
+		'SELECT r.*, u.id as uid, u.username, u.name, u.avatar_url FROM reactions r JOIN users u ON r.user_id = u.id WHERE r.note_id = ? ORDER BY r.created_at ASC LIMIT ?'
+	).bind(noteId, limit).all();
+	return json((reactions.results ?? []).map((r: any) => ({
+		id: r.id,
+		createdAt: r.created_at,
+		user: { id: r.uid, username: r.username, name: r.name || r.username, avatarUrl: r.avatar_url },
+		type: r.reaction,
+	})));
+};
+
+export const createFavorite: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const noteId = body.noteId as string;
+	if (!noteId) return err('noteId required');
+	const note = await db.prepare('SELECT id FROM notes WHERE id = ?').bind(noteId).first();
+	if (!note) return err('No such note', 404);
+	try {
+		await db.prepare('INSERT INTO favorites (id, user_id, note_id) VALUES (?, ?, ?)').bind(generateId(), u.id, noteId).run();
+	} catch {
+		return err('Already favorited');
+	}
+	return json({});
+};
+
+export const deleteFavorite: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const noteId = body.noteId as string;
+	if (!noteId) return err('noteId required');
+	await db.prepare('DELETE FROM favorites WHERE user_id = ? AND note_id = ?').bind(u.id, noteId).run();
+	return json({});
+};
+
+export const listFavorites: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const limit = Math.min(Number(body.limit) || 10, 100);
+	const favs = await db.prepare(
+		'SELECT f.note_id FROM favorites f WHERE f.user_id = ? ORDER BY f.created_at DESC LIMIT ?'
+	).bind(u.id, limit).all<{ note_id: string }>();
+	const packed = await Promise.all((favs.results ?? []).map(async f => {
+		const note = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(f.note_id).first<DbNote>();
+		return note ? packNote(db, note) : null;
+	}));
+	return json(packed.filter(Boolean));
 };

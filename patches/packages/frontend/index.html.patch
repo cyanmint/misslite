@@ -1,6 +1,6 @@
 diff --git a/packages/frontend/index.html b/packages/frontend/index.html
 new file mode 100644
-index 0000000..0b34b45
+index 0000000..e18b145
 --- /dev/null
 +++ b/packages/frontend/index.html
 @@ -0,0 +1,264 @@
@@ -19,9 +19,9 @@ index 0000000..0b34b45
 +<meta property="og:site_name" content="Misskey">
 +<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 +<meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no">
-+<link rel="icon" href="./favicon.ico">
-+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
-+<link rel="manifest" href="./app.webmanifest">
++<link rel="icon" href="/favicon.ico">
++<link rel="apple-touch-icon" href="/apple-touch-icon.png">
++<link rel="manifest" href="/app.webmanifest">
 +<script>
 +// Normalize URL format: /?domain should be treated as / with ?domain query string
 +(function() {
@@ -33,7 +33,7 @@ index 0000000..0b34b45
 +}
 +})();
 +</script>
-+<script src="./config.js"></script>
++<script src="/config.js"></script>
 +<title>MissLite</title>
 +<style id="splash-style">
 +#splash {

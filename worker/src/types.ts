@@ -4,7 +4,18 @@
 
 export interface Env {
 	DB: D1Database;
+	/** Password required for the initial admin account setup. Defaults to 'changeme'. */
 	INITIAL_PASSWORD: string;
+	/** Instance display name. Defaults to 'MissLite'. */
+	INSTANCE_NAME?: string;
+	/** Instance description shown in meta. */
+	INSTANCE_DESCRIPTION?: string;
+	/** Whether registration is open (invite-only = 'invite', open = 'open'). Defaults to 'invite'. */
+	REGISTRATION_MODE?: string;
+	/** Max note length. Defaults to 3000. */
+	MAX_NOTE_LENGTH?: string;
+	/** Theme colour for the instance. Defaults to '#86b300'. */
+	THEME_COLOR?: string;
 }
 
 export interface DbUser {
@@ -28,6 +39,26 @@ export interface DbNote {
 	visibility: string;
 	reply_id: string | null;
 	renote_id: string | null;
+	created_at: string;
+}
+
+export interface DbAnnouncement {
+	id: string;
+	title: string;
+	text: string;
+	image_url: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface DbNotification {
+	id: string;
+	user_id: string;
+	type: string;
+	notifier_id: string | null;
+	note_id: string | null;
+	reaction: string | null;
+	is_read: number;
 	created_at: string;
 }
 
