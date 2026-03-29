@@ -44,10 +44,16 @@ jobs:
           cd misskey-build
           corepack pnpm install
 
-      - name: Build
+      - name: Build frontend
         run: |
           cd misskey-build
-          corepack pnpm run build
+          node scripts/build-pre.mjs
+          corepack pnpm -F i18n build
+          corepack pnpm -F misskey-js build
+          corepack pnpm -F misskey-bubble-game build
+          corepack pnpm -F misskey-reversi build
+          corepack pnpm -F icons-subsetter build
+          corepack pnpm -F frontend build
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -65,5 +71,6 @@ jobs:
           touch .nojekyll
           git add -A
           git commit -m "Deploy frontend"
+          # Use --amend on subsequent pushes (gh-pages has no real history)
           git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
           git push --force origin gh-pages

@@ -3,7 +3,7 @@
 # This file is dedicated to the public domain under CC0-1.0.
 #
 # Misslite frontend build script
-# Clones misskey, applies patches, then builds using corepack pnpm run build.
+# Clones misskey, applies patches, builds only the frontend.
 #
 # Usage: ./build.sh [misskey-ref]
 #   misskey-ref: git ref to clone (default: develop)
@@ -37,21 +37,28 @@ cd "${BUILD_DIR}"
 echo "[build] Initializing submodules..."
 git submodule update --init --depth=1
 
-# Step 2: Apply patch 1 - select server feature
+# Step 2: Apply patches
 echo "[build] Applying patch 1: select server feature..."
 git apply --whitespace=fix "${SCRIPT_DIR}/patches/0001-add-select-server.patch"
 
-# Step 3: Apply patch 2 - standalone build support
 echo "[build] Applying patch 2: standalone build support..."
 git apply --whitespace=fix "${SCRIPT_DIR}/patches/0002-standalone-build.patch"
 
-# Step 4: Install dependencies and build
+# Step 3: Install and build
 echo "[build] Installing dependencies..."
 corepack enable
 corepack pnpm install
 
-echo "[build] Building..."
-corepack pnpm run build
+echo "[build] Building frontend dependencies..."
+node scripts/build-pre.mjs
+corepack pnpm -F i18n build
+corepack pnpm -F misskey-js build
+corepack pnpm -F misskey-bubble-game build
+corepack pnpm -F misskey-reversi build
+corepack pnpm -F icons-subsetter build
+
+echo "[build] Building frontend..."
+corepack pnpm -F frontend build
 
 echo "[build] Build complete!"
 echo "[build] Output: ${BUILD_DIR}/webroot/"
