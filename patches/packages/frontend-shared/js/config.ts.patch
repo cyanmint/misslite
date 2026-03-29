@@ -1,8 +1,12 @@
 diff --git a/packages/frontend-shared/js/config.ts b/packages/frontend-shared/js/config.ts
-index 8021c4f..64c9b98 100644
+index 8021c4f..eae4c5f 100644
 --- a/packages/frontend-shared/js/config.ts
 +++ b/packages/frontend-shared/js/config.ts
-@@ -5,6 +5,75 @@
+@@ -1,23 +1,103 @@
+ /*
+  * SPDX-FileCopyrightText: syuilo and misskey-project
+  * SPDX-License-Identifier: AGPL-3.0-only
+  */
  
 -// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 -const address = new URL(window.document.querySelector<HTMLMetaElement>('meta[property="instance_url"]')?.content || window.location.href);
@@ -23,11 +27,10 @@ index 8021c4f..64c9b98 100644
 +queryDomain = window.location.pathname.substring(2).trim();
 +}
 +
-+// If no search string, default to configured API domain or current hostname,
-+// then redirect to include the domain in the search string.
-+if (!queryDomain) {
-+queryDomain = defaultApiUrl || window.location.hostname;
-+// Add the domain to the URL so that each tab always has an explicit search string
++// If no search string but a defaultApiUrl is configured, redirect to include it.
++// If neither is set, leave queryDomain empty — index.html will show the landing page.
++if (!queryDomain && defaultApiUrl) {
++queryDomain = defaultApiUrl;
 +const newUrl = window.location.origin + window.location.pathname + '?' + queryDomain + window.location.hash;
 +window.history.replaceState({}, '', newUrl);
 +}
@@ -57,6 +60,7 @@ index 8021c4f..64c9b98 100644
 +// Construct API URL from domain
 +const determineApiUrl = (): string => {
 +const domain = apiDomain;
++if (!domain) return '';
 +if (domain.startsWith('http') && domain.includes('/api')) {
 +return domain;
 +}
@@ -69,6 +73,7 @@ index 8021c4f..64c9b98 100644
 +
 +const determineWsOrigin = (): string => {
 +const domain = apiDomain;
++if (!domain) return '';
 +if (domain.startsWith('http')) {
 +try { return new URL(domain).origin; } catch { return window.location.origin; }
 +}
@@ -80,7 +85,8 @@ index 8021c4f..64c9b98 100644
 +};
 +
  export const host = address.host;
-@@ -13,5 +82,5 @@ export const url = address.origin;
+ export const hostname = address.hostname;
+ export const url = address.origin;
  export const port = address.port;
 -export const apiUrl = window.location.origin + '/api';
 -export const wsOrigin = window.location.origin;
@@ -89,7 +95,7 @@ index 8021c4f..64c9b98 100644
 +export const wsOrigin = determineWsOrigin();
 +export const lang = scopedGet('lang') ?? localStorage.getItem('lang') ?? 'en-US';
  export const langs = _LANGS_;
-@@ -19,5 +88,15 @@ export const version = _VERSION_;
+ export const version = _VERSION_;
  export const instanceName = (siteName === 'Misskey' || siteName == null) ? host : siteName;
 -export const ui = localStorage.getItem('ui');
 -export const debug = localStorage.getItem('debug') === 'true';
