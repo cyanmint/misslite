@@ -1,0 +1,23 @@
+diff --git a/packages/frontend/src/utility/domain-sanitize.ts b/packages/frontend/src/utility/domain-sanitize.ts
+new file mode 100644
+index 0000000..e074482
+--- /dev/null
++++ b/packages/frontend/src/utility/domain-sanitize.ts
+@@ -0,0 +1,17 @@
++/*
++ * SPDX-FileCopyrightText: syuilo and misskey-project
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++/**
++ * Sanitize domain string for safe use as storage key
++ * Removes protocol, path, and special characters
++ * @param domain - Domain string to sanitize (e.g., 'https://example.com/path' or 'example.com')
++ * @returns Sanitized domain safe for use as storage key (e.g., 'example.com')
++ */
++export function sanitizeDomain(domain: string): string {
++return domain
++.replace(/^https?:\/\//, '') // Remove protocol
++.replace(/\/.*$/, '') // Remove path
++.replace(/[^a-zA-Z0-9.-]/g, '_'); // Replace special chars with underscore
++}

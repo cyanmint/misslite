@@ -42,8 +42,7 @@ jobs:
       - name: Apply patches
         run: |
           cd misskey-build
-          git apply --whitespace=fix ../patches/0001-add-select-server.patch
-          git apply --whitespace=fix ../patches/0002-standalone-build.patch
+          find ../patches -name "*.patch" -type f | sort | while read -r p; do patch -p1 --fuzz=3 < "$p"; done
 
       - name: Install dependencies
         run: |

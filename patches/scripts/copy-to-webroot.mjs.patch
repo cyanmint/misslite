@@ -1,0 +1,75 @@
+diff --git a/scripts/copy-to-webroot.mjs b/scripts/copy-to-webroot.mjs
+new file mode 100644
+index 0000000..08684f0
+--- /dev/null
++++ b/scripts/copy-to-webroot.mjs
+@@ -0,0 +1,69 @@
++// SPDX-License-Identifier: CC0-1.0
++// Copy built assets to webroot for standalone deployment
++
++import { cpSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
++import { resolve, dirname } from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++const __dirname = dirname(fileURLToPath(import.meta.url));
++const root = resolve(__dirname, '..');
++const webroot = resolve(root, 'webroot');
++
++function copyIfExists(src, dest) {
++if (existsSync(src)) {
++mkdirSync(dirname(dest), { recursive: true });
++cpSync(src, dest, { recursive: true });
++console.log(`[copy] ${src} -> ${dest}`);
++} else {
++console.warn(`[skip] ${src} (not found)`);
++}
++}
++
++// Service worker
++copyIfExists(resolve(root, 'built/_sw_dist_/sw.js'), resolve(webroot, 'sw.js'));
++
++// Frontend embed
++if (existsSync(resolve(root, 'built/_frontend_embed_vite_'))) {
++cpSync(resolve(root, 'built/_frontend_embed_vite_'), resolve(webroot, 'embed_vite'), { recursive: true });
++console.log('[copy] frontend embed assets');
++}
++
++// i18n locales
++const localesDir = resolve(root, 'built/_frontend_dist_/locales');
++if (existsSync(localesDir)) {
++mkdirSync(resolve(webroot, 'locales'), { recursive: true });
++for (const f of readdirSync(localesDir)) {
++if (f.endsWith('.json')) {
++cpSync(resolve(localesDir, f), resolve(webroot, 'locales', f));
++}
++}
++console.log('[copy] locale files');
++}
++
++// Frontend client assets
++const clientDir = resolve(root, 'built/_frontend_dist_/client');
++if (existsSync(clientDir)) {
++cpSync(clientDir, resolve(webroot, 'client'), { recursive: true });
++console.log('[copy] frontend client assets');
++}
++
++// Fluent emojis
++const emojiDir = resolve(root, 'built/_frontend_dist_/fluent-emoji');
++if (existsSync(emojiDir)) {
++cpSync(emojiDir, resolve(webroot, 'fluent-emoji'), { recursive: true });
++console.log('[copy] fluent emoji assets');
++}
++
++// Backend static assets (favicon, icons, etc.)
++const backendAssets = resolve(root, 'packages/backend/assets');
++if (existsSync(backendAssets)) {
++for (const f of ['favicon.ico', 'apple-touch-icon.png']) {
++copyIfExists(resolve(backendAssets, f), resolve(webroot, f));
++}
++if (existsSync(resolve(backendAssets, 'icons'))) {
++cpSync(resolve(backendAssets, 'icons'), resolve(webroot, 'icons'), { recursive: true });
++console.log('[copy] icon assets');
++}
++}
++
++console.log('[copy] Done!');

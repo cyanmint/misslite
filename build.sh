@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: CC0-1.0
-# This file is dedicated to the public domain under CC0-1.0.
-#
 # Misslite frontend build script
 # Clones misskey, applies patches, builds only the frontend.
-#
 # Usage: ./build.sh [misskey-ref]
 #   misskey-ref: git ref to clone (default: develop)
-#
 # Output: misskey-build/webroot/ directory with built frontend
 
 set -euo pipefail
@@ -37,12 +33,13 @@ cd "${BUILD_DIR}"
 echo "[build] Initializing submodules..."
 git submodule update --init --depth=1
 
-# Step 2: Apply patches
-echo "[build] Applying patch 1: select server feature..."
-git apply --whitespace=fix "${SCRIPT_DIR}/patches/0001-add-select-server.patch"
-
-echo "[build] Applying patch 2: standalone build support..."
-git apply --whitespace=fix "${SCRIPT_DIR}/patches/0002-standalone-build.patch"
+# Step 2: Apply per-file patches (with fuzz for upstream compatibility)
+echo "[build] Applying patches..."
+find "${SCRIPT_DIR}/patches" -name '*.patch' -type f | sort | while read -r patchfile; do
+  relpath="${patchfile#${SCRIPT_DIR}/patches/}"
+  echo "[build]   Applying: ${relpath}"
+  patch -p1 --fuzz=3 < "${patchfile}"
+done
 
 # Step 3: Install and build
 echo "[build] Installing dependencies..."
@@ -67,4 +64,3 @@ cp built/_frontend_dist_/locales/*.json webroot/locales/
 
 echo "[build] Build complete!"
 echo "[build] Output: ${BUILD_DIR}/webroot/"
-

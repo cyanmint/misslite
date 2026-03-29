@@ -145,3 +145,5 @@ webroot/
 # Worker
 worker/node_modules/
 worker/.wrangler/
+worker/node_modules
+misskey-build

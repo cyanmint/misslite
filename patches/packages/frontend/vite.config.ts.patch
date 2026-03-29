@@ -1,0 +1,9 @@
+diff --git a/packages/frontend/vite.config.ts b/packages/frontend/vite.config.ts
+index 260d121..e81f370 100644
+--- a/packages/frontend/vite.config.ts
++++ b/packages/frontend/vite.config.ts
+@@ -91,3 +91,3 @@ export function getConfig(): UserConfig {
+ 	return {
+-		base: '/vite/',
++		base: './',
+ 

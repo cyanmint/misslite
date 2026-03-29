@@ -1,0 +1,15 @@
+diff --git a/package.json b/package.json
+index 3797dfd..0c602c0 100644
+--- a/package.json
++++ b/package.json
+@@ -27,3 +27,3 @@
+ 		"build-assets": "node ./scripts/build-assets.mjs",
+-		"build": "pnpm build-pre && pnpm -r build && pnpm build-assets",
++		"build": "pnpm build-pre && pnpm -r build && pnpm build-assets && pnpm run copy-to-webroot",
+ 		"build-storybook": "pnpm --filter frontend build-storybook",
+@@ -52,3 +52,4 @@
+ 		"clean-all": "node scripts/clean-all.mjs",
+-		"cleanall": "pnpm clean-all"
++		"cleanall": "pnpm clean-all",
++		"copy-to-webroot": "node scripts/copy-to-webroot.mjs"
+ 	},

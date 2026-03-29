@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: CC0-1.0
-# This file is dedicated to the public domain under CC0-1.0.
 name: Build Frontend
 
 on:
@@ -21,42 +20,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-
+      
       - name: Enable corepack
         run: corepack enable
-
+      
       - name: Clone misskey
         run: |
           git clone --depth=1 https://github.com/misskey-dev/misskey.git misskey-build
           cd misskey-build
           git submodule update --init --depth=1
-
+      
       - name: Apply patches
         run: |
           cd misskey-build
-          git apply --whitespace=fix ../patches/0001-add-select-server.patch
-          git apply --whitespace=fix ../patches/0002-standalone-build.patch
-
+          find ../patches -name '*.patch' -type f | sort | while read -r patchfile; do
+            echo "Applying: ${patchfile#../patches/}"
+            patch -p1 --fuzz=3 < "$patchfile"
+          done
+      
       - name: Install dependencies
         run: |
           cd misskey-build
           corepack pnpm install
-
+      
       - name: Build
         run: |
           cd misskey-build
           corepack pnpm run build
-
+      
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: frontend
           path: misskey-build/webroot/
-
+      
       - name: Deploy to gh-pages
         run: |
           cd misskey-build/webroot
@@ -68,6 +69,5 @@ jobs:
           echo misslite-cf.cyanmint.net >> CNAME
           git add -A
           git commit -m "Deploy frontend"
-          # Use --amend on subsequent pushes (gh-pages has no real history)
           git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
           git push --force origin gh-pages

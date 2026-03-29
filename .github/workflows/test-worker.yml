@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: CC0-1.0
+name: Test (worker)
+
+on:
+  push:
+    branches:
+      - default
+      - 'copilot/**'
+    paths:
+      - 'worker/**'
+      - '.github/workflows/test-worker.yml'
+  pull_request:
+    paths:
+      - 'worker/**'
+      - '.github/workflows/test-worker.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Worker API tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: cd worker && npm install
+
+      - name: Run tests
+        run: cd worker && npx vitest run

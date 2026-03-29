@@ -1,0 +1,16 @@
+diff --git a/packages/frontend/public/config.js b/packages/frontend/public/config.js
+new file mode 100644
+index 0000000..42233eb
+--- /dev/null
++++ b/packages/frontend/public/config.js
+@@ -0,0 +1,10 @@
++/*
++ * SPDX-FileCopyrightText: syuilo and misskey-project
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++// Frontend Runtime Configuration
++window.MISSKEY_CONFIG = {
++allowApiSelection: true,
++defaultApiUrl: '',
++};
