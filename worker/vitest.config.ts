@@ -4,6 +4,7 @@ export default defineWorkersConfig({
 	test: {
 		poolOptions: {
 			workers: {
+				isolatedStorage: false,
 				wrangler: { configPath: './wrangler.toml' },
 				miniflare: {
 					d1Databases: { DB: 'test-db' },

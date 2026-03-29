@@ -2,10 +2,12 @@ import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:
 import { describe, it, expect } from 'vitest';
 import worker from '../index.js';
 
+const BASE_URL = 'http://localhost';
+
 type WorkerEnv = typeof env;
 
 async function callApi(path: string, body: Record<string, unknown> = {}): Promise<{ status: number; data: any }> {
-const request = new Request(`http://localhost/api/${path}`, {
+const request = new Request(`${BASE_URL}/api/${path}`, {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify(body),
@@ -22,7 +24,7 @@ describe('MissLite Worker API', () => {
 // ---- Instance ----
 
 it('GET / returns server info', async () => {
-const request = new Request('http://localhost/', { method: 'GET' });
+const request = new Request(`${BASE_URL}/`, { method: 'GET' });
 const ctx = createExecutionContext();
 const response = await worker.fetch(request, env as unknown as WorkerEnv, ctx);
 await waitOnExecutionContext(ctx);
@@ -60,7 +62,7 @@ expect(status).toBe(404);
 });
 
 it('OPTIONS returns CORS headers', async () => {
-const request = new Request('http://localhost/api/meta', { method: 'OPTIONS' });
+const request = new Request(`${BASE_URL}/api/meta`, { method: 'OPTIONS' });
 const ctx = createExecutionContext();
 const response = await worker.fetch(request, env as unknown as WorkerEnv, ctx);
 await waitOnExecutionContext(ctx);

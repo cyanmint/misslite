@@ -13,10 +13,48 @@ export function generateId(): string {
 	return id;
 }
 
+const PBKDF2_ITERATIONS = 100_000;
+const PBKDF2_HASH = 'SHA-256';
+const PBKDF2_BITS = 256;
+
+function bytesToHex(bytes: Uint8Array): string {
+	return [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex: string): Uint8Array {
+	const pairs = hex.match(/.{2}/g) ?? [];
+	return new Uint8Array(pairs.map(h => parseInt(h, 16)));
+}
+
+async function pbkdf2(pw: string, salt: Uint8Array): Promise<string> {
+	const keyMaterial = await crypto.subtle.importKey(
+		'raw',
+		new TextEncoder().encode(pw),
+		'PBKDF2',
+		false,
+		['deriveBits'],
+	);
+	const bits = await crypto.subtle.deriveBits(
+		{ name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: PBKDF2_HASH },
+		keyMaterial,
+		PBKDF2_BITS,
+	);
+	return bytesToHex(new Uint8Array(bits));
+}
+
 export async function hashPassword(pw: string): Promise<string> {
-	const data = new TextEncoder().encode(pw);
-	const hash = await crypto.subtle.digest('SHA-256', data);
-	return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
+	const salt = crypto.getRandomValues(new Uint8Array(16));
+	const hash = await pbkdf2(pw, salt);
+	return `${bytesToHex(salt)}:${hash}`;
+}
+
+export async function verifyPassword(pw: string, stored: string): Promise<boolean> {
+	const parts = stored.split(':');
+	if (parts.length !== 2) return false;
+	const [saltHex, expectedHash] = parts;
+	const salt = hexToBytes(saltHex);
+	const actualHash = await pbkdf2(pw, salt);
+	return actualHash === expectedHash;
 }
 
 export function cors(headers?: HeadersInit): Headers {

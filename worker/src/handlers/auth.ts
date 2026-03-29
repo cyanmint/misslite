@@ -3,7 +3,7 @@
  */
 
 import type { Handler } from '../types.js';
-import { json, err, generateId, hashPassword, packUser } from '../helpers.js';
+import { json, err, generateId, hashPassword, verifyPassword, packUser } from '../helpers.js';
 import type { DbUser } from '../types.js';
 
 export const meta: Handler = async (db) => {
@@ -84,8 +84,7 @@ export const signin: Handler = async (db, body) => {
 	if (!user) return err('No such user', 401);
 	if (user.is_suspended) return err('Account is suspended', 403);
 
-	const pwHash = await hashPassword(password);
-	if (user.password_hash !== pwHash) return err('Incorrect password', 401);
+	if (!await verifyPassword(password, user.password_hash)) return err('Incorrect password', 401);
 
 	const token = generateId() + generateId();
 	await db.prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)').bind(token, user.id).run();
