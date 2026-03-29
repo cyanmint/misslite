@@ -77,9 +77,16 @@ jobs:
           corepack pnpm -F icons-subsetter build
           corepack pnpm -F frontend build
 
+      - name: Copy to webroot
+        run: |
+          cd misskey-build
+          node scripts/copy-to-webroot.mjs
+
       - name: Verify build output
         run: |
           cd misskey-build
+          test -f built/_frontend_vite_/index.html || { echo "FAIL: index.html not in vite output"; exit 1; }
+          ls built/_frontend_vite_/scripts/*.js > /dev/null 2>&1 || { echo "FAIL: no JS bundles in vite output"; exit 1; }
           test -f webroot/index.html || { echo "FAIL: webroot/index.html not generated"; exit 1; }
           ls webroot/scripts/*.js > /dev/null 2>&1 || { echo "FAIL: no JS bundles in webroot"; exit 1; }
           echo "Build output verified."

@@ -3,12 +3,10 @@
  */
 
 import type { Handler } from '../types.js';
-import { ensureSchema } from '../schema.js';
 import { json, err, generateId, hashPassword, packUser } from '../helpers.js';
 import type { DbUser } from '../types.js';
 
 export const meta: Handler = async (db) => {
-	await ensureSchema(db);
 	const initialized = await db.prepare("SELECT value FROM meta WHERE key = 'initialized'").first<{ value: string }>();
 	const name = await db.prepare("SELECT value FROM meta WHERE key = 'name'").first<{ value: string }>();
 	const desc = await db.prepare("SELECT value FROM meta WHERE key = 'description'").first<{ value: string }>();
@@ -55,7 +53,6 @@ export const meta: Handler = async (db) => {
 };
 
 export const adminAccountsCreate: Handler = async (db, body, env) => {
-	await ensureSchema(db);
 	const initialized = await db.prepare("SELECT value FROM meta WHERE key = 'initialized'").first();
 	if (initialized) return err('Already initialized', 403);
 

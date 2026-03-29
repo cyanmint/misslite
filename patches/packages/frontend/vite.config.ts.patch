@@ -1,5 +1,5 @@
 diff --git a/packages/frontend/vite.config.ts b/packages/frontend/vite.config.ts
-index 260d121..78932d0 100644
+index 260d121..a88ac0c 100644
 --- a/packages/frontend/vite.config.ts
 +++ b/packages/frontend/vite.config.ts
 @@ -181,6 +181,3 @@ export function getConfig(): UserConfig {
@@ -10,8 +10,3 @@ index 260d121..78932d0 100644
 -				},
 +				input: 'index.html',
  				external: externalPackages.map(p => p.match),
-@@ -209,3 +206,3 @@ export function getConfig(): UserConfig {
- 			cssCodeSplit: true,
--			outDir: __dirname + '/../../built/_frontend_vite_',
-+			outDir: __dirname + '/../../webroot',
- 			assetsDir: '.',

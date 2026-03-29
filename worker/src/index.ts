@@ -7,6 +7,7 @@
 
 import type { Env, Handler } from './types.js';
 import { cors, json, err } from './helpers.js';
+import { ensureSchema } from './schema.js';
 import { meta, adminAccountsCreate, signin, signup } from './handlers/auth.js';
 import { currentUser, updateUser, showUser } from './handlers/users.js';
 import { createNote, showNote, deleteNote, timeline, userNotes, createReaction, deleteReaction } from './handlers/notes.js';
@@ -71,6 +72,7 @@ export default {
 		}
 
 		try {
+			await ensureSchema(env.DB);
 			return await handler(env.DB, body, env);
 		} catch (e) {
 			console.error('Handler error:', e);
