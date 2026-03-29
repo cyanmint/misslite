@@ -1,9 +1,9 @@
 diff --git a/packages/frontend/index.html b/packages/frontend/index.html
 new file mode 100644
-index 0000000..94d9301
+index 0000000..2f9ebe9
 --- /dev/null
 +++ b/packages/frontend/index.html
-@@ -0,0 +1,99 @@
+@@ -0,0 +1,100 @@
 +<!DOCTYPE html>
 +<!--
 +SPDX-FileCopyrightText: syuilo and misskey-project
@@ -101,5 +101,6 @@ index 0000000..94d9301
 +</div>
 +</div>
 +<div id="misskey_app"></div>
++<script type="module" src="./src/_boot_.ts"></script>
 +</body>
 +</html>
