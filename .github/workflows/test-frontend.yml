@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: CC0-1.0
-# Adapted from https://github.com/misskey-dev/misskey .github/workflows/test-frontend.yml
+# Verify that patches apply cleanly and the patched frontend builds successfully.
+# This does NOT run upstream Misskey unit tests (which don't cover our patches).
 name: Test (frontend)
 
 on:
@@ -9,18 +10,18 @@ on:
       - 'copilot/**'
     paths:
       - 'patches/**'
+      - 'build.sh'
       - '.github/workflows/test-frontend.yml'
-      - '.github/misskey/test.yml'
   pull_request:
     paths:
       - 'patches/**'
+      - 'build.sh'
       - '.github/workflows/test-frontend.yml'
-      - '.github/misskey/test.yml'
   workflow_dispatch:
 
 jobs:
-  vitest:
-    name: Unit tests (frontend)
+  patch-and-build:
+    name: Verify patches apply & build
     runs-on: ubuntu-latest
 
     steps:
@@ -39,25 +40,46 @@ jobs:
           cd misskey-build
           git submodule update --init --depth=1
 
-      - name: Apply patches
+      - name: Apply patches (must all succeed)
         run: |
           cd misskey-build
-          find ../patches -name "*.patch" -type f | sort | while read -r p; do patch -p1 --fuzz=3 < "$p"; done
+          find ../patches -name "*.patch" -type f | sort | while read -r p; do
+            echo "Applying: ${p#../patches/}"
+            patch -p1 --fuzz=3 < "$p"
+          done
+
+      - name: Verify patched files exist
+        run: |
+          cd misskey-build
+          test -f packages/frontend/index.html || { echo "FAIL: index.html missing"; exit 1; }
+          grep -q '_boot_' packages/frontend/index.html || { echo "FAIL: boot script missing from index.html"; exit 1; }
+          grep -q "input: 'index.html'" packages/frontend/vite.config.ts || { echo "FAIL: vite input not set to index.html"; exit 1; }
+          grep -q "webroot" packages/frontend/vite.config.ts || { echo "FAIL: vite outDir not set to webroot"; exit 1; }
+          test -f packages/frontend/public/config.js || { echo "FAIL: config.js missing"; exit 1; }
+          test -f packages/frontend/public/app.webmanifest || { echo "FAIL: app.webmanifest missing"; exit 1; }
+          test -f packages/frontend/src/utility/domain-sanitize.ts || { echo "FAIL: domain-sanitize.ts missing"; exit 1; }
+          test -f scripts/copy-to-webroot.mjs || { echo "FAIL: copy-to-webroot.mjs missing"; exit 1; }
+          echo "All patched files verified."
 
       - name: Install dependencies
         run: |
           cd misskey-build
           corepack pnpm install
 
-      - name: Copy test config
-        run: cp .github/misskey/test.yml misskey-build/.config
-
-      - name: Build
+      - name: Build frontend
         run: |
           cd misskey-build
-          corepack pnpm run build
+          node scripts/build-pre.mjs
+          corepack pnpm -F i18n build
+          corepack pnpm -F misskey-js build
+          corepack pnpm -F misskey-bubble-game build
+          corepack pnpm -F misskey-reversi build
+          corepack pnpm -F icons-subsetter build
+          corepack pnpm -F frontend build
 
-      - name: Test
+      - name: Verify build output
         run: |
           cd misskey-build
-          corepack pnpm --filter frontend test-and-coverage
+          test -f webroot/index.html || { echo "FAIL: webroot/index.html not generated"; exit 1; }
+          ls webroot/scripts/*.js > /dev/null 2>&1 || { echo "FAIL: no JS bundles in webroot"; exit 1; }
+          echo "Build output verified."
