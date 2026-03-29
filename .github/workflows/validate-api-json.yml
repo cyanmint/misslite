@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: CC0-1.0
+# Adapted from https://github.com/misskey-dev/misskey/blob/develop/.github/workflows/validate-api-json.yml
+#
+# Validates the api.json file using Redocly CLI.
+name: api.json validation
+
+on:
+  push:
+    branches:
+      - default
+    paths:
+      - api.json
+      - .github/workflows/validate-api-json.yml
+  pull_request:
+    paths:
+      - api.json
+      - .github/workflows/validate-api-json.yml
+
+jobs:
+  validate-api-json:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Redocly CLI
+      run: npm i -g @redocly/cli
+    - name: Validate api.json
+      run: npx @redocly/cli lint --extends=minimal api.json
