@@ -60,6 +60,11 @@ corepack pnpm -F icons-subsetter build
 echo "[build] Building frontend..."
 corepack pnpm -F frontend build
 
+# Copy locale JSON files to webroot for runtime locale loading
+echo "[build] Copying locale files..."
+mkdir -p webroot/locales
+cp built/_frontend_dist_/locales/*.json webroot/locales/
+
 echo "[build] Build complete!"
 echo "[build] Output: ${BUILD_DIR}/webroot/"
 

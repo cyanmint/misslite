@@ -1,3 +1,16 @@
+diff --git a/packages/frontend-shared/js/locale.ts b/packages/frontend-shared/js/locale.ts
+index 38584fb..2a1e4de 100644
+--- a/packages/frontend-shared/js/locale.ts
++++ b/packages/frontend-shared/js/locale.ts
+@@ -7,7 +7,7 @@ import { lang, version } from '@@/js/config.js';
+ import type { Locale } from 'i18n';
+ 
+ // ここはビルド時に const locale = JSON.parse("...") みたいな感じで置き換えられるので top-level await は消える
+-export let locale: Locale = await window.fetch(`/assets/locales/${lang}.${version}.json`).then(r => r.json(), () => null);
++export let locale: Locale = await window.fetch(`./locales/${lang}.${version}.json`).then(r => r.json(), () => null);
+ 
+ export function updateLocale(newLocale: Locale): void {
+ 	locale = newLocale;
 diff --git a/packages/frontend/build.ts b/packages/frontend/build.ts
 index 0f605c7..f439b04 100644
 --- a/packages/frontend/build.ts
@@ -11,6 +24,19 @@ index 0f605c7..f439b04 100644
  
  /**
   * @return {Promise<void>}
+diff --git a/packages/frontend/src/boot/common.ts b/packages/frontend/src/boot/common.ts
+index 2b522d3..4133b08 100644
+--- a/packages/frontend/src/boot/common.ts
++++ b/packages/frontend/src/boot/common.ts
+@@ -88,7 +88,7 @@ export async function common(createVue: () => Promise<App<Element>>) {
+ 					window.setTimeout(resolve, 500);
+ 				});
+ 				// fetch with cache: 'no-store' to ensure the latest locale is fetched
+-				await window.fetch(`/assets/locales/${lang}.${version}.json`, { cache: 'no-store' }).then(async res => res.status === 200 && await res.text());
++				await window.fetch(`./locales/${lang}.${version}.json`, { cache: 'no-store' }).then(async res => res.status === 200 && await res.text());
+ 				window.location.reload();
+ 			}
+ 		});
 diff --git a/packages/frontend/vite.config.ts b/packages/frontend/vite.config.ts
 index 260d121..15556ac 100644
 --- a/packages/frontend/vite.config.ts
