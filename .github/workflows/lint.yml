@@ -1,0 +1,104 @@
+# SPDX-License-Identifier: CC0-1.0
+# Adapted from https://github.com/misskey-dev/misskey .github/workflows/lint.yml
+name: Lint
+
+on:
+  push:
+    branches:
+      - default
+      - 'copilot/**'
+    paths:
+      - 'patches/**'
+      - '.github/workflows/lint.yml'
+  pull_request:
+    paths:
+      - 'patches/**'
+      - '.github/workflows/lint.yml'
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        workspace:
+          - frontend
+          - frontend-shared
+          - sw
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Clone misskey
+        run: |
+          git clone --depth=1 https://github.com/misskey-dev/misskey.git misskey-build
+          cd misskey-build
+          git submodule update --init --depth=1
+
+      - name: Apply patches
+        run: |
+          cd misskey-build
+          git apply --whitespace=fix ../patches/0001-add-select-server.patch
+          git apply --whitespace=fix ../patches/0002-standalone-build.patch
+
+      - name: Install dependencies
+        run: |
+          cd misskey-build
+          corepack pnpm install
+
+      - name: Lint
+        run: |
+          cd misskey-build
+          corepack pnpm --filter ${{ matrix.workspace }} run eslint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        workspace:
+          - frontend
+          - sw
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Clone misskey
+        run: |
+          git clone --depth=1 https://github.com/misskey-dev/misskey.git misskey-build
+          cd misskey-build
+          git submodule update --init --depth=1
+
+      - name: Apply patches
+        run: |
+          cd misskey-build
+          git apply --whitespace=fix ../patches/0001-add-select-server.patch
+          git apply --whitespace=fix ../patches/0002-standalone-build.patch
+
+      - name: Install dependencies
+        run: |
+          cd misskey-build
+          corepack pnpm install
+
+      - name: Build dependencies
+        run: |
+          cd misskey-build
+          corepack pnpm --filter "${{ matrix.workspace }}^..." run build
+
+      - name: Typecheck
+        run: |
+          cd misskey-build
+          corepack pnpm --filter ${{ matrix.workspace }} run typecheck

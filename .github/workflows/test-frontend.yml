@@ -1,0 +1,64 @@
+# SPDX-License-Identifier: CC0-1.0
+# Adapted from https://github.com/misskey-dev/misskey .github/workflows/test-frontend.yml
+name: Test (frontend)
+
+on:
+  push:
+    branches:
+      - default
+      - 'copilot/**'
+    paths:
+      - 'patches/**'
+      - '.github/workflows/test-frontend.yml'
+      - '.github/misskey/test.yml'
+  pull_request:
+    paths:
+      - 'patches/**'
+      - '.github/workflows/test-frontend.yml'
+      - '.github/misskey/test.yml'
+  workflow_dispatch:
+
+jobs:
+  vitest:
+    name: Unit tests (frontend)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Clone misskey
+        run: |
+          git clone --depth=1 https://github.com/misskey-dev/misskey.git misskey-build
+          cd misskey-build
+          git submodule update --init --depth=1
+
+      - name: Apply patches
+        run: |
+          cd misskey-build
+          git apply --whitespace=fix ../patches/0001-add-select-server.patch
+          git apply --whitespace=fix ../patches/0002-standalone-build.patch
+
+      - name: Install dependencies
+        run: |
+          cd misskey-build
+          corepack pnpm install
+
+      - name: Copy test config
+        run: cp .github/misskey/test.yml misskey-build/.config
+
+      - name: Build
+        run: |
+          cd misskey-build
+          corepack pnpm run build
+
+      - name: Test
+        run: |
+          cd misskey-build
+          corepack pnpm --filter frontend test-and-coverage

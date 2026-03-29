@@ -22,6 +22,19 @@ index 3797dfd..b858074 100644
  	},
  	"dependencies": {
  		"cssnano": "7.1.3",
+diff --git a/packages/frontend-shared/js/emoji-base.ts b/packages/frontend-shared/js/emoji-base.ts
+index 5fbbc4e..1151bfc 100644
+--- a/packages/frontend-shared/js/emoji-base.ts
++++ b/packages/frontend-shared/js/emoji-base.ts
+@@ -3,7 +3,7 @@
+  * SPDX-License-Identifier: AGPL-3.0-only
+  */
+ 
+-const twemojiSvgBase = '/twemoji';
++const twemojiSvgBase = 'https://cdn.jsdelivr.net/npm/@discordapp/twemoji@16.0.1/dist/svg';
+ const fluentEmojiPngBase = '/fluent-emoji';
+ 
+ export function char2twemojiFilePath(char: string): string {
 diff --git a/packages/frontend-shared/js/locale.ts b/packages/frontend-shared/js/locale.ts
 index 38584fb..ecec80e 100644
 --- a/packages/frontend-shared/js/locale.ts
@@ -62,7 +75,7 @@ index 0f605c7..f439b04 100644
   * @return {Promise<void>}
 diff --git a/packages/frontend/index.html b/packages/frontend/index.html
 new file mode 100644
-index 0000000..4a79d56
+index 0000000..1a22816
 --- /dev/null
 +++ b/packages/frontend/index.html
 @@ -0,0 +1,144 @@
@@ -118,7 +131,7 @@ index 0000000..4a79d56
 +			const colorScheme = localStorage.getItem('colorScheme') || 'light';
 +			document.documentElement.setAttribute('data-color-scheme', colorScheme);
 +			document.documentElement.style.setProperty('color-scheme', colorScheme);
-+			
++
 +			// Hardcoded default themes for instant loading
 +			const defaultLightTheme = {
 +				accent: '#86b300',
@@ -134,7 +147,7 @@ index 0000000..4a79d56
 +				buttonBg: '#e8eaec',
 +				buttonHoverBg: '#dfe1e3',
 +			};
-+			
++
 +			const defaultDarkTheme = {
 +				accent: '#86b300',
 +				bg: '#000',
@@ -149,19 +162,19 @@ index 0000000..4a79d56
 +				buttonBg: '#1e1e1e',
 +				buttonHoverBg: '#2d2d2d',
 +			};
-+			
++
 +			// Apply default theme immediately
 +			const defaultTheme = colorScheme === 'dark' ? defaultDarkTheme : defaultLightTheme;
 +			for (const [k, v] of Object.entries(defaultTheme)) {
 +				document.documentElement.style.setProperty(`--MI_THEME-${k}`, v);
 +			}
-+			
++
 +			// Set theme-color meta tag
 +			const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 +			if (themeColorMeta) {
 +				themeColorMeta.setAttribute('content', defaultTheme.htmlThemeColor);
 +			}
-+			
++
 +			// Asynchronously try to load custom theme from localStorage
 +			// This won't block page rendering
 +			const loadCustomTheme = () => {
@@ -181,7 +194,7 @@ index 0000000..4a79d56
 +					}
 +				}
 +			};
-+			
++
 +			// Use requestIdleCallback if available, otherwise use setTimeout
 +			if (typeof requestIdleCallback !== 'undefined') {
 +				requestIdleCallback(loadCustomTheme, { timeout: 100 });
@@ -263,14 +276,14 @@ index 0000000..168d46b
 +}
 diff --git a/packages/frontend/public/config.js b/packages/frontend/public/config.js
 new file mode 100644
-index 0000000..58b5ff9
+index 0000000..b8236e2
 --- /dev/null
 +++ b/packages/frontend/public/config.js
 @@ -0,0 +1,24 @@
 +/*
 + * SPDX-FileCopyrightText: syuilo and misskey-project
 + * SPDX-License-Identifier: AGPL-3.0-only
-+ * 
++ *
 + * NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
 + * The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
 + */
@@ -283,7 +296,7 @@ index 0000000..58b5ff9
 +	// Set to false to disable API server selection and use only defaultApiUrl
 +	// When true, users see an "API Server" button on the welcome page
 +	allowApiSelection: true,
-+	
++
 +	// Default API server domain (when not using custom selection)
 +	// Leave empty to use the frontend host (window.location.hostname)
 +	// Specify just the domain name, e.g., 'misskey.io' or 'api.example.com'
@@ -292,7 +305,7 @@ index 0000000..58b5ff9
 +	defaultApiUrl: '',
 +};
 diff --git a/packages/frontend/public/loader/boot.js b/packages/frontend/public/loader/boot.js
-index 8aafb28..545030b 100644
+index 8aafb28..c5ae032 100644
 --- a/packages/frontend/public/loader/boot.js
 +++ b/packages/frontend/public/loader/boot.js
 @@ -1,3 +1,11 @@
@@ -324,7 +337,7 @@ index 8aafb28..545030b 100644
 +	const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 +	const savedDarkMode = localStorage.getItem('darkMode');
 +	const useDarkMode = savedDarkMode !== null ? savedDarkMode === 'true' : prefersDark;
-+	
++
 +	// Default theme colors (pre-compiled from l-light.json5 and d-dark.json5)
 +	const defaultLightTheme = {
 +		accent: 'rgb(134, 179, 0)',
@@ -335,7 +348,7 @@ index 8aafb28..545030b 100644
 +		link: 'rgb(68, 164, 193)',
 +		modalBg: 'rgba(0, 0, 0, 0.3)',
 +	};
-+	
++
 +	const defaultDarkTheme = {
 +		accent: 'rgb(134, 179, 0)',
 +		bg: 'rgb(0, 0, 0)',
@@ -345,7 +358,7 @@ index 8aafb28..545030b 100644
 +		link: 'rgb(68, 164, 193)',
 +		modalBg: 'rgba(0, 0, 0, 0.5)',
 +	};
-+	
++
  	if (!isSafeMode) {
  		const theme = localStorage.getItem('theme');
  		if (theme) {
@@ -367,7 +380,7 @@ index 8aafb28..545030b 100644
 +			const defaultTheme = useDarkMode ? defaultDarkTheme : defaultLightTheme;
 +			for (const [k, v] of Object.entries(defaultTheme)) {
 +				document.documentElement.style.setProperty(`--MI_THEME-${k}`, v.toString());
-+				
++
  				// HTMLの theme-color 適用
  				if (k === 'htmlThemeColor') {
  					for (const tag of document.head.children) {
@@ -517,9 +530,22 @@ index 260d121..c9dea7e 100644
  		worker: {
  			format: 'es',
  		},
+diff --git a/packages/sw/src/scripts/lang.ts b/packages/sw/src/scripts/lang.ts
+index 63ac4ce..7323a28 100644
+--- a/packages/sw/src/scripts/lang.ts
++++ b/packages/sw/src/scripts/lang.ts
+@@ -33,7 +33,7 @@ class SwLang {
+ 
+ 	private async _fetch(): Promise<I18n<Locale>> {
+ 		// Service Workerは何度も起動しそのたびにlocaleを読み込むので、CacheStorageを使う
+-		const localeUrl = `/assets/locales/${await this.lang}.${_VERSION_}.json`;
++		const localeUrl = `/locales/${await this.lang}.${_VERSION_}.json`;
+ 		let localeRes = await caches.match(localeUrl);
+ 
+ 		// _DEV_がtrueの場合は常に最新化
 diff --git a/scripts/copy-to-webroot.mjs b/scripts/copy-to-webroot.mjs
 new file mode 100644
-index 0000000..8a583ec
+index 0000000..2a92ddc
 --- /dev/null
 +++ b/scripts/copy-to-webroot.mjs
 @@ -0,0 +1,116 @@
@@ -527,7 +553,7 @@ index 0000000..8a583ec
 +/*
 + * NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
 + * The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
-+ * 
++ *
 + * SPDX-FileCopyrightText: syuilo and misskey-project
 + * SPDX-License-Identifier: AGPL-3.0-only
 + */

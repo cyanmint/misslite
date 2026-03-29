@@ -1,113 +1,84 @@
 diff --git a/packages/frontend-shared/js/config.ts b/packages/frontend-shared/js/config.ts
-index 8021c4f..fee426f 100644
+index 8021c4f..64c9b98 100644
 --- a/packages/frontend-shared/js/config.ts
 +++ b/packages/frontend-shared/js/config.ts
-@@ -1,18 +1,116 @@
-+/*
-+ * SPDX-FileCopyrightText: syuilo and misskey-project
-+ * SPDX-License-Identifier: AGPL-3.0-only
-+ *
-+ * NOTE: This file was generated with AI assistance (GitHub Copilot) and is not subject to copyright.
-+ * The file as a whole is licensed under AGPL-3.0 as part of the MissLite project.
-+ */
-+
- /*
-  * SPDX-FileCopyrightText: syuilo and misskey-project
+@@ -3,21 +3,100 @@
   * SPDX-License-Identifier: AGPL-3.0-only
   */
  
- // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+-// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 -const address = new URL(window.document.querySelector<HTMLMetaElement>('meta[property="instance_url"]')?.content || window.location.href);
 +const address = new URL(window.location.href);
  const siteName = window.document.querySelector<HTMLMetaElement>('meta[property="og:site_name"]')?.content;
  
 +// Get runtime configuration from config.js (if available)
 +const runtimeConfig = (window as any).MISSKEY_CONFIG || {};
-+// Default to true if config.js doesn't exist or doesn't specify
-+const allowApiSelection = runtimeConfig.allowApiSelection !== false;
 +const defaultApiUrl = runtimeConfig.defaultApiUrl || '';
 +
-+// Check for API domain from query string (entire query string is the domain)
-+// Format: https://frontend.com/?misskey.io (not ?api=misskey.io)
-+// Handle both search string and pathname-embedded query cases
-+let queryString = window.location.search.slice(1); // Remove leading '?'
++// Determine API domain from the search string.
++// Format: https://frontend.com/?misskey.io
++// The entire query string (after ?) is the domain name.
++let queryDomain = window.location.search.slice(1).trim();
 +
-+// Fallback: check if pathname contains query-like pattern (/?domain)
-+// This handles cases where browser or server interprets /?domain incorrectly
-+if (!queryString && window.location.pathname.startsWith('/?') && window.location.pathname.length > 2) {
-+	queryString = window.location.pathname.substring(2); // Extract domain from /?domain
-+	console.log('[Misskey Config] Extracted domain from pathname:', queryString);
++// Fallback: handle pathname-embedded query (/?domain)
++if (!queryDomain && window.location.pathname.startsWith('/?') && window.location.pathname.length > 2) {
++queryDomain = window.location.pathname.substring(2).trim();
 +}
 +
-+const apiDomainFromQuery = queryString && queryString.trim() !== '' ? queryString.trim() : null;
-+
-+// If query string specifies a domain and API selection is allowed, save it to localStorage
-+if (apiDomainFromQuery && allowApiSelection) {
-+	localStorage.setItem('customApiDomain', apiDomainFromQuery);
++// If no search string, default to configured API domain or current hostname,
++// then redirect to include the domain in the search string.
++if (!queryDomain) {
++queryDomain = defaultApiUrl || window.location.hostname;
++// Add the domain to the URL so that each tab always has an explicit search string
++const newUrl = window.location.origin + window.location.pathname + '?' + queryDomain + window.location.hash;
++window.history.replaceState({}, '', newUrl);
 +}
 +
-+// Check for user-selected custom API from localStorage
-+const storedApiDomain = allowApiSelection ? localStorage.getItem('customApiDomain') : null;
++// The API domain is always derived from the search string — no localStorage involved.
++const apiDomain = queryDomain;
 +
-+// Priority: 
-+// If allowApiSelection=false: always use defaultApiUrl (ignore query string)
-+// If allowApiSelection=true: query string > user selection > runtime config > default (current origin)
-+const determineApiDomain = (): string => {
-+	// If API selection is disabled, always use configured value
-+	if (!allowApiSelection) {
-+		return defaultApiUrl || window.location.hostname;
-+	}
-+	
-+	// Use query parameter if available
-+	if (apiDomainFromQuery) {
-+		return apiDomainFromQuery;
-+	}
-+	
-+	// Otherwise use stored domain or default
-+	return storedApiDomain || defaultApiUrl || window.location.hostname;
-+};
++// Build a sanitized key prefix so that each API domain gets its own localStorage partition.
++// This allows two tabs pointing at different servers to maintain independent sessions.
++const domainKey = apiDomain.replace(/[^a-zA-Z0-9.-]/g, '_');
 +
-+const apiDomain = determineApiDomain();
++// Scoped localStorage helpers used by the rest of the frontend.
++// Every key stored via miLocalStorage will be prefixed with the domain key.
++function scopedGet(key: string): string | null {
++return localStorage.getItem(`${domainKey}::${key}`);
++}
 +
-+// Construct API URL and WebSocket origin from domain
++function scopedSet(key: string, value: string): void {
++localStorage.setItem(`${domainKey}::${key}`, value);
++}
++
++// Expose scoped helpers globally so miLocalStorage can use them
++(window as any).__missliteScopedGet = scopedGet;
++(window as any).__missliteScopedSet = scopedSet;
++(window as any).__missliteScopedRemove = (key: string) => localStorage.removeItem(`${domainKey}::${key}`);
++
++// Construct API URL from domain
 +const determineApiUrl = (): string => {
-+	const domain = apiDomain;
-+	// If it already has protocol and /api, use as-is (backward compatibility)
-+	if (domain.startsWith('http') && domain.includes('/api')) {
-+		return domain;
-+	}
-+	// If domain equals the current hostname (no custom domain configured), use the
-+	// current origin so that the correct protocol and port are preserved.
-+	// e.g. http://localhost:61812 → http://localhost:61812/api (not https://localhost/api)
-+	if (domain === window.location.hostname) {
-+		return `${window.location.origin}/api`;
-+	}
-+	// Otherwise construct from a custom domain (always HTTPS for remote servers)
-+	const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-+	const url = `https://${cleanDomain}/api`;
-+	console.log('[Misskey Config] API URL:', url, { apiDomain, origin: window.location.origin });
-+	return url;
++const domain = apiDomain;
++if (domain.startsWith('http') && domain.includes('/api')) {
++return domain;
++}
++if (domain === window.location.hostname) {
++return `${window.location.origin}/api`;
++}
++const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
++return `https://${cleanDomain}/api`;
 +};
 +
 +const determineWsOrigin = (): string => {
-+	const domain = apiDomain;
-+	// If it already has protocol, extract origin
-+	if (domain.startsWith('http')) {
-+		try {
-+			return new URL(domain).origin;
-+		} catch {
-+			return window.location.origin;
-+		}
-+	}
-+	// If domain equals the current hostname, use the current origin (preserves port)
-+	if (domain === window.location.hostname) {
-+		return window.location.origin;
-+	}
-+	// Otherwise construct from a custom domain (always HTTPS for remote servers)
-+	const cleanDomain = domain.replace(/\/.*$/, '');
-+	const origin = `https://${cleanDomain}`;
-+	console.log('[Misskey Config] WebSocket Origin:', origin, { apiDomain, origin: window.location.origin });
-+	return origin;
++const domain = apiDomain;
++if (domain.startsWith('http')) {
++try { return new URL(domain).origin; } catch { return window.location.origin; }
++}
++if (domain === window.location.hostname) {
++return window.location.origin;
++}
++const cleanDomain = domain.replace(/\/.*$/, '');
++return `https://${cleanDomain}`;
 +};
 +
  export const host = address.host;
@@ -116,28 +87,32 @@ index 8021c4f..fee426f 100644
  export const port = address.port;
 -export const apiUrl = window.location.origin + '/api';
 -export const wsOrigin = window.location.origin;
+-export const lang = localStorage.getItem('lang') ?? 'en-US';
 +export const apiUrl = determineApiUrl();
 +export const wsOrigin = determineWsOrigin();
-+export const allowCustomApiSelection = allowApiSelection;
- export const lang = localStorage.getItem('lang') ?? 'en-US';
++export const lang = scopedGet('lang') ?? localStorage.getItem('lang') ?? 'en-US';
  export const langs = _LANGS_;
  export const version = _VERSION_;
-@@ -21,3 +119,13 @@ export const ui = localStorage.getItem('ui');
- export const debug = localStorage.getItem('debug') === 'true';
- export const isSafeMode = localStorage.getItem('isSafeMode') === 'true';
+ export const instanceName = (siteName === 'Misskey' || siteName == null) ? host : siteName;
+-export const ui = localStorage.getItem('ui');
+-export const debug = localStorage.getItem('debug') === 'true';
+-export const isSafeMode = localStorage.getItem('isSafeMode') === 'true';
++export const ui = scopedGet('ui') ?? localStorage.getItem('ui');
++export const debug = (scopedGet('debug') ?? localStorage.getItem('debug')) === 'true';
++export const isSafeMode = (scopedGet('isSafeMode') ?? localStorage.getItem('isSafeMode')) === 'true';
  export const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion)').matches;
 +
-+// API server hostname - derived from apiUrl for separated deployments
-+// This should be used for constructing URLs to API server resources (notes, well-known, etc.)
++// The API server hostname — used for displaying user addresses (@user@server)
++// instead of the web frontend hostname.
 +export const apiHost = (() => {
-+	try {
-+		return new URL(apiUrl).hostname;
-+	} catch {
-+		return hostname; // fallback to frontend hostname if apiUrl is invalid
-+	}
++try {
++return new URL(apiUrl).hostname;
++} catch {
++return hostname;
++}
 +})();
 diff --git a/packages/frontend/src/boot/common.ts b/packages/frontend/src/boot/common.ts
-index 2b522d3..877269b 100644
+index 2b522d3..6dc4804 100644
 --- a/packages/frontend/src/boot/common.ts
 +++ b/packages/frontend/src/boot/common.ts
 @@ -1,3 +1,11 @@
@@ -152,24 +127,7 @@ index 2b522d3..877269b 100644
  /*
   * SPDX-FileCopyrightText: syuilo and misskey-project
   * SPDX-License-Identifier: AGPL-3.0-only
-@@ -5,7 +13,7 @@
- 
- import { watch, version as vueVersion } from 'vue';
- import { compareVersions } from 'compare-versions';
--import { version, lang, apiUrl, isSafeMode } from '@@/js/config.js';
-+import { version, lang, apiUrl, isSafeMode, allowCustomApiSelection } from '@@/js/config.js';
- import defaultLightTheme from '@@/themes/l-light.json5';
- import defaultDarkTheme from '@@/themes/d-green-lime.json5';
- import { storeBootloaderErrors } from '@@/js/store-boot-errors';
-@@ -30,6 +38,7 @@ import { fetchCustomEmojis } from '@/custom-emojis.js';
- import { prefer } from '@/preferences.js';
- import { $i } from '@/i.js';
- import { launchPlugins } from '@/plugin.js';
-+import { sanitizeDomain } from '@/utility/domain-sanitize.js';
- 
- export async function common(createVue: () => Promise<App<Element>>) {
- 	console.info(`Misskey v${version}`);
-@@ -88,7 +97,7 @@ export async function common(createVue: () => Promise<App<Element>>) {
+@@ -88,7 +96,7 @@ export async function common(createVue: () => Promise<App<Element>>) {
  					window.setTimeout(resolve, 500);
  				});
  				// fetch with cache: 'no-store' to ensure the latest locale is fetched
@@ -178,72 +136,41 @@ index 2b522d3..877269b 100644
  				window.location.reload();
  			}
  		});
-@@ -117,12 +126,128 @@ export async function common(createVue: () => Promise<App<Element>>) {
+@@ -117,12 +125,97 @@ export async function common(createVue: () => Promise<App<Element>>) {
  	await store.ready;
  	await deckStore.ready;
  
-+	//#region Handle API server from query string
-+	// Query string format: ?misskey.io (entire query string is the domain)
-+	const queryString = window.location.search.slice(1); // Remove leading '?'
-+	const apiFromQuery = queryString && queryString.trim() !== '' ? queryString.trim() : null;
-+	
-+	if (apiFromQuery && allowCustomApiSelection) {
-+		// Get current stored domain (not full URL)
-+		const currentApiDomain = localStorage.getItem('customApiDomain');
-+		
-+		// Normalize domain from query
-+		const newDomain = apiFromQuery.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-+		
-+		// Check if this is first visit (no stored domain) or domain change
-+		if (!currentApiDomain) {
-+			// First visit with query string - set domain immediately, no validation needed
-+			console.info(`[Misskey] First visit with query string API domain: ${newDomain}`);
-+			localStorage.setItem('customApiDomain', newDomain);
-+		} else {
-+			// Normalize current domain for comparison
-+			const currentDomain = currentApiDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-+			
-+			// Check if API server has changed
-+			if (newDomain !== currentDomain) {
-+				console.info(`[Misskey] API server change requested from query string: ${newDomain}`);
-+				
-+				// IMPORTANT: Don't commit the domain change yet!
-+				// Store it temporarily and validate the new API server first
-+				localStorage.setItem('_pendingApiDomain', newDomain);
-+				
-+				// Try to fetch instance metadata from the new API server to validate it works
-+				// We'll check if it succeeded after the fetch completes
-+			}
-+			// If domain unchanged, continue with query string in URL
-+		}
-+	}
-+	//#endregion
++	//#region API server from query string
++// The API domain is determined by config.ts from the search string.
++// No localStorage-based domain selection — each tab's search string
++// is the single source of truth.
++//#endregion
 +
  	const fetchInstanceMetaPromise = fetchInstance();
  
 -	fetchInstanceMetaPromise.then(() => {
 +	fetchInstanceMetaPromise.then((instanceData) => {
  		miLocalStorage.setItem('v', instance.version);
-+		
++
 +		// Check if we have a pending API domain change to validate
 +		const pendingDomain = localStorage.getItem('_pendingApiDomain');
-+		
++
 +		if (pendingDomain) {
 +			// Check if this fetch was successful
 +			if (!instanceData) {
 +				// New API server failed - don't commit the change
 +				console.error(`[Misskey] Failed to connect to new API server: ${pendingDomain}`);
 +				localStorage.removeItem('_pendingApiDomain');
-+				
++
 +				// Reload to revert to the previous working server
 +				window.location.reload();
 +				return; // Don't proceed with the domain change
 +			}
-+			
++
 +			// New API server works! Now commit the domain change
 +			const currentDomain = localStorage.getItem('customApiDomain') || window.location.hostname;
 +			console.info(`[Misskey] Successfully validated new API server: ${pendingDomain}, committing change`);
-+			
++
 +			// Save current session for old server
 +			const currentAccount = localStorage.getItem('account');
 +			if (currentAccount) {
@@ -251,15 +178,15 @@ index 2b522d3..877269b 100644
 +				localStorage.setItem(sessionKey, currentAccount);
 +				console.info(`[Misskey] Saved session for ${currentDomain}`);
 +			}
-+			
++
 +			// Commit the domain change
 +			localStorage.setItem('customApiDomain', pendingDomain);
 +			localStorage.removeItem('_pendingApiDomain');
-+			
++
 +			// Try to restore session for new server
 +			const savedSessionKey = `session_${sanitizeDomain(pendingDomain)}`;
 +			const savedSession = localStorage.getItem(savedSessionKey);
-+			
++
 +			if (savedSession) {
 +				localStorage.setItem('account', savedSession);
 +				console.info(`[Misskey] Restored session for ${pendingDomain}`);
@@ -267,26 +194,26 @@ index 2b522d3..877269b 100644
 +				localStorage.removeItem('account');
 +				console.info(`[Misskey] No saved session for ${pendingDomain}`);
 +			}
-+			
++
 +			// Reload to apply the change
 +			window.location.reload();
 +			return;
 +		}
-+		
++
 +		// No pending domain change - continue with normal flow
 +	}).catch((error) => {
 +		console.error('Failed to load instance metadata:', error);
-+		
++
 +		// Check if this was a pending domain change
 +		const pendingDomain = localStorage.getItem('_pendingApiDomain');
-+		
++
 +		if (pendingDomain) {
 +			// Failed to validate new server - reload to revert to previous
 +			localStorage.removeItem('_pendingApiDomain');
 +			window.location.reload();
 +			return;
 +		}
-+		
++
 +		// For first visit errors, fetchInstance returns minimal config as fallback
 +		// so this catch should rarely be reached. Just log and continue.
 +		console.warn('[Misskey] Using fallback instance config due to error:', error);
@@ -308,8 +235,183 @@ index 2b522d3..877269b 100644
  	//#region loginId
  	const params = new URLSearchParams(window.location.search);
  	const loginId = params.get('loginId');
+diff --git a/packages/frontend/src/components/MkSignin.input.vue b/packages/frontend/src/components/MkSignin.input.vue
+index 89ec637..7eaf9f2 100644
+--- a/packages/frontend/src/components/MkSignin.input.vue
++++ b/packages/frontend/src/components/MkSignin.input.vue
+@@ -57,7 +57,7 @@ import { ref } from 'vue';
+ import { toUnicode } from 'punycode.js';
+ 
+ import { query, extractDomain } from '@@/js/url.js';
+-import { host as configHost } from '@@/js/config.js';
++import { apiHost as configHost } from '@@/js/config.js';
+ import type { OpenOnRemoteOptions } from '@/utility/please-login.js';
+ import { i18n } from '@/i18n.js';
+ import * as os from '@/os.js';
+diff --git a/packages/frontend/src/components/global/MkAcct.vue b/packages/frontend/src/components/global/MkAcct.vue
+index ff794d9..c875a0d 100644
+--- a/packages/frontend/src/components/global/MkAcct.vue
++++ b/packages/frontend/src/components/global/MkAcct.vue
+@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
+ <script lang="ts" setup>
+ import * as Misskey from 'misskey-js';
+ import { toUnicode } from 'punycode.js';
+-import { host as hostRaw } from '@@/js/config.js';
++import { apiHost as hostRaw } from '@@/js/config.js';
+ 
+ defineProps<{
+ 	user: Misskey.entities.UserLite;
+diff --git a/packages/frontend/src/local-storage.ts b/packages/frontend/src/local-storage.ts
+index f79f62f..3ec983f 100644
+--- a/packages/frontend/src/local-storage.ts
++++ b/packages/frontend/src/local-storage.ts
+@@ -4,67 +4,85 @@
+  */
+ 
+ export type Keys = (
+-	'v' |
+-	'lastVersion' |
+-	'instance' |
+-	'instanceCachedAt' |
+-	'account' |
+-	'latestDonationInfoShownAt' |
+-	'neverShowDonationInfo' |
+-	'neverShowLocalOnlyInfo' |
+-	'modifiedVersionMustProminentlyOfferInAgplV3Section13Read' |
+-	'lastUsed' |
+-	'lang' |
+-	'drafts' |
+-	'hashtags' |
+-	'colorScheme' |
+-	'useSystemFont' |
+-	'fontSize' |
+-	'ui' |
+-	'ui_temp' |
+-	'bootloaderLocales' |
+-	'theme' |
+-	'themeId' |
+-	'themeCachedVersion' |
+-	'customCss' |
+-	'chatMessageDrafts' |
+-	'scratchpad' |
+-	'debug' |
+-	'preferences' |
+-	'latestPreferencesUpdate' |
+-	'hidePreferencesRestoreSuggestion' |
+-	'isSafeMode' |
+-	`miux:${string}` |
+-	`ui:folder:${string}` |
+-	`themes:${string}` | // DEPRECATED
+-	`aiscript:${string}` |
+-	'lastEmojisFetchedAt' | // DEPRECATED, stored in indexeddb (13.9.0~)
+-	'emojis' | // DEPRECATED, stored in indexeddb (13.9.0~);
+-	`channelLastReadedAt:${string}` |
+-	`idbfallback::${string}`
++'v' |
++'lastVersion' |
++'instance' |
++'instanceCachedAt' |
++'account' |
++'latestDonationInfoShownAt' |
++'neverShowDonationInfo' |
++'neverShowLocalOnlyInfo' |
++'modifiedVersionMustProminentlyOfferInAgplV3Section13Read' |
++'lastUsed' |
++'lang' |
++'drafts' |
++'hashtags' |
++'colorScheme' |
++'useSystemFont' |
++'fontSize' |
++'ui' |
++'ui_temp' |
++'bootloaderLocales' |
++'theme' |
++'themeId' |
++'themeCachedVersion' |
++'customCss' |
++'chatMessageDrafts' |
++'scratchpad' |
++'debug' |
++'preferences' |
++'latestPreferencesUpdate' |
++'hidePreferencesRestoreSuggestion' |
++'isSafeMode' |
++`miux:${string}` |
++`ui:folder:${string}` |
++`themes:${string}` | // DEPRECATED
++`aiscript:${string}` |
++'lastEmojisFetchedAt' | // DEPRECATED, stored in indexeddb (13.9.0~)
++'emojis' | // DEPRECATED, stored in indexeddb (13.9.0~);
++`channelLastReadedAt:${string}` |
++`idbfallback::${string}` |
++`instance_${string}` |
++`instanceCachedAt_${string}`
+ );
+ 
+-// セッション毎に廃棄されるLocalStorage代替（セーフモードなどで使用できそう）
+-//const safeSessionStorage = new Map<Keys, string>();
++// Use scoped localStorage when running in multi-server mode.
++// The scoped helpers are installed by config.ts on the window object.
++// They prefix every key with the active API domain so that two tabs
++// pointing at different servers maintain independent storage.
++const scopedGet = (key: string): string | null => {
++const fn = (window as any).__missliteScopedGet;
++return fn ? fn(key) : window.localStorage.getItem(key);
++};
++
++const scopedSet = (key: string, value: string): void => {
++const fn = (window as any).__missliteScopedSet;
++if (fn) fn(key, value); else window.localStorage.setItem(key, value);
++};
++
++const scopedRemove = (key: string): void => {
++const fn = (window as any).__missliteScopedRemove;
++if (fn) fn(key); else window.localStorage.removeItem(key);
++};
+ 
+ export const miLocalStorage = {
+-	getItem: (key: Keys): string | null => {
+-		return window.localStorage.getItem(key);
+-	},
+-	setItem: (key: Keys, value: string): void => {
+-		window.localStorage.setItem(key, value);
+-	},
+-	removeItem: (key: Keys): void => {
+-		window.localStorage.removeItem(key);
+-	},
+-	getItemAsJson: (key: Keys): any | undefined => {
+-		const item = miLocalStorage.getItem(key);
+-		if (item === null) {
+-			return undefined;
+-		}
+-		return JSON.parse(item);
+-	},
+-	setItemAsJson: (key: Keys, value: any): void => {
+-		miLocalStorage.setItem(key, JSON.stringify(value));
+-	},
++getItem: (key: Keys): string | null => {
++return scopedGet(key);
++},
++setItem: (key: Keys, value: string): void => {
++scopedSet(key, value);
++},
++removeItem: (key: Keys): void => {
++scopedRemove(key);
++},
++getItemAsJson: (key: Keys): any | undefined => {
++const item = miLocalStorage.getItem(key);
++if (item === null) {
++return undefined;
++}
++return JSON.parse(item);
++},
++setItemAsJson: (key: Keys, value: any): void => {
++miLocalStorage.setItem(key, JSON.stringify(value));
++},
+ };
 diff --git a/packages/frontend/src/router.ts b/packages/frontend/src/router.ts
-index b1c1708..f2b164a 100644
+index b1c1708..b9a3a0d 100644
 --- a/packages/frontend/src/router.ts
 +++ b/packages/frontend/src/router.ts
 @@ -1,3 +1,11 @@
@@ -342,12 +444,12 @@ index b1c1708..f2b164a 100644
 +export function appendApiDomainQuery(fullPath: string): string {
 +	const apiQuery = getApiDomainQueryString();
 +	if (!apiQuery) return fullPath;
-+	
++
 +	// If path starts with http or //, it's an absolute URL - just return it
 +	if (fullPath.startsWith('http://') || fullPath.startsWith('https://') || fullPath.startsWith('//')) {
 +		return fullPath;
 +	}
-+	
++
 +	// If path already has query string, append API domain to it
 +	if (fullPath.includes('?')) {
 +		// Check if it already has the API domain query
@@ -357,7 +459,7 @@ index b1c1708..f2b164a 100644
 +		// Add API domain to existing query string
 +		return fullPath + '&' + apiQuery.substring(1);
 +	}
-+	
++
 +	// If path has no query string, add the API domain query
 +	return fullPath + apiQuery;
 +}
