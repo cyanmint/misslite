@@ -64,11 +64,14 @@ export const adminAccountsCreate: Handler = async (db, body, env) => {
 	const initialized = await db.prepare("SELECT value FROM meta WHERE key = 'initialized'").first();
 	if (initialized) return err('Already initialized', 403);
 
-	const password = (body.password ?? '') as string;
-	if (password !== env.INITIAL_PASSWORD) return err('Initial password is incorrect', 403);
+	const setupToken = (body.token ?? '') as string;
+	if (setupToken !== (env.INITIAL_PASSWORD ?? '')) return err('Initial password is incorrect', 403);
 
 	const username = (body.username ?? '') as string;
 	if (!username || !/^[a-zA-Z0-9_]{1,20}$/.test(username)) return err('Invalid username');
+
+	const password = (body.password ?? '') as string;
+	if (!password) return err('Password required');
 
 	const id = generateId();
 	const pwHash = await hashPassword(username + password);

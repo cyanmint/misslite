@@ -77,7 +77,7 @@ let adminId: string;
 
 it('admin/accounts/create sets up instance', async () => {
 const { status, data } = await callApi('admin/accounts/create', {
-username: 'admin', password: 'testpass123',
+username: 'admin', password: 'myloginpass', token: 'testpass123',
 });
 expect(status).toBe(200);
 expect(data.username).toBe('admin');
@@ -86,9 +86,16 @@ adminToken = data.token;
 adminId = data.id;
 });
 
+it('admin/accounts/create rejects wrong setup token', async () => {
+const { status } = await callApi('admin/accounts/create', {
+username: 'admin2', password: 'myloginpass', token: 'wrongtoken',
+});
+expect(status).toBe(403);
+});
+
 it('admin/accounts/create rejects duplicate setup', async () => {
 const { status } = await callApi('admin/accounts/create', {
-username: 'admin2', password: 'testpass123',
+username: 'admin2', password: 'myloginpass', token: 'testpass123',
 });
 expect(status).toBe(403);
 });
@@ -100,7 +107,7 @@ expect(data.requireSetup).toBe(false);
 
 it('signin with correct credentials', async () => {
 const { status, data } = await callApi('signin', {
-username: 'admin', password: 'testpass123',
+username: 'admin', password: 'myloginpass',
 });
 expect(status).toBe(200);
 expect(data.i).toBeTypeOf('string');
