@@ -73,6 +73,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b gh-pages
           touch .nojekyll
+          echo misslite-cf.cyanmint.net >> CNAME
           git add -A
           git commit -m "Deploy frontend"
           # Use --amend on subsequent pushes (gh-pages has no real history)
