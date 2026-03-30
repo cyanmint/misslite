@@ -8,10 +8,12 @@ on:
       - 'copilot/**'
     paths:
       - 'worker/**'
+      - 'api.json'
       - '.github/workflows/test-worker.yml'
   pull_request:
     paths:
       - 'worker/**'
+      - 'api.json'
       - '.github/workflows/test-worker.yml'
   workflow_dispatch:
 
@@ -29,5 +31,10 @@ jobs:
       - name: Install dependencies
         run: cd worker && npm install
 
-      - name: Run tests
+      - name: Run unit tests
         run: cd worker && npx vitest run
+
+      - name: API coverage report
+        # Always run — never fails the build; reports coverage vs api.json
+        if: always()
+        run: node worker/scripts/api-coverage.mjs
