@@ -60,6 +60,18 @@ CREATE INDEX IF NOT EXISTS idx_reactions_note ON reactions(note_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at DESC);
+CREATE TABLE IF NOT EXISTS registry_items (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  domain TEXT,
+  scope TEXT NOT NULL DEFAULT '[]',
+  key TEXT NOT NULL,
+  value TEXT NOT NULL DEFAULT 'null',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  UNIQUE(user_id, domain, scope, key)
+);
+CREATE INDEX IF NOT EXISTS idx_registry_user_scope ON registry_items(user_id, domain, scope);
 `;
 
 export async function ensureSchema(db: D1Database): Promise<void> {

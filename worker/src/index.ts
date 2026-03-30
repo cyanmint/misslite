@@ -23,6 +23,7 @@ import {
 	listAnnouncements, createAnnouncement, deleteAnnouncement,
 } from './handlers/admin.js';
 import { emojis, stats, ping, serverInfo, listNotifications, markNotificationsRead } from './handlers/misc.js';
+import { registryGetAll, registryGet, registrySet, registryRemove, registryKeys } from './handlers/registry.js';
 
 const routes: Record<string, Handler> = {
 	// Instance
@@ -91,6 +92,13 @@ const routes: Record<string, Handler> = {
 	'invite/list': listInvites,
 
 	'endpoints': async () => json(Object.keys(routes)),
+
+	// Registry (user preferences / frontend settings store)
+	'i/registry/get-all': registryGetAll,
+	'i/registry/get': registryGet,
+	'i/registry/set': registrySet,
+	'i/registry/remove': registryRemove,
+	'i/registry/keys': registryKeys,
 };
 
 export default {

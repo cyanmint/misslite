@@ -554,4 +554,66 @@ const data = await response.json() as any;
 expect(data.software.name).toBe('misslite');
 expect(data.version).toBe('2.1');
 });
+
+// ---- Registry ----
+
+it('i/registry/get-all returns empty object for empty scope', async () => {
+const { status, data } = await callApi('i/registry/get-all', { i: adminToken, scope: [] });
+expect(status).toBe(200);
+expect(typeof data).toBe('object');
+});
+
+it('i/registry/set persists a value', async () => {
+const { status } = await callApi('i/registry/set', { i: adminToken, scope: ['test-scope'], key: 'myKey', value: 42 });
+expect(status).toBe(200);
+});
+
+it('i/registry/get retrieves a stored value', async () => {
+const { status, data } = await callApi('i/registry/get', { i: adminToken, scope: ['test-scope'], key: 'myKey' });
+expect(status).toBe(200);
+expect(data).toBe(42);
+});
+
+it('i/registry/get-all returns all keys in scope', async () => {
+await callApi('i/registry/set', { i: adminToken, scope: ['test-scope'], key: 'anotherKey', value: 'hello' });
+const { status, data } = await callApi('i/registry/get-all', { i: adminToken, scope: ['test-scope'] });
+expect(status).toBe(200);
+expect(data.myKey).toBe(42);
+expect(data.anotherKey).toBe('hello');
+});
+
+it('i/registry/keys lists keys in scope', async () => {
+const { status, data } = await callApi('i/registry/keys', { i: adminToken, scope: ['test-scope'] });
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+expect(data).toContain('myKey');
+expect(data).toContain('anotherKey');
+});
+
+it('i/registry/set updates an existing value', async () => {
+await callApi('i/registry/set', { i: adminToken, scope: ['test-scope'], key: 'myKey', value: 99 });
+const { data } = await callApi('i/registry/get', { i: adminToken, scope: ['test-scope'], key: 'myKey' });
+expect(data).toBe(99);
+});
+
+it('i/registry/remove deletes a key', async () => {
+await callApi('i/registry/remove', { i: adminToken, scope: ['test-scope'], key: 'myKey' });
+const { status } = await callApi('i/registry/get', { i: adminToken, scope: ['test-scope'], key: 'myKey' });
+expect(status).toBe(400);
+});
+
+it('i/registry/get returns 400 for missing key', async () => {
+const { status } = await callApi('i/registry/get', { i: adminToken, scope: ['nonexistent'], key: 'nope' });
+expect(status).toBe(400);
+});
+
+it('i/registry/get-all requires authentication', async () => {
+const { status } = await callApi('i/registry/get-all', { scope: [] });
+expect(status).toBe(401);
+});
+
+it('i/registry/set requires authentication', async () => {
+const { status } = await callApi('i/registry/set', { scope: ['x'], key: 'k', value: 1 });
+expect(status).toBe(401);
+});
 });
