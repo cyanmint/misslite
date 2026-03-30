@@ -8,7 +8,7 @@
 import type { Env, Handler } from './types.js';
 import { cors, json, err } from './helpers.js';
 import { ensureSchema } from './schema.js';
-import { meta, adminAccountsCreate, signin, signout, signup, changePassword } from './handlers/auth.js';
+import { meta, adminAccountsCreate, signin, signinFlow, signout, signup, changePassword } from './handlers/auth.js';
 import { currentUser, updateUser, showUser, searchUsers } from './handlers/users.js';
 import {
 	createNote, showNote, deleteNote, timeline, userNotes, searchNotes,
@@ -22,7 +22,15 @@ import {
 	deleteAccount, resetPassword, updateMeta, showModerationLogs,
 	listAnnouncements, createAnnouncement, deleteAnnouncement,
 } from './handlers/admin.js';
-import { emojis, stats, ping, serverInfo, listNotifications, markNotificationsRead } from './handlers/misc.js';
+import {
+	emojis, stats, ping, serverInfo, listNotifications, markNotificationsRead,
+	userListsList, iClips, iMute, iBlock, iFollowing, iFollowers,
+	driveFiles, driveFolders, antennasList, iUserListMemberships,
+	notesFeatured, channelsFeatured, channelsFollowed,
+	flashFeatured, pagesFeatured, galleryFeatured, iGalleryLikes,
+	hashtagsTrend, readAnnouncement, swRegister, swUnregister,
+	iNotificationsGrouped,
+} from './handlers/misc.js';
 import { registryGetAll, registryGet, registrySet, registryRemove, registryKeys } from './handlers/registry.js';
 
 const routes: Record<string, Handler> = {
@@ -37,6 +45,7 @@ const routes: Record<string, Handler> = {
 	// Auth
 	'admin/accounts/create': adminAccountsCreate,
 	'signin': signin,
+	'signin-flow': signinFlow,
 	'signout': signout,
 	'signup': signup,
 	'i/change-password': changePassword,
@@ -72,6 +81,7 @@ const routes: Record<string, Handler> = {
 
 	// Notifications
 	'i/notifications': listNotifications,
+	'i/notifications-grouped': iNotificationsGrouped,
 	'notifications/mark-all-as-read': markNotificationsRead,
 
 	// Admin / Moderation
@@ -99,6 +109,29 @@ const routes: Record<string, Handler> = {
 	'i/registry/set': registrySet,
 	'i/registry/remove': registryRemove,
 	'i/registry/keys': registryKeys,
+
+	// Stubs — return empty data so the Misskey frontend loads without errors
+	'users/lists/list': userListsList,
+	'i/clips': iClips,
+	'i/mute': iMute,
+	'i/block': iBlock,
+	'i/following': iFollowing,
+	'i/followers': iFollowers,
+	'i/user-list-memberships': iUserListMemberships,
+	'i/gallery/likes': iGalleryLikes,
+	'i/read-announcement': readAnnouncement,
+	'drive/files': driveFiles,
+	'drive/folders': driveFolders,
+	'antennas/list': antennasList,
+	'notes/featured': notesFeatured,
+	'channels/followed': channelsFollowed,
+	'channels/featured': channelsFeatured,
+	'flash/featured': flashFeatured,
+	'pages/featured': pagesFeatured,
+	'gallery/featured': galleryFeatured,
+	'hashtags/trend': hashtagsTrend,
+	'sw/register': swRegister,
+	'sw/unregister': swUnregister,
 };
 
 export default {

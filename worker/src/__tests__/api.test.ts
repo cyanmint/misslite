@@ -37,6 +37,10 @@ const { status, data } = await callApi('meta');
 expect(status).toBe(200);
 expect(data.name).toBe('MissLite');
 expect(data.requireSetup).toBe(true);
+expect(data.clientOptions).toBeTruthy();
+expect(data.clientOptions.entrancePageStyle).toBeNull();
+expect(data.policies).toBeTruthy();
+expect(data.serverRules).toEqual([]);
 });
 
 it('ping returns pong', async () => {
@@ -111,6 +115,32 @@ username: 'admin', password: 'myloginpass',
 });
 expect(status).toBe(200);
 expect(data.i).toBeTypeOf('string');
+});
+
+it('signin-flow: step1 returns next=password', async () => {
+const { status, data } = await callApi('signin-flow', { username: 'admin' });
+expect(status).toBe(200);
+expect(data.finished).toBe(false);
+expect(data.next).toBe('password');
+});
+
+it('signin-flow: full login returns MeDetailed + finished', async () => {
+const { status, data } = await callApi('signin-flow', {
+username: 'admin', password: 'myloginpass',
+});
+expect(status).toBe(200);
+expect(data.finished).toBe(true);
+expect(data.i).toBeTypeOf('string');
+expect(data.token).toBeTypeOf('string');
+expect(data.username).toBe('admin');
+expect(data.policies).toBeTruthy();
+});
+
+it('signin-flow: rejects wrong password', async () => {
+const { status } = await callApi('signin-flow', {
+username: 'admin', password: 'wrong',
+});
+expect(status).toBe(401);
 });
 
 it('signin rejects wrong password', async () => {

@@ -3,7 +3,7 @@
  */
 
 import type { Handler } from '../types.js';
-import { json, err, generateId, hashPassword, verifyPassword, packUser, requireUser, getMeta } from '../helpers.js';
+import { json, err, generateId, hashPassword, verifyPassword, packSelf, requireUser, getMeta, DEFAULT_POLICIES } from '../helpers.js';
 import type { DbUser } from '../types.js';
 
 export const meta: Handler = async (db, _body, env) => {
@@ -27,36 +27,70 @@ export const meta: Handler = async (db, _body, env) => {
 		uri: 'https://misslite.example',
 		description: desc,
 		langs: ['en-US'],
+		tosUrl: null,
+		tosTextUrl: null,
+		privacyPolicyUrl: null,
+		inquiryUrl: null,
+		impressumUrl: null,
+		donationUrl: null,
+		repositoryUrl: null,
+		feedbackUrl: null,
 		disableRegistration: registrationMode !== 'open',
+		approvalRequiredForSignup: false,
 		emailRequiredForSignup: false,
 		enableHcaptcha: false,
+		hcaptchaSiteKey: null,
+		enableMcaptcha: false,
+		mcaptchaSiteKey: null,
+		mcaptchaInstanceUrl: null,
 		enableRecaptcha: false,
+		recaptchaSiteKey: null,
 		enableTurnstile: false,
+		turnstileSiteKey: null,
+		enableTestcaptcha: false,
 		maxNoteTextLength: maxNoteLength,
 		enableEmail: false,
 		enableServiceWorker: false,
+		swPublickey: null,
 		proxyAccountName: null,
 		themeColor,
 		mascotImageUrl: null,
 		bannerUrl,
 		backgroundImageUrl,
 		logoImageUrl: null,
+		infoImageUrl: null,
+		serverErrorImageUrl: null,
+		notFoundImageUrl: null,
 		iconUrl,
+		defaultLightTheme: null,
+		defaultDarkTheme: null,
 		features: {},
 		requireSetup: !initialized,
-		policies: {
-			ltlAvailable: true,
-			canPublicNote: true,
-			canCreateContent: true,
-			canInvite: true,
-		},
+		policies: DEFAULT_POLICIES,
+		entrancePageStyle: null,
+		serverRules: [],
+		pinnedUsers: [],
 		ads: [],
 		notesCount: 0,
 		usersCount: 0,
+		reactionsCount: 0,
+		localPostsCount: 0,
+		localUsersCount: 0,
+		instances: 0,
+		driveCapacityPerLocalUserMb: 0,
+		driveCapacityPerRemoteUserMb: 0,
 		federation: 'none',
 		cacheRemoteFiles: false,
 		cacheRemoteSensitiveFiles: false,
 		mediaProxy: '',
+		translatorAvailable: false,
+		enableUrlPreview: false,
+		noteSearchableScope: 'local',
+		clientOptions: {
+			entrancePageStyle: null,
+			showTimelineForVisitor: false,
+			showActivitiesForVisitor: false,
+		},
 	});
 };
 
@@ -90,7 +124,7 @@ export const adminAccountsCreate: Handler = async (db, body, env) => {
 	await db.prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)').bind(token, id).run();
 
 	const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<DbUser>();
-	return json({ ...packUser(user!, true), token });
+	return json(packSelf(user!, token));
 };
 
 export const signin: Handler = async (db, body) => {
@@ -107,6 +141,33 @@ export const signin: Handler = async (db, body) => {
 	const token = generateId() + generateId();
 	await db.prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)').bind(token, user.id).run();
 	return json({ id: user.id, i: token });
+};
+
+export const signinFlow: Handler = async (db, body) => {
+	const username = (body.username ?? '') as string;
+	const password = (body.password ?? null) as string | null;
+
+	if (!username) return err('Username required');
+
+	const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first<DbUser>();
+	if (!user) return err('No such user', 401);
+	if (user.is_suspended) return err('Account is suspended', 403);
+
+	// First step: only username provided → tell frontend to ask for password
+	if (!password) {
+		return json({ id: user.id, next: 'password', finished: false });
+	}
+
+	// Second step: validate password
+	if (!await verifyPassword(username + password, user.password_hash)) {
+		return err('Incorrect password', 401);
+	}
+
+	const token = generateId() + generateId();
+	await db.prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)').bind(token, user.id).run();
+	// Return MeDetailed + finished flag. Include both `token` and `i` so all
+	// frontend code paths can find the session credential.
+	return json({ ...packSelf(user, token), i: token, finished: true });
 };
 
 export const signout: Handler = async (db, body) => {
@@ -148,7 +209,7 @@ export const signup: Handler = async (db, body, env) => {
 	await db.prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)').bind(token, id).run();
 
 	const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<DbUser>();
-	return json({ ...packUser(user!, true), token });
+	return json(packSelf(user!, token));
 };
 
 export const changePassword: Handler = async (db, body) => {

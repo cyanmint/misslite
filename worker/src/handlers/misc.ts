@@ -76,3 +76,65 @@ export const markNotificationsRead: Handler = async (db, body) => {
 	await db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?').bind(u.id).run();
 	return json({});
 };
+
+// ── Stub endpoints ──────────────────────────────────────────────────────────
+// The Misskey frontend calls these endpoints on startup / navigation.
+// We return empty arrays or objects so the frontend loads without errors.
+
+/** GET-like list endpoints that always return an empty array (auth required). */
+const emptyAuthedList: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+return json([]);
+};
+
+/** Endpoints that return an empty array without auth (public feeds). */
+const emptyPublicList: Handler = async () => json([]);
+
+export const userListsList = emptyAuthedList;
+export const iClips = emptyAuthedList;
+export const iMute = emptyAuthedList;
+export const iBlock = emptyAuthedList;
+export const iFollowing = emptyAuthedList;
+export const iFollowers = emptyAuthedList;
+export const driveFiles = emptyAuthedList;
+export const driveFolders = emptyAuthedList;
+export const antennasList = emptyAuthedList;
+export const iUserListMemberships = emptyAuthedList;
+export const iNotificationsGrouped = emptyAuthedList;
+
+export const notesFeatured = emptyPublicList;
+export const channelsFeatured = emptyPublicList;
+export const channelsFollowed = emptyAuthedList;
+export const flashFeatured = emptyPublicList;
+export const pagesFeatured = emptyPublicList;
+export const galleryFeatured = emptyPublicList;
+export const iGalleryLikes = emptyAuthedList;
+
+/** hashtags/trend — returns empty trending tag list. */
+export const hashtagsTrend: Handler = async () => json([]);
+
+/** i/read-announcement — marks an announcement as read (no-op). */
+export const readAnnouncement: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+return json({});
+};
+
+/** sw/register — service worker push registration stub. */
+export const swRegister: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+return json({
+userId: (u as { id: string }).id,
+endpoint: body.endpoint ?? '',
+sendReadMessage: false,
+});
+};
+
+/** sw/unregister — service worker unregistration stub. */
+export const swUnregister: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+return json({});
+};

@@ -76,6 +76,37 @@ export function err(message: string, status = 400): Response {
 	return json({ error: { message, code: status === 403 ? 'FORBIDDEN' : status === 401 ? 'UNAUTHORIZED' : 'BAD_REQUEST' } }, status);
 }
 
+/** Full set of user-level policies returned with every MeDetailed response. */
+export const DEFAULT_POLICIES = {
+	gtlAvailable: true,
+	ltlAvailable: true,
+	canPublicNote: true,
+	canEditNote: true,
+	canInvite: true,
+	inviteLimit: 0,
+	inviteLimitCycle: 0,
+	inviteExpirationTime: 0,
+	canManageCustomEmojis: false,
+	canManageAvatarDecorations: false,
+	canCreateContent: true,
+	canUpdateContent: true,
+	canDeleteContent: true,
+	canHideAds: false,
+	driveCapacityMb: 0,
+	alwaysMarkNsfw: false,
+	pinLimit: 10,
+	antennaLimit: 5,
+	wordMuteLimit: 200,
+	webhookLimit: 3,
+	clipLimit: 10,
+	noteEachClipsLimit: 200,
+	userListLimit: 10,
+	userEachUserListsLimit: 50,
+	rateLimitFactor: 1,
+	canSearchNotes: true,
+	canUseTranslator: false,
+};
+
 export function packUser(u: DbUser, detail = false): Record<string, unknown> {
 	const packed: Record<string, unknown> = {
 		id: u.id,
@@ -102,8 +133,43 @@ export function packUser(u: DbUser, detail = false): Record<string, unknown> {
 		packed.fields = [];
 		packed.pinnedNotes = [];
 		packed.pinnedNoteIds = [];
+		packed.isLocked = false;
+		packed.isExplorable = true;
+		packed.noIndex = false;
+		packed.isRenoteMuted = false;
+		packed.movedTo = null;
+		packed.alsoKnownAs = null;
+		packed.memo = null;
+		packed.moderationNote = null;
+		packed.roles = [];
+		packed.policies = DEFAULT_POLICIES;
 	}
 	return packed;
+}
+
+/**
+ * Pack a user object as the authenticated user's own profile (MeDetailed).
+ * Extends packUser(detail=true) with self-only fields like token, mutes, etc.
+ */
+export function packSelf(u: DbUser, token: string): Record<string, unknown> {
+	return {
+		...packUser(u, true),
+		token,
+		twoFactorEnabled: false,
+		usePasswordLessLogin: false,
+		securityKeys: false,
+		mutedWords: [],
+		hardMutedWords: [],
+		mutedInstances: [],
+		notificationRecieveConfig: {},
+		emailNotificationTypes: [],
+		achievements: [],
+		loggedInDays: 0,
+		hideOnlineStatus: false,
+		publicReactions: true,
+		followingVisibility: 'public',
+		followersVisibility: 'public',
+	};
 }
 
 export async function packNote(db: D1Database, n: DbNote): Promise<Record<string, unknown>> {

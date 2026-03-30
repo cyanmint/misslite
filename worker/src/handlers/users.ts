@@ -4,12 +4,13 @@
 
 import type { Handler } from '../types.js';
 import type { DbUser } from '../types.js';
-import { json, err, packUser, requireUser } from '../helpers.js';
+import { json, err, packUser, packSelf, requireUser } from '../helpers.js';
 
 export const currentUser: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
-	return json(packUser(u, true));
+	const token = (body.i ?? body.token ?? '') as string;
+	return json(packSelf(u, token));
 };
 
 export const updateUser: Handler = async (db, body) => {
