@@ -1,0 +1,16 @@
+
+ ⛅️ wrangler 4.78.0
+───────────────────
+Your Worker has access to the following bindings:
+Binding                                                                    Resource                  Mode
+env.DB (misslite)                                                          D1 Database               local
+env.INITIAL_PASSWORD ("changeme")                                          Environment Variable      local
+env.INSTANCE_NAME ("MissLite")                                             Environment Variable      local
+env.INSTANCE_DESCRIPTION ("A lightweight Misskey-compatible inst...")      Environment Variable      local
+env.REGISTRATION_MODE ("invite")                                           Environment Variable      local
+env.MAX_NOTE_LENGTH ("3000")                                               Environment Variable      local
+env.THEME_COLOR ("#86b300")                                                Environment Variable      local
+
+⎔ Starting local server...
+[wrangler:info] Ready on http://localhost:8787
+[wrangler:info] GET / 200 OK (3ms)
