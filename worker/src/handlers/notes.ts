@@ -59,6 +59,18 @@ export const showNote: Handler = async (db, body) => {
 	return json(await packNote(db, note));
 };
 
+export const showPartialBulk: Handler = async (db, body) => {
+	const noteIds = body.noteIds as string[] | undefined;
+	if (!Array.isArray(noteIds) || noteIds.length === 0) return json({});
+	// Return a map of noteId → packed note (only for notes that exist)
+	const result: Record<string, unknown> = {};
+	for (const id of noteIds.slice(0, 100)) {
+		const note = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(id).first<DbNote>();
+		if (note) result[id] = await packNote(db, note);
+	}
+	return json(result);
+};
+
 export const deleteNote: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;

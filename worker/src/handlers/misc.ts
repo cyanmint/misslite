@@ -114,6 +114,16 @@ export const iGalleryLikes = emptyAuthedList;
 /** hashtags/trend — returns empty trending tag list. */
 export const hashtagsTrend: Handler = async () => json([]);
 
+/** bubble-game/ranking — returns empty ranking list. */
+export const bubbleGameRanking: Handler = async () => json([]);
+
+/** i/claim-achievement — records an achievement unlock (no-op stub). */
+export const iClaimAchievement: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+return json(null);
+};
+
 /** i/read-announcement — marks an announcement as read (no-op). */
 export const readAnnouncement: Handler = async (db, body) => {
 const u = await requireUser(db, body);

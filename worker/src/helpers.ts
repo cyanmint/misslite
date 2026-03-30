@@ -104,7 +104,12 @@ export const DEFAULT_POLICIES = {
 	userEachUserListsLimit: 50,
 	rateLimitFactor: 1,
 	canSearchNotes: true,
+	canSearchUsers: true,
 	canUseTranslator: false,
+	chatAvailability: 'available',
+	maxFileSizeMb: 100,
+	scheduledNoteLimit: 0,
+	watermarkAvailable: false,
 };
 
 export function packUser(u: DbUser, detail = false): Record<string, unknown> {

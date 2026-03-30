@@ -61,7 +61,7 @@ export const registryGet: Handler = async (db, body) => {
 		: await db.prepare('SELECT value FROM registry_items WHERE user_id = ? AND domain IS NULL AND scope = ? AND key = ?')
 			.bind(u.id, scope, key).first<{ value: string }>();
 
-	if (!row) return err('No such key', 400);
+	if (!row) return json({ error: { message: 'No such key', code: 'NO_SUCH_KEY' } }, 400);
 
 	try { return json(JSON.parse(row.value)); } catch { return json(row.value); }
 };

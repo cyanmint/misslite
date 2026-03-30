@@ -11,7 +11,7 @@ import { ensureSchema } from './schema.js';
 import { meta, adminAccountsCreate, signin, signinFlow, signout, signup, changePassword } from './handlers/auth.js';
 import { currentUser, updateUser, showUser, searchUsers } from './handlers/users.js';
 import {
-	createNote, showNote, deleteNote, timeline, userNotes, searchNotes,
+	createNote, showNote, showPartialBulk, deleteNote, timeline, userNotes, searchNotes,
 	noteState, noteMentions, noteConversation,
 	createReaction, deleteReaction, listReactions,
 	createFavorite, deleteFavorite, listFavorites,
@@ -30,6 +30,7 @@ import {
 	flashFeatured, pagesFeatured, galleryFeatured, iGalleryLikes,
 	hashtagsTrend, readAnnouncement, swRegister, swUnregister,
 	iNotificationsGrouped,
+	bubbleGameRanking, iClaimAchievement,
 } from './handlers/misc.js';
 import { registryGetAll, registryGet, registrySet, registryRemove, registryKeys } from './handlers/registry.js';
 
@@ -59,9 +60,11 @@ const routes: Record<string, Handler> = {
 	// Notes
 	'notes/create': createNote,
 	'notes/show': showNote,
+	'notes/show-partial-bulk': showPartialBulk,
 	'notes/delete': deleteNote,
 	'notes/timeline': timeline,
 	'notes/local-timeline': timeline,
+	'notes/hybrid-timeline': timeline,
 	'notes/global-timeline': timeline,
 	'users/notes': userNotes,
 	'notes/search': searchNotes,
@@ -132,6 +135,8 @@ const routes: Record<string, Handler> = {
 	'hashtags/trend': hashtagsTrend,
 	'sw/register': swRegister,
 	'sw/unregister': swUnregister,
+	'bubble-game/ranking': bubbleGameRanking,
+	'i/claim-achievement': iClaimAchievement,
 };
 
 export default {

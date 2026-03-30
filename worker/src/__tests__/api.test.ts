@@ -243,6 +243,25 @@ expect(status).toBe(200);
 expect(data.text).toBe('Hello world!');
 });
 
+it('notes/show-partial-bulk returns map of notes', async () => {
+const { status, data } = await callApi('notes/show-partial-bulk', { noteIds: [noteId] });
+expect(status).toBe(200);
+expect(data[noteId]).toBeTruthy();
+expect(data[noteId].text).toBe('Hello world!');
+});
+
+it('notes/show-partial-bulk returns empty map for empty input', async () => {
+const { status, data } = await callApi('notes/show-partial-bulk', { noteIds: [] });
+expect(status).toBe(200);
+expect(Object.keys(data)).toHaveLength(0);
+});
+
+it('notes/hybrid-timeline returns notes', async () => {
+const { status, data } = await callApi('notes/hybrid-timeline', {});
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
 it('notes/timeline returns notes', async () => {
 const { status, data } = await callApi('notes/timeline', {});
 expect(status).toBe(200);
@@ -637,6 +656,12 @@ const { status } = await callApi('i/registry/get', { i: adminToken, scope: ['non
 expect(status).toBe(400);
 });
 
+it('i/registry/get returns NO_SUCH_KEY error code for missing key', async () => {
+const { status, data } = await callApi('i/registry/get', { i: adminToken, scope: ['no-scope'], key: 'missing' });
+expect(status).toBe(400);
+expect(data.error.code).toBe('NO_SUCH_KEY');
+});
+
 it('i/registry/get-all requires authentication', async () => {
 const { status } = await callApi('i/registry/get-all', { scope: [] });
 expect(status).toBe(401);
@@ -645,5 +670,31 @@ expect(status).toBe(401);
 it('i/registry/set requires authentication', async () => {
 const { status } = await callApi('i/registry/set', { scope: ['x'], key: 'k', value: 1 });
 expect(status).toBe(401);
+});
+
+it('bubble-game/ranking returns empty array', async () => {
+const { status, data } = await callApi('bubble-game/ranking');
+expect(status).toBe(200);
+expect(data).toEqual([]);
+});
+
+it('i/claim-achievement requires auth', async () => {
+const { status } = await callApi('i/claim-achievement', { name: 'notes1' });
+expect(status).toBe(401);
+});
+
+it('i/claim-achievement returns null for authenticated user', async () => {
+const { status, data } = await callApi('i/claim-achievement', { i: adminToken, name: 'notes1' });
+expect(status).toBe(200);
+expect(data).toBeNull();
+});
+
+it('meta policies contains all required fields', async () => {
+const { data } = await callApi('meta');
+expect(data.policies.canSearchNotes).toBe(true);
+expect(data.policies.canSearchUsers).toBe(true);
+expect(data.policies.gtlAvailable).toBe(true);
+expect(data.policies.chatAvailability).toBe('available');
+expect(data.policies.maxFileSizeMb).toBeGreaterThan(0);
 });
 });
