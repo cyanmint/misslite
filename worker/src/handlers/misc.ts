@@ -136,6 +136,7 @@ export const swRegister: Handler = async (db, body) => {
 const u = await requireUser(db, body);
 if (u instanceof Response) return u;
 return json({
+key: body.publickey ?? null,
 userId: (u as { id: string }).id,
 endpoint: body.endpoint ?? '',
 sendReadMessage: false,

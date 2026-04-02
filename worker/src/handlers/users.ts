@@ -29,7 +29,8 @@ export const updateUser: Handler = async (db, body) => {
 	}
 
 	const updated = await db.prepare('SELECT * FROM users WHERE id = ?').bind(u.id).first<DbUser>();
-	return json(packUser(updated!, true));
+	const token = (body.i ?? body.token ?? '') as string;
+	return json(packSelf(updated!, token));
 };
 
 export const showUser: Handler = async (db, body) => {

@@ -16,7 +16,9 @@ export const createNote: Handler = async (db, body) => {
 	const replyId = (body.replyId ?? null) as string | null;
 	const renoteId = (body.renoteId ?? null) as string | null;
 
-	if (!text && !renoteId) return err('Text or renoteId required');
+	if (!text && !renoteId) {
+		// Allow empty note creation; text will be stored as null
+	}
 
 	const id = generateId();
 	await db.prepare(

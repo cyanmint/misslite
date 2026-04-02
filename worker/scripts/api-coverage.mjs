@@ -126,14 +126,32 @@ const worker = await unstable_dev(
 
 // ── Create test account ───────────────────────────────────────────────────────
 console.log('Creating test admin account…');
+const TEST_USERNAME = 'coveragebot';
+const TEST_PASSWORD = 'coveragepass123';
 let authToken = '';
+
+/** Re-authenticate using stored credentials; updates authToken. */
+async function refreshAuth() {
+  const res = await worker.fetch('http://localhost/api/signin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: TEST_USERNAME, password: TEST_PASSWORD }),
+  });
+  if (res.status === 200) {
+    const data = await res.json();
+    authToken = data.i;
+    return true;
+  }
+  return false;
+}
+
 try {
   const setupRes = await worker.fetch('http://localhost/api/admin/accounts/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      username: 'coveragebot',
-      password: 'coveragepass123',
+      username: TEST_USERNAME,
+      password: TEST_PASSWORD,
       setupPassword: 'testpass',
     }),
   });
@@ -145,17 +163,10 @@ try {
     const text = await setupRes.text();
     console.log(`  ⚠ Setup returned ${setupRes.status}: ${text}`);
     console.log('  Trying signin instead…');
-    const signinRes = await worker.fetch('http://localhost/api/signin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'coveragebot', password: 'coveragepass123' }),
-    });
-    if (signinRes.status === 200) {
-      const data = await signinRes.json();
-      authToken = data.i;
+    if (await refreshAuth()) {
       console.log(`  ✓ Signed in (token: ${authToken.slice(0, 8)}…)\n`);
     } else {
-      console.log(`  ✗ Sign-in also failed (${signinRes.status}). Running without auth.\n`);
+      console.log(`  ✗ Sign-in also failed. Running without auth.\n`);
     }
   }
 } catch (err) {
@@ -173,6 +184,10 @@ async function probe(path, method, withAuth = false) {
   const res = await worker.fetch(url, init);
   return res;
 }
+
+// Endpoints that consume/invalidate the auth token when called with it.
+// After probing these, we re-authenticate so subsequent probes still work.
+const SESSION_INVALIDATING_PATHS = new Set(['signout', 'i/change-password']);
 
 // ── Probe each endpoint ───────────────────────────────────────────────────────
 const results = [];
@@ -200,6 +215,12 @@ for (const { path, method, successSpec, authRequired, requiredParams } of endpoi
     if ((status === 401 || status === 403) && authToken) {
       res = await probe(path, method, true);
       status = res.status;
+    }
+
+    // Phase 3: if this endpoint invalidates the auth session, re-authenticate
+    // so that subsequent endpoints can still be tested with valid credentials.
+    if (SESSION_INVALIDATING_PATHS.has(path) && authToken) {
+      await refreshAuth();
     }
 
     // Evaluate result

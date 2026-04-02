@@ -86,6 +86,13 @@ export const meta: Handler = async (db, _body, env) => {
 		translatorAvailable: false,
 		enableUrlPreview: false,
 		noteSearchableScope: 'local',
+		maxFileSize: 0,
+		dimensions: null,
+		googleAnalyticsId: null,
+		wellKnownWebsites: [],
+		notesPerOneAd: 0,
+		sentryForFrontend: null,
+		enableSkebStatus: false,
 		clientOptions: {
 			entrancePageStyle: null,
 			showTimelineForVisitor: false,

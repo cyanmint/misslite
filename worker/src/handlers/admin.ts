@@ -80,7 +80,17 @@ export const createInvite: Handler = async (db, body) => {
 
 	const code = generateId();
 	await db.prepare('INSERT INTO invite_codes (code, created_by) VALUES (?, ?)').bind(code, u.id).run();
-	return json({ code });
+	const userRow = await db.prepare('SELECT * FROM users WHERE id = ?').bind(u.id).first<DbUser>();
+	return json({
+		id: code,
+		code,
+		expiresAt: null,
+		createdAt: new Date().toISOString(),
+		createdBy: packUser(userRow!),
+		usedBy: null,
+		usedAt: null,
+		used: false,
+	});
 };
 
 export const listInvites: Handler = async (db, body) => {

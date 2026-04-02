@@ -119,6 +119,11 @@ export function packUser(u: DbUser, detail = false): Record<string, unknown> {
 		username: u.username,
 		host: null,
 		avatarUrl: u.avatar_url,
+		avatarBlurhash: null,
+		avatarDecorations: [],
+		emojis: {},
+		url: null,
+		uri: null,
 		isBot: false,
 		isCat: false,
 		onlineStatus: 'unknown',
@@ -126,28 +131,46 @@ export function packUser(u: DbUser, detail = false): Record<string, unknown> {
 		isModerator: !!u.is_moderator,
 		isSuspended: !!u.is_suspended,
 		createdAt: u.created_at,
+		updatedAt: u.created_at,
 	};
 	if (detail) {
 		packed.description = u.description;
 		packed.followersCount = 0;
 		packed.followingCount = 0;
 		packed.notesCount = 0;
-		packed.avatarBlurhash = null;
 		packed.bannerUrl = null;
 		packed.bannerBlurhash = null;
 		packed.fields = [];
+		packed.verifiedLinks = [];
 		packed.pinnedNotes = [];
 		packed.pinnedNoteIds = [];
 		packed.isLocked = false;
 		packed.isExplorable = true;
 		packed.noIndex = false;
 		packed.isRenoteMuted = false;
+		packed.isSilenced = false;
+		packed.isLimited = false;
 		packed.movedTo = null;
 		packed.alsoKnownAs = null;
+		packed.lastFetchedAt = null;
 		packed.memo = null;
 		packed.moderationNote = null;
 		packed.roles = [];
 		packed.policies = DEFAULT_POLICIES;
+		packed.mutualLinkSections = [];
+		packed.followingVisibility = 'public';
+		packed.followersVisibility = 'public';
+		packed.chatScope = 'none';
+		packed.canChat = false;
+		packed.publicReactions = true;
+		packed.pinnedPage = null;
+		packed.pinnedPageId = null;
+		packed.location = null;
+		packed.birthday = null;
+		packed.lang = null;
+		packed.avatarId = null;
+		packed.bannerId = null;
+		packed.followedMessage = null;
 	}
 	return packed;
 }
@@ -161,6 +184,7 @@ export function packSelf(u: DbUser, token: string): Record<string, unknown> {
 		...packUser(u, true),
 		token,
 		twoFactorEnabled: false,
+		twoFactorBackupCodesStock: 'none',
 		usePasswordLessLogin: false,
 		securityKeys: false,
 		mutedWords: [],
@@ -171,9 +195,29 @@ export function packSelf(u: DbUser, token: string): Record<string, unknown> {
 		achievements: [],
 		loggedInDays: 0,
 		hideOnlineStatus: false,
-		publicReactions: true,
-		followingVisibility: 'public',
-		followersVisibility: 'public',
+		hasUnreadSpecifiedNotes: false,
+		hasUnreadMentions: false,
+		hasUnreadAnnouncement: false,
+		unreadAnnouncements: [],
+		hasUnreadAntenna: false,
+		hasUnreadChannel: false,
+		hasUnreadChatMessages: false,
+		hasUnreadNotification: false,
+		hasPendingReceivedFollowRequest: false,
+		unreadNotificationsCount: 0,
+		isDeleted: false,
+		injectFeaturedNote: false,
+		receiveAnnouncementEmail: false,
+		alwaysMarkNsfw: false,
+		autoSensitive: false,
+		carefulBot: false,
+		autoAcceptFollowed: false,
+		noCrawle: false,
+		preventAiLearning: false,
+		showMediaInAllLanguages: false,
+		showHashtagsInAllLanguages: false,
+		postingLang: null,
+		viewingLangs: [],
 	};
 }
 
