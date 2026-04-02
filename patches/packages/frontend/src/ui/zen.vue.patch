@@ -1,0 +1,12 @@
+diff --git a/packages/frontend/src/ui/zen.vue b/packages/frontend/src/ui/zen.vue
+index b56ed4e..0000000 100644
+--- a/packages/frontend/src/ui/zen.vue
++++ b/packages/frontend/src/ui/zen.vue
+@@ -31,7 +31,7 @@ const pageMetadata = ref<null | PageMetadata>(null);
+ const showDeckNav = !(new URLSearchParams(window.location.search)).has('zen') && ui === 'deck';
+ 
+ function goToDeck() {
+-	window.location.href = '/';
++	window.location.href = '/' + window.location.search;
+ }
+ 

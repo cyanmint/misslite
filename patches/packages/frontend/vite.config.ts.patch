@@ -9,7 +9,15 @@ index 260d121..144e0d7 100644
 +		base: '/',
  
  		// The console is shared with backend, so clearing the console will also clear the backend log.
-@@ -181,6 +181,6 @@ export function getConfig(): UserConfig {
+@@ -170,6 +170,10 @@ export function getConfig(): UserConfig {
+ 			manifest: 'manifest.json',
++			modulePreload: {
++				polyfill: false,
++			},
+ 			rolldownOptions: {
+ 				experimental: {
+ 					nativeMagicString: true,
+@@ -181,6 +185,6 @@ export function getConfig(): UserConfig {
  			rollupOptions: {
  				input: {
 +					main: 'index.html',
