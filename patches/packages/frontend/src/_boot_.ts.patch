@@ -1,0 +1,12 @@
+diff --git a/packages/frontend/src/_boot_.ts b/packages/frontend/src/_boot_.ts
+--- a/packages/frontend/src/_boot_.ts
++++ b/packages/frontend/src/_boot_.ts
+@@ -4,8 +4,6 @@ 
+ */
+ 
+-// https://vitejs.dev/config/build-options.html#build-modulepreload
+-import 'vite/modulepreload-polyfill';
+ 
+ if (import.meta.env.DEV) {
+ 	await import('@tabler/icons-webfont/dist/tabler-icons.scss');
+ }
