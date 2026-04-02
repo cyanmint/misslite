@@ -13,27 +13,33 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      
+
       - name: Enable corepack
         run: corepack enable
-      
+
       - name: Clone misskey
         run: |
           git clone --depth=1 https://github.com/misskey-dev/misskey.git misskey-build
           cd misskey-build
           git submodule update --init --depth=1
-      
+
       - name: Apply patches
         run: |
           cd misskey-build
@@ -41,34 +47,39 @@ jobs:
             echo "Applying: ${patchfile#../patches/}"
             patch -p1 --fuzz=3 < "$patchfile"
           done
-      
+
       - name: Install dependencies
         run: |
           cd misskey-build
           corepack pnpm install
-      
+
       - name: Build
         run: |
           cd misskey-build
           corepack pnpm run build
-      
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend
-          path: misskey-build/webroot/
-      
-      - name: Deploy to gh-pages
+
+      - name: Prepare pages output
         run: |
           cd misskey-build/webroot
-          git init
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b gh-pages
           touch .nojekyll
           cp index.html 404.html
-          echo misslite-cf.cyanmint.net >> CNAME
-          git add -A
-          git commit -m "Deploy frontend"
-          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
-          git push --force origin gh-pages
+          echo misslite-cf.cyanmint.net > CNAME
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: misskey-build/webroot/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
