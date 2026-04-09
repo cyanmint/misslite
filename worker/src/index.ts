@@ -33,6 +33,7 @@ import {
 	bubbleGameRanking, iClaimAchievement,
 } from './handlers/misc.js';
 import { registryGetAll, registryGet, registrySet, registryRemove, registryKeys } from './handlers/registry.js';
+import { stubRoutes } from './handlers/stubs.js';
 
 const routes: Record<string, Handler> = {
 	// Instance
@@ -137,6 +138,9 @@ const routes: Record<string, Handler> = {
 	'sw/unregister': swUnregister,
 	'bubble-game/ranking': bubbleGameRanking,
 	'i/claim-achievement': iClaimAchievement,
+
+	// Stubs — auto-generated from api.json for all unimplemented endpoints
+	...stubRoutes,
 };
 
 export default {
