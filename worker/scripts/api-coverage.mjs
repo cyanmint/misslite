@@ -341,291 +341,8 @@ const correctPaths = new Set(results.filter(r => r.verdict === 'correct').map(r 
  *   - verify(ctx): calls read APIs to verify the seeded data; returns
  *     a Map<path, {pass: boolean, reason?: string}>
  */
-const stubTests = [];
-
-// ── Helper: safe JSON fetch ───────────────────────────────────────────────────
-async function fetchJson(path, body = {}) {
-  try {
-    const res = await apiPost(path, { i: authToken, ...body });
-    if (res.status === 200) {
-      const text = await res.text();
-      try { return JSON.parse(text); } catch { return null; }
-    }
-    return null;
-  } catch { return null; }
-}
-
-// ── Test: notes/create → notes/show, notes/timeline, users/notes ──────────────
-stubTests.push({
-  targets: ['notes/create', 'notes/show', 'notes/timeline', 'notes/local-timeline',
-            'notes/hybrid-timeline', 'notes/global-timeline', 'users/notes',
-            'notes/search'],
-  async seed() {
-    const data = await fetchJson('notes/create', { text: 'stub-detection-test-note' });
-    if (!data?.createdNote?.id) return null;
-    return { noteId: data.createdNote.id };
-  },
-  async verify(ctx) {
-    const m = new Map();
-    // notes/show — should return the note we created
-    const shown = await fetchJson('notes/show', { noteId: ctx.noteId });
-    m.set('notes/show', { pass: shown?.id === ctx.noteId });
-
-    // notes/create — if we got here, seed succeeded, so it's real
-    m.set('notes/create', { pass: true });
-
-    // timeline endpoints — should contain our note
-    for (const tl of ['notes/timeline', 'notes/local-timeline', 'notes/hybrid-timeline', 'notes/global-timeline']) {
-      const list = await fetchJson(tl, { limit: 50 });
-      const found = Array.isArray(list) && list.some(n => n.id === ctx.noteId);
-      m.set(tl, { pass: found, reason: found ? undefined : 'note not found in timeline' });
-    }
-
-    // users/notes
-    const userNotes = await fetchJson('users/notes', { userId: shown?.userId ?? shown?.user?.id, limit: 50 });
-    const foundUserNote = Array.isArray(userNotes) && userNotes.some(n => n.id === ctx.noteId);
-    m.set('users/notes', { pass: foundUserNote, reason: foundUserNote ? undefined : 'note not found in user notes' });
-
-    return m;
-  },
-});
-
-// ── Test: notes/reactions/create → notes/reactions ────────────────────────────
-stubTests.push({
-  targets: ['notes/reactions/create', 'notes/reactions'],
-  async seed() {
-    // Create a note first, then react to it
-    const data = await fetchJson('notes/create', { text: 'reaction-test-note' });
-    if (!data?.createdNote?.id) return null;
-    const noteId = data.createdNote.id;
-    await apiPost('notes/reactions/create', { i: authToken, noteId, reaction: '👍' });
-    return { noteId };
-  },
-  async verify(ctx) {
-    const m = new Map();
-    const reactions = await fetchJson('notes/reactions', { noteId: ctx.noteId });
-    const found = Array.isArray(reactions) && reactions.length > 0;
-    m.set('notes/reactions/create', { pass: found, reason: found ? undefined : 'reaction not found after create' });
-    m.set('notes/reactions', { pass: found, reason: found ? undefined : 'reactions list empty' });
-    return m;
-  },
-});
-
-// ── Test: notes/favorites/create → i/favorites ───────────────────────────────
-stubTests.push({
-  targets: ['notes/favorites/create', 'i/favorites'],
-  async seed() {
-    const data = await fetchJson('notes/create', { text: 'favorite-test-note' });
-    if (!data?.createdNote?.id) return null;
-    const noteId = data.createdNote.id;
-    await apiPost('notes/favorites/create', { i: authToken, noteId });
-    return { noteId };
-  },
-  async verify(ctx) {
-    const m = new Map();
-    const favs = await fetchJson('i/favorites', {});
-    const found = Array.isArray(favs) && favs.some(f => (f.noteId ?? f.note?.id) === ctx.noteId);
-    m.set('notes/favorites/create', { pass: found, reason: found ? undefined : 'favorite not found after create' });
-    m.set('i/favorites', { pass: found, reason: found ? undefined : 'favorites list empty/missing note' });
-    return m;
-  },
-});
-
-// ── Test: i/update → i (read-back profile changes) ───────────────────────────
-stubTests.push({
-  targets: ['i/update', 'i'],
-  async seed() {
-    const newName = 'StubTest_' + Date.now();
-    await apiPost('i/update', { i: authToken, name: newName });
-    return { expectedName: newName };
-  },
-  async verify(ctx) {
-    const m = new Map();
-    const me = await fetchJson('i', {});
-    const pass = me?.name === ctx.expectedName;
-    m.set('i/update', { pass, reason: pass ? undefined : `name not updated (got ${me?.name})` });
-    m.set('i', { pass: !!me?.id, reason: me?.id ? undefined : 'i endpoint returned no user' });
-    return m;
-  },
-});
-
-// ── Test: i/registry/set → i/registry/get ────────────────────────────────────
-stubTests.push({
-  targets: ['i/registry/set', 'i/registry/get', 'i/registry/keys', 'i/registry/get-all'],
-  async seed() {
-    const key = 'stubtest_' + Date.now();
-    const value = { test: true, ts: Date.now() };
-    await apiPost('i/registry/set', { i: authToken, key, value, scope: ['client', 'base'] });
-    return { key, value };
-  },
-  async verify(ctx) {
-    const m = new Map();
-    const got = await fetchJson('i/registry/get', { key: ctx.key, scope: ['client', 'base'] });
-    const pass = got !== null && JSON.stringify(got) === JSON.stringify(ctx.value);
-    m.set('i/registry/set', { pass, reason: pass ? undefined : 'registry value not persisted' });
-    m.set('i/registry/get', { pass, reason: pass ? undefined : 'registry get returned wrong value' });
-
-    const keys = await fetchJson('i/registry/keys', { scope: ['client', 'base'] });
-    const keysPass = Array.isArray(keys) && keys.includes(ctx.key);
-    m.set('i/registry/keys', { pass: keysPass, reason: keysPass ? undefined : 'key not found in keys list' });
-
-    const all = await fetchJson('i/registry/get-all', { scope: ['client', 'base'] });
-    const allPass = all !== null && typeof all === 'object' && ctx.key in all;
-    m.set('i/registry/get-all', { pass: allPass, reason: allPass ? undefined : 'key not found in get-all' });
-
-    return m;
-  },
-});
-
-// ── Test: sw/register → sw/register read-back ─────────────────────────────────
-stubTests.push({
-  targets: ['sw/register'],
-  async seed() {
-    const endpoint = 'https://example.com/push/' + Date.now();
-    await apiPost('sw/register', { i: authToken, endpoint, auth: 'testauthkey', publickey: 'testpubkey' });
-    return { endpoint };
-  },
-  async verify(ctx) {
-    const m = new Map();
-    // sw/register returns state info; re-calling should show already-subscribed
-    const res = await fetchJson('sw/register', { endpoint: ctx.endpoint, auth: 'testauthkey', publickey: 'testpubkey' });
-    const pass = res?.state === 'already-subscribed' || res?.endpoint === ctx.endpoint;
-    m.set('sw/register', { pass, reason: pass ? undefined : 'sw subscription not persisted' });
-    return m;
-  },
-});
-
-// ── Test: admin/announcements/create → announcements ─────────────────────────
-stubTests.push({
-  targets: ['admin/announcements/create', 'announcements'],
-  async seed() {
-    const title = 'StubTest Announcement ' + Date.now();
-    const data = await fetchJson('admin/announcements/create', { title, text: 'test body', imageUrl: null });
-    if (!data?.id) return null;
-    return { announcementId: data.id, title };
-  },
-  async verify(ctx) {
-    const m = new Map();
-    const list = await fetchJson('announcements', {});
-    const found = Array.isArray(list) && list.some(a => a.id === ctx.announcementId);
-    m.set('admin/announcements/create', { pass: found, reason: found ? undefined : 'announcement not found after create' });
-    m.set('announcements', { pass: found, reason: found ? undefined : 'announcements list missing created item' });
-    return m;
-  },
-});
-
-// ── Test: invite/create → invite/list ────────────────────────────────────────
-stubTests.push({
-  targets: ['invite/create', 'invite/list'],
-  async seed() {
-    const data = await fetchJson('invite/create', {});
-    if (!data) return null;
-    // data might be the invite object itself
-    const code = data.code ?? data.id;
-    return { code };
-  },
-  async verify(ctx) {
-    const m = new Map();
-    const list = await fetchJson('invite/list', {});
-    const found = Array.isArray(list) && list.length > 0;
-    m.set('invite/create', { pass: found, reason: found ? undefined : 'no invites found after create' });
-    m.set('invite/list', { pass: found, reason: found ? undefined : 'invite list empty' });
-    return m;
-  },
-});
-
-// ── Test: users/show, users/search (read-only — should find our admin user) ──
-stubTests.push({
-  targets: ['users/show', 'users/search'],
-  async seed() { return { username: TEST_USERNAME }; },
-  async verify(ctx) {
-    const m = new Map();
-    const shown = await fetchJson('users/show', { username: ctx.username });
-    const showPass = shown?.username === ctx.username;
-    m.set('users/show', { pass: showPass, reason: showPass ? undefined : 'users/show did not return test user' });
-
-    const searched = await fetchJson('users/search', { query: ctx.username });
-    const searchPass = Array.isArray(searched) && searched.some(u => u.username === ctx.username);
-    m.set('users/search', { pass: searchPass, reason: searchPass ? undefined : 'users/search did not find test user' });
-    return m;
-  },
-});
-
-// ── Test: i/notifications (read-only — after activity, should be non-empty) ──
-stubTests.push({
-  targets: ['i/notifications'],
-  async seed() {
-    // Notifications are generated by activity (reactions, etc.) done in previous tests
-    return {};
-  },
-  async verify() {
-    const m = new Map();
-    // We can't guarantee notifications exist, so just check the endpoint returns a valid array
-    // Stub detection here: if there are reactions and favorites we created, there might be notifs
-    const notifs = await fetchJson('i/notifications', { limit: 10 });
-    // For read-only, simply passing if the endpoint returns a proper array is enough
-    // The stub check for notifications is less strict since notifs depend on server-side generation
-    m.set('i/notifications', { pass: Array.isArray(notifs) });
-    return m;
-  },
-});
-
-// ── Test: meta (read-only — should have real server data) ────────────────────
-stubTests.push({
-  targets: ['meta'],
-  async seed() { return {}; },
-  async verify() {
-    const m = new Map();
-    const data = await fetchJson('meta', {});
-    // A real meta response has name, version, etc.
-    const pass = data?.name && data?.version;
-    m.set('meta', { pass: !!pass, reason: pass ? undefined : 'meta response missing name or version' });
-    return m;
-  },
-});
-
-// ── Test: stats (read-only — should reflect actual user/note counts) ─────────
-stubTests.push({
-  targets: ['stats'],
-  async seed() { return {}; },
-  async verify() {
-    const m = new Map();
-    const data = await fetchJson('stats', {});
-    // After creating a user and notes, usersCount should be ≥ 1
-    const pass = data && typeof data.usersCount === 'number' && data.usersCount >= 1;
-    m.set('stats', { pass: !!pass, reason: pass ? undefined : `stats.usersCount is ${data?.usersCount}` });
-    return m;
-  },
-});
-
-// ── Test: emojis (read-only) ──────────────────────────────────────────────────
-stubTests.push({
-  targets: ['emojis'],
-  async seed() { return {}; },
-  async verify() {
-    const m = new Map();
-    const data = await fetchJson('emojis', {});
-    // emojis should return an object with emojis array
-    const pass = data && 'emojis' in data && Array.isArray(data.emojis);
-    m.set('emojis', { pass: !!pass, reason: pass ? undefined : 'emojis response missing emojis array' });
-    return m;
-  },
-});
-
-// ── Test: ping ────────────────────────────────────────────────────────────────
-stubTests.push({
-  targets: ['ping'],
-  async seed() { return {}; },
-  async verify() {
-    const m = new Map();
-    const data = await fetchJson('ping', {});
-    const pass = data && typeof data.pong === 'number' && data.pong > 0;
-    m.set('ping', { pass: !!pass, reason: pass ? undefined : 'ping did not return valid pong timestamp' });
-    return m;
-  },
-});
-
-// ── Run stub tests (pre-restart) ──────────────────────────────────────────────
+// Load declarative stub tests from endpoint_info.json
+const declaredStubTests = endpointInfo.__stubTests ?? [];
 
 // stubVerdict: path → { preRestart: boolean, postRestart: boolean, reason?: string }
 const stubVerdict = new Map();
@@ -633,33 +350,168 @@ const stubVerdict = new Map();
 // Seed contexts for post-restart verification
 const seedContexts = [];
 
-for (const test of stubTests) {
-  // Only run tests where at least one target was "correct" in Phase 1
-  const relevantTargets = test.targets.filter(t => correctPaths.has(t));
+/** Substitute {{key}} placeholders in a value (recursively for objects) */
+function interpolate(val, ctx) {
+  if (typeof val === 'string') {
+    // Handle special {{timestamp}} placeholder
+    let result = val;
+    if (result.includes('{{timestamp}}')) {
+      result = result.replace(/\{\{timestamp\}\}/g, String(Date.now()));
+    }
+    // Replace other context variables
+    result = result.replace(/\{\{(\w+)\}\}/g, (_, k) => ctx[k] ?? '');
+    return result;
+  }
+  if (Array.isArray(val)) return val.map(v => interpolate(v, ctx));
+  if (val && typeof val === 'object') {
+    return Object.fromEntries(Object.entries(val).map(([k, v]) => [k, interpolate(v, ctx)]));
+  }
+  return val;
+}
+
+/** Build POST body, injecting auth token if needed */
+function buildBody(bodySpec, ctx, withAuth) {
+  const body = interpolate(bodySpec ?? {}, ctx);
+  if (withAuth && authToken) body.i = authToken;
+  return body;
+}
+
+/** Helper: get nested field from object using dot notation or simple field name */
+function getNestedField(obj, path) {
+  if (!path || !obj) return obj;
+  if (path.includes('.')) {
+    const parts = path.split('.');
+    let current = obj;
+    for (const part of parts) {
+      current = current?.[part];
+      if (current === undefined) return undefined;
+    }
+    return current;
+  }
+  return obj[path];
+}
+
+/** Run a single verify step and return { pass, reason } */
+async function runVerify(step, ctx) {
+  const body = buildBody(step.body, ctx, step.auth !== false);
+  const res = await apiPost(step.path, body);
+  if (res.status !== 200) return { pass: false, reason: `verify returned ${res.status}` };
+  let data;
+  try { data = await res.json(); } catch { return { pass: false, reason: 'verify response not JSON' }; }
+  
+  const check = step.check ?? 'nonEmpty';
+  if (check === 'nonEmpty') {
+    if (Array.isArray(data)) return data.length > 0 ? { pass: true } : { pass: false, reason: 'array is empty' };
+    if (data && typeof data === 'object') {
+      const keys = Object.keys(data).filter(k => k !== 'error');
+      return keys.length > 0 ? { pass: true } : { pass: false, reason: 'object is empty' };
+    }
+    return { pass: data != null, reason: data == null ? 'null response' : undefined };
+  }
+  if (check === 'contains') {
+    // Array should contain an item whose checkField matches capturedValue
+    const capturedVal = ctx[step.checkCapture ?? ''];
+    if (!Array.isArray(data)) return { pass: false, reason: 'expected array for contains check' };
+    const found = data.some(item => item[step.checkField ?? 'id'] === capturedVal);
+    return found ? { pass: true } : { pass: false, reason: `array does not contain item with ${step.checkField}=${capturedVal}` };
+  }
+  if (check === 'hasField') {
+    const field = step.checkField;
+    if (!field) return { pass: true };
+    // Support template substitution in checkField (e.g., {{key}})
+    const actualField = interpolate(field, ctx);
+    return (actualField in (data ?? {})) ? { pass: true } : { pass: false, reason: `response missing field: ${actualField}` };
+  }
+  if (check === 'exists') {
+    // Just checking the endpoint responds with non-error data
+    return (data && !data.error) ? { pass: true } : { pass: false, reason: data?.error?.message ?? 'endpoint returned error' };
+  }
+  return { pass: true };
+}
+
+for (const test of declaredStubTests) {
+  const relevantTargets = (test.targets ?? []).filter(t => correctPaths.has(t));
   if (relevantTargets.length === 0) continue;
 
+  // Forced stub: immediately mark targets
+  if (test.forced_stub) {
+    for (const t of relevantTargets) {
+      stubVerdict.set(t, { preRestart: false, postRestart: false, reason: test.reason ?? 'forced stub' });
+    }
+    continue;
+  }
+
   try {
-    const ctx = await test.seed();
-    if (!ctx) {
-      // Seed failed — mark relevant targets as stub
-      for (const t of relevantTargets) {
-        stubVerdict.set(t, { preRestart: false, postRestart: false, reason: 'seed failed (API returned no data)' });
+    let ctx = {};
+    
+    // Run seed if defined
+    if (test.seed) {
+      const seedBody = buildBody(test.seed.body, ctx, test.seed.auth !== false);
+      const seedRes = await apiPost(test.seed.path, seedBody);
+      if (seedRes.status !== 200) {
+        for (const t of relevantTargets) {
+          stubVerdict.set(t, { preRestart: false, postRestart: false, reason: `seed ${test.seed.path} returned ${seedRes.status}` });
+        }
+        continue;
       }
-      continue;
+      let seedData;
+      try { seedData = await seedRes.json(); } catch {
+        for (const t of relevantTargets) {
+          stubVerdict.set(t, { preRestart: false, postRestart: false, reason: 'seed response not JSON' });
+        }
+        continue;
+      }
+      if (!seedData || seedData.error) {
+        for (const t of relevantTargets) {
+          stubVerdict.set(t, { preRestart: false, postRestart: false, reason: `seed failed: ${seedData?.error?.message ?? 'no data'}` });
+        }
+        continue;
+      }
+      // Capture field from seed response
+      if (test.seed.capture) {
+        if (test.seed.captureFrom) {
+          // Use dot notation or simple field (e.g., "createdNote.id")
+          ctx[test.seed.capture] = getNestedField(seedData, test.seed.captureFrom);
+        } else {
+          // Try common field names
+          ctx[test.seed.capture] = seedData[test.seed.capture] ?? seedData.id ?? seedData.token ?? seedData.key ?? JSON.stringify(seedData).slice(0, 50);
+        }
+      }
+      // Also capture userId if we can find it (for notes tests)
+      if (seedData.createdNote?.userId) {
+        ctx.userId = seedData.createdNote.userId;
+      } else if (seedData.userId) {
+        ctx.userId = seedData.userId;
+      } else if (seedData.user?.id) {
+        ctx.userId = seedData.user.id;
+      }
     }
 
-    const verifyResults = await test.verify(ctx);
-    for (const [path, result] of verifyResults) {
-      if (!correctPaths.has(path)) continue;
-      stubVerdict.set(path, {
-        preRestart: result.pass,
-        postRestart: false, // will be set after restart
-        reason: result.reason,
-      });
+    // Run verify steps
+    const verifySteps = test.verify ?? [];
+    for (const step of verifySteps) {
+      const stepTargets = (step.targets ?? test.targets ?? []).filter(t => correctPaths.has(t));
+      if (stepTargets.length === 0) continue;
+      
+      const result = await runVerify(step, ctx);
+      for (const t of stepTargets) {
+        if (!stubVerdict.has(t)) {
+          stubVerdict.set(t, { preRestart: result.pass, postRestart: false, reason: result.reason });
+        }
+      }
     }
-
-    // Store for post-restart
-    seedContexts.push({ test, ctx, relevantTargets });
+    
+    // Mark any targets not yet in stubVerdict (no verify step covered them) as pass
+    for (const t of relevantTargets) {
+      if (!stubVerdict.has(t)) {
+        stubVerdict.set(t, { preRestart: true, postRestart: false });
+      }
+    }
+    
+    // Store context for post-restart verification
+    if (verifySteps.length > 0) {
+      seedContexts.push({ test, ctx, relevantTargets });
+    }
   } catch (e) {
     for (const t of relevantTargets) {
       stubVerdict.set(t, { preRestart: false, postRestart: false, reason: `test error: ${e.message}` });
@@ -683,14 +535,19 @@ if (await refreshAuth()) {
 
 for (const { test, ctx, relevantTargets } of seedContexts) {
   try {
-    const verifyResults = await test.verify(ctx);
-    for (const [path, result] of verifyResults) {
-      if (!correctPaths.has(path)) continue;
-      const existing = stubVerdict.get(path);
-      if (existing) {
-        existing.postRestart = result.pass;
-        if (!result.pass && !existing.reason) {
-          existing.reason = result.reason ?? 'data not persisted after restart';
+    const verifySteps = test.verify ?? [];
+    for (const step of verifySteps) {
+      const stepTargets = (step.targets ?? test.targets ?? []).filter(t => correctPaths.has(t));
+      if (stepTargets.length === 0) continue;
+      
+      const result = await runVerify(step, ctx);
+      for (const t of stepTargets) {
+        const existing = stubVerdict.get(t);
+        if (existing) {
+          existing.postRestart = result.pass;
+          if (!result.pass && !existing.reason) {
+            existing.reason = result.reason ?? 'data not persisted after restart';
+          }
         }
       }
     }

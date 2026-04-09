@@ -1779,6 +1779,680 @@
         "test/post-stub",
         "test/list-stub"
       ]
+    },
+    {
+      "name": "Admin Abuse Reports",
+      "endpoints": [
+        "admin/abuse-user-reports",
+        "admin/abuse-report-resolver/create",
+        "admin/abuse-report-resolver/delete",
+        "admin/abuse-report-resolver/list",
+        "admin/abuse-report-resolver/update",
+        "admin/abuse-report/notification-recipient/create",
+        "admin/abuse-report/notification-recipient/delete",
+        "admin/abuse-report/notification-recipient/list",
+        "admin/abuse-report/notification-recipient/show",
+        "admin/abuse-report/notification-recipient/update",
+        "admin/forward-abuse-user-report",
+        "admin/resolve-abuse-user-report",
+        "admin/update-abuse-user-report"
+      ]
+    },
+    {
+      "name": "Admin Accounts",
+      "endpoints": [
+        "admin/accounts/create",
+        "admin/accounts/delete",
+        "admin/accounts/find-by-email",
+        "admin/accounts/pending/list",
+        "admin/accounts/pending/revoke",
+        "admin/show-user",
+        "admin/show-users",
+        "admin/suspend-user",
+        "admin/unsuspend-user",
+        "admin/delete-account",
+        "admin/get-user-ips",
+        "admin/reset-password",
+        "admin/unset-user-avatar",
+        "admin/unset-user-banner",
+        "admin/update-user-name",
+        "admin/update-user-note",
+        "admin/unset-user-mutual-link",
+        "admin/regenerate-user-token",
+        "admin/show-user-account-move-logs",
+        "admin/update-proxy-account"
+      ]
+    },
+    {
+      "name": "Admin Ads",
+      "endpoints": [
+        "admin/ad/create",
+        "admin/ad/delete",
+        "admin/ad/list",
+        "admin/ad/update"
+      ]
+    },
+    {
+      "name": "Admin Announcements Extended",
+      "endpoints": [
+        "admin/announcements/delete",
+        "admin/announcements/list",
+        "admin/announcements/update"
+      ]
+    },
+    {
+      "name": "Admin Avatar Decorations",
+      "endpoints": [
+        "admin/avatar-decorations/create",
+        "admin/avatar-decorations/delete",
+        "admin/avatar-decorations/list",
+        "admin/avatar-decorations/update"
+      ]
+    },
+    {
+      "name": "Admin Captcha",
+      "endpoints": [
+        "admin/captcha/current",
+        "admin/captcha/save"
+      ]
+    },
+    {
+      "name": "Admin Drive",
+      "endpoints": [
+        "admin/drive/clean-remote-files",
+        "admin/drive/cleanup",
+        "admin/drive/delete-all-files-of-a-user",
+        "admin/drive/files",
+        "admin/drive/show-file"
+      ]
+    },
+    {
+      "name": "Admin Emoji",
+      "endpoints": [
+        "admin/emoji/add",
+        "admin/emoji/add-aliases-bulk",
+        "admin/emoji/copy",
+        "admin/emoji/delete",
+        "admin/emoji/delete-bulk",
+        "admin/emoji/import-zip",
+        "admin/emoji/list",
+        "admin/emoji/list-remote",
+        "admin/emoji/remove-aliases-bulk",
+        "admin/emoji/set-aliases-bulk",
+        "admin/emoji/set-category-bulk",
+        "admin/emoji/set-license-bulk",
+        "admin/emoji/update",
+        "v2/admin/emoji/list"
+      ]
+    },
+    {
+      "name": "Admin Federation",
+      "endpoints": [
+        "admin/federation/delete-all-files",
+        "admin/federation/refresh-remote-instance-metadata",
+        "admin/federation/remove-all-following",
+        "admin/federation/update-instance"
+      ]
+    },
+    {
+      "name": "Admin IndieAuth",
+      "endpoints": [
+        "admin/indie-auth/create",
+        "admin/indie-auth/delete",
+        "admin/indie-auth/list",
+        "admin/indie-auth/update"
+      ]
+    },
+    {
+      "name": "Admin Invites Extended",
+      "endpoints": [
+        "admin/invite/create",
+        "admin/invite/list"
+      ]
+    },
+    {
+      "name": "Admin Meta",
+      "endpoints": [
+        "admin/meta",
+        "admin/update-meta"
+      ]
+    },
+    {
+      "name": "Admin Moderation",
+      "endpoints": [
+        "admin/moderators/add",
+        "admin/moderators/remove",
+        "admin/show-moderation-logs"
+      ]
+    },
+    {
+      "name": "Admin Promo",
+      "endpoints": [
+        "admin/promo/create"
+      ]
+    },
+    {
+      "name": "Admin Queue",
+      "endpoints": [
+        "admin/queue/clear",
+        "admin/queue/deliver-delayed",
+        "admin/queue/inbox-delayed",
+        "admin/queue/promote",
+        "admin/queue/stats"
+      ]
+    },
+    {
+      "name": "Admin Relays",
+      "endpoints": [
+        "admin/relays/add",
+        "admin/relays/list",
+        "admin/relays/remove"
+      ]
+    },
+    {
+      "name": "Admin Roles",
+      "endpoints": [
+        "admin/roles/assign",
+        "admin/roles/create",
+        "admin/roles/delete",
+        "admin/roles/list",
+        "admin/roles/show",
+        "admin/roles/unassign",
+        "admin/roles/update",
+        "admin/roles/update-default-policies",
+        "admin/roles/update-inline-policies",
+        "admin/roles/users"
+      ]
+    },
+    {
+      "name": "Admin SSO",
+      "endpoints": [
+        "admin/sso/create",
+        "admin/sso/delete",
+        "admin/sso/list",
+        "admin/sso/update"
+      ]
+    },
+    {
+      "name": "Admin System Webhooks",
+      "endpoints": [
+        "admin/system-webhook/create",
+        "admin/system-webhook/delete",
+        "admin/system-webhook/list",
+        "admin/system-webhook/show",
+        "admin/system-webhook/test",
+        "admin/system-webhook/update"
+      ]
+    },
+    {
+      "name": "Admin Server",
+      "endpoints": [
+        "admin/get-index-stats",
+        "admin/get-table-stats",
+        "admin/send-email"
+      ]
+    },
+    {
+      "name": "Announcements Extended",
+      "endpoints": [
+        "announcement",
+        "announcements/show"
+      ]
+    },
+    {
+      "name": "Antennas Lifecycle",
+      "endpoints": [
+        "antennas/create",
+        "antennas/delete",
+        "antennas/list",
+        "antennas/notes",
+        "antennas/show",
+        "antennas/update"
+      ]
+    },
+    {
+      "name": "ActivityPub",
+      "endpoints": [
+        "ap/get",
+        "ap/show"
+      ]
+    },
+    {
+      "name": "App Auth",
+      "endpoints": [
+        "app/create",
+        "app/show",
+        "auth/accept",
+        "auth/session/generate",
+        "auth/session/show",
+        "auth/session/userkey"
+      ]
+    },
+    {
+      "name": "Auth",
+      "endpoints": [
+        "signin",
+        "signout",
+        "signup",
+        "i/change-password",
+        "i/delete-account",
+        "i/regenerate-token",
+        "i/update-email",
+        "i/move",
+        "i/revoke-token",
+        "i/signin-history",
+        "username/available",
+        "request-reset-password",
+        "reset-password",
+        "email-address/available"
+      ]
+    },
+    {
+      "name": "Blocking",
+      "endpoints": [
+        "blocking/create",
+        "blocking/delete",
+        "blocking/list"
+      ]
+    },
+    {
+      "name": "Bubble Game",
+      "endpoints": [
+        "bubble-game/ranking",
+        "bubble-game/register"
+      ]
+    },
+    {
+      "name": "Channels Lifecycle",
+      "endpoints": [
+        "channels/create",
+        "channels/featured",
+        "channels/featured-games",
+        "channels/follow",
+        "channels/followed",
+        "channels/my-favorites",
+        "channels/owned",
+        "channels/search",
+        "channels/show",
+        "channels/timeline",
+        "channels/unfollow",
+        "channels/update",
+        "channels/favorite",
+        "channels/unfavorite"
+      ]
+    },
+    {
+      "name": "Charts",
+      "endpoints": [
+        "charts/active-users",
+        "charts/ap-request",
+        "charts/drive",
+        "charts/federation",
+        "charts/instance",
+        "charts/notes",
+        "charts/user/drive",
+        "charts/user/following",
+        "charts/user/notes",
+        "charts/user/pv",
+        "charts/user/reactions",
+        "charts/users"
+      ]
+    },
+    {
+      "name": "Clips Lifecycle",
+      "endpoints": [
+        "clips/add-note",
+        "clips/create",
+        "clips/delete",
+        "clips/list",
+        "clips/my-favorites",
+        "clips/notes",
+        "clips/remove-note",
+        "clips/show",
+        "clips/unfavorite",
+        "clips/update",
+        "clips/favorite"
+      ]
+    },
+    {
+      "name": "Drive Files",
+      "endpoints": [
+        "drive/files",
+        "drive/files/attached-notes",
+        "drive/files/check-existence",
+        "drive/files/create",
+        "drive/files/delete",
+        "drive/files/find",
+        "drive/files/find-by-hash",
+        "drive/files/show",
+        "drive/files/update",
+        "drive/files/upload-from-url"
+      ]
+    },
+    {
+      "name": "Drive Folders",
+      "endpoints": [
+        "drive/folders",
+        "drive/folders/create",
+        "drive/folders/delete",
+        "drive/folders/find",
+        "drive/folders/show",
+        "drive/folders/update"
+      ]
+    },
+    {
+      "name": "Drive Root",
+      "endpoints": [
+        "drive",
+        "drive/stream"
+      ]
+    },
+    {
+      "name": "Emoji",
+      "endpoints": [
+        "emoji",
+        "export-custom-emojis"
+      ]
+    },
+    {
+      "name": "Federation",
+      "endpoints": [
+        "federation/followers",
+        "federation/following",
+        "federation/instances",
+        "federation/show-instance",
+        "federation/stats",
+        "federation/update-remote-user",
+        "federation/users"
+      ]
+    },
+    {
+      "name": "Flash Lifecycle",
+      "endpoints": [
+        "flash/create",
+        "flash/delete",
+        "flash/featured",
+        "flash/like",
+        "flash/my",
+        "flash/my-likes",
+        "flash/show",
+        "flash/unlike",
+        "flash/update"
+      ]
+    },
+    {
+      "name": "Following Lifecycle",
+      "endpoints": [
+        "following/create",
+        "following/delete",
+        "following/invalidate",
+        "following/requests/accept",
+        "following/requests/cancel",
+        "following/requests/list",
+        "following/requests/reject",
+        "following/requests/sent",
+        "following/update",
+        "following/update-all"
+      ]
+    },
+    {
+      "name": "Gallery Lifecycle",
+      "endpoints": [
+        "gallery/featured",
+        "gallery/popular",
+        "gallery/posts",
+        "gallery/posts/create",
+        "gallery/posts/delete",
+        "gallery/posts/like",
+        "gallery/posts/show",
+        "gallery/posts/unlike",
+        "gallery/posts/update",
+        "i/gallery/likes",
+        "i/gallery/posts",
+        "users/gallery/posts"
+      ]
+    },
+    {
+      "name": "Hashtags",
+      "endpoints": [
+        "hashtags/list",
+        "hashtags/search",
+        "hashtags/show",
+        "hashtags/trend",
+        "hashtags/users"
+      ]
+    },
+    {
+      "name": "Misc",
+      "endpoints": [
+        "endpoint",
+        "endpoints",
+        "get-avatar-decorations",
+        "get-online-users-count",
+        "pinned-users",
+        "retention",
+        "server-info",
+        "test",
+        "promo/read",
+        "page-push",
+        "reset-db",
+        "fetch-external-resources",
+        "fetch-rss"
+      ]
+    },
+    {
+      "name": "MiAuth",
+      "endpoints": [
+        "miauth/gen-token"
+      ]
+    },
+    {
+      "name": "Muting",
+      "endpoints": [
+        "mute/create",
+        "mute/delete",
+        "mute/list",
+        "renote-mute/create",
+        "renote-mute/delete",
+        "renote-mute/list"
+      ]
+    },
+    {
+      "name": "Notes Extended",
+      "endpoints": [
+        "notes",
+        "notes/children",
+        "notes/clips",
+        "notes/conversation",
+        "notes/delete",
+        "notes/favorites/delete",
+        "notes/featured",
+        "notes/mentions",
+        "notes/polls/recommendation",
+        "notes/polls/vote",
+        "notes/reactions/delete",
+        "notes/renotes",
+        "notes/replies",
+        "notes/scheduled/cancel",
+        "notes/scheduled/list",
+        "notes/search-by-tag",
+        "notes/state",
+        "notes/thread-muting/create",
+        "notes/thread-muting/delete",
+        "notes/translate",
+        "notes/unrenote",
+        "notes/user-list-timeline"
+      ]
+    },
+    {
+      "name": "Notifications Extended",
+      "endpoints": [
+        "i/notifications-grouped",
+        "notifications/create",
+        "notifications/flush",
+        "notifications/mark-all-as-read",
+        "notifications/test-notification"
+      ]
+    },
+    {
+      "name": "Pages Lifecycle",
+      "endpoints": [
+        "pages/create",
+        "pages/delete",
+        "pages/featured",
+        "pages/like",
+        "pages/show",
+        "pages/unlike",
+        "pages/update",
+        "i/page-likes",
+        "i/pages",
+        "users/pages"
+      ]
+    },
+    {
+      "name": "Reversi",
+      "endpoints": [
+        "reversi/cancel-match",
+        "reversi/games",
+        "reversi/invitations",
+        "reversi/match",
+        "reversi/show-game",
+        "reversi/surrender",
+        "reversi/verify"
+      ]
+    },
+    {
+      "name": "Roles",
+      "endpoints": [
+        "roles/list",
+        "roles/notes",
+        "roles/show",
+        "roles/users"
+      ]
+    },
+    {
+      "name": "Service Worker Extended",
+      "endpoints": [
+        "sw/show-registration",
+        "sw/unregister",
+        "sw/update-registration"
+      ]
+    },
+    {
+      "name": "User 2FA",
+      "endpoints": [
+        "i/2fa/done",
+        "i/2fa/key-done",
+        "i/2fa/password-less",
+        "i/2fa/register",
+        "i/2fa/register-key",
+        "i/2fa/remove-key",
+        "i/2fa/unregister",
+        "i/2fa/update-key"
+      ]
+    },
+    {
+      "name": "User Apps",
+      "endpoints": [
+        "i/apps",
+        "i/authorized-apps",
+        "my/apps"
+      ]
+    },
+    {
+      "name": "User Achievements",
+      "endpoints": [
+        "i/claim-achievement",
+        "users/achievements"
+      ]
+    },
+    {
+      "name": "User Export/Import",
+      "endpoints": [
+        "i/export-antennas",
+        "i/export-blocking",
+        "i/export-clips",
+        "i/export-favorites",
+        "i/export-following",
+        "i/export-mute",
+        "i/export-notes",
+        "i/export-user-lists",
+        "i/import-antennas",
+        "i/import-blocking",
+        "i/import-following",
+        "i/import-muting",
+        "i/import-user-lists"
+      ]
+    },
+    {
+      "name": "User Misc",
+      "endpoints": [
+        "i/purge-timeline-cache",
+        "i/read-announcement",
+        "i/pin",
+        "i/unpin",
+        "users/clips",
+        "users/featured-notes",
+        "users/flashs",
+        "users/followers",
+        "users/following",
+        "users/get-following-birthday-users",
+        "users/get-frequently-replied-users",
+        "users/get-security-info",
+        "users/get-skeb-status",
+        "users/reactions",
+        "users/recommendation",
+        "users/relation",
+        "users/report-abuse",
+        "users/search-by-username-and-host",
+        "users/stats",
+        "users/update-memo",
+        "users"
+      ]
+    },
+    {
+      "name": "User Lists Lifecycle",
+      "endpoints": [
+        "users/lists/create",
+        "users/lists/create-from-public",
+        "users/lists/delete",
+        "users/lists/favorite",
+        "users/lists/get-memberships",
+        "users/lists/list",
+        "users/lists/pull",
+        "users/lists/push",
+        "users/lists/show",
+        "users/lists/unfavorite",
+        "users/lists/update",
+        "users/lists/update-membership"
+      ]
+    },
+    {
+      "name": "Webhooks Lifecycle",
+      "endpoints": [
+        "i/webhooks/create",
+        "i/webhooks/delete",
+        "i/webhooks/list",
+        "i/webhooks/show",
+        "i/webhooks/test",
+        "i/webhooks/update"
+      ]
+    },
+    {
+      "name": "Registry Extended",
+      "endpoints": [
+        "i/registry/get-detail",
+        "i/registry/keys-with-type",
+        "i/registry/remove",
+        "i/registry/scopes-with-domain"
+      ]
+    },
+    {
+      "name": "Invites Extended",
+      "endpoints": [
+        "invite/delete",
+        "invite/limit"
+      ]
     }
   ],
   "__diagnostic": [
@@ -1787,14 +2461,16 @@
       "method": "post",
       "expectedResponseType": "array",
       "hasSecurity": false,
-      "description": "Control group stub: always returns empty array, never reads/writes DB. Must be flagged as Stub."
+      "description": "Control group stub: always returns empty array, never reads/writes DB. Must be flagged as Stub.",
+      "forced_stub": true
     },
     {
       "path": "test/post-stub",
       "method": "post",
       "expectedResponseType": "object",
       "hasSecurity": false,
-      "description": "Control group stub: always returns hardcoded object, never writes DB. Must be flagged as Stub."
+      "description": "Control group stub: always returns hardcoded object, never writes DB. Must be flagged as Stub.",
+      "forced_stub": true
     },
     {
       "path": "test/list-malfunction",
@@ -1809,6 +2485,1503 @@
       "expectedResponseType": "object",
       "hasSecurity": false,
       "description": "Malfunction simulation: intentionally returns an array when an object is expected. Must be flagged as Malfunction."
+    }
+  ],
+  "__stubTests": [
+    {
+      "name": "Stub Control Group",
+      "targets": [
+        "test/post-stub",
+        "test/list-stub"
+      ],
+      "forced_stub": true,
+      "reason": "diagnostic control group: hardcoded responses, never reads/writes DB"
+    },
+    {
+      "name": "Notes Lifecycle",
+      "targets": [
+        "notes/create",
+        "notes/show",
+        "notes/timeline",
+        "notes/local-timeline",
+        "notes/hybrid-timeline",
+        "notes/global-timeline",
+        "users/notes",
+        "notes/search"
+      ],
+      "seed": {
+        "path": "notes/create",
+        "body": {
+          "text": "stub-detection-test-note"
+        },
+        "auth": true,
+        "capture": "noteId",
+        "captureFrom": "createdNote.id"
+      },
+      "verify": [
+        {
+          "path": "notes/show",
+          "body": {
+            "noteId": "{{noteId}}"
+          },
+          "auth": true,
+          "check": "hasField",
+          "checkField": "id",
+          "targets": [
+            "notes/show"
+          ]
+        },
+        {
+          "path": "notes/timeline",
+          "body": {
+            "limit": 50
+          },
+          "auth": true,
+          "check": "contains",
+          "checkField": "id",
+          "checkCapture": "noteId",
+          "targets": [
+            "notes/timeline"
+          ]
+        },
+        {
+          "path": "notes/local-timeline",
+          "body": {
+            "limit": 50
+          },
+          "auth": true,
+          "check": "contains",
+          "checkField": "id",
+          "checkCapture": "noteId",
+          "targets": [
+            "notes/local-timeline"
+          ]
+        },
+        {
+          "path": "notes/hybrid-timeline",
+          "body": {
+            "limit": 50
+          },
+          "auth": true,
+          "check": "contains",
+          "checkField": "id",
+          "checkCapture": "noteId",
+          "targets": [
+            "notes/hybrid-timeline"
+          ]
+        },
+        {
+          "path": "notes/global-timeline",
+          "body": {
+            "limit": 50
+          },
+          "auth": true,
+          "check": "contains",
+          "checkField": "id",
+          "checkCapture": "noteId",
+          "targets": [
+            "notes/global-timeline"
+          ]
+        },
+        {
+          "path": "users/notes",
+          "body": {
+            "userId": "{{userId}}",
+            "limit": 50
+          },
+          "auth": true,
+          "check": "contains",
+          "checkField": "id",
+          "checkCapture": "noteId",
+          "targets": [
+            "users/notes"
+          ]
+        },
+        {
+          "path": "notes/search",
+          "body": {
+            "query": "stub-detection-test-note",
+            "limit": 50
+          },
+          "auth": true,
+          "check": "contains",
+          "checkField": "id",
+          "checkCapture": "noteId",
+          "targets": [
+            "notes/search"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Note Reactions",
+      "targets": [
+        "notes/reactions/create",
+        "notes/reactions"
+      ],
+      "seed": {
+        "path": "notes/create",
+        "body": {
+          "text": "reaction-test-note"
+        },
+        "auth": true,
+        "capture": "noteId",
+        "captureFrom": "createdNote.id"
+      },
+      "verify": [
+        {
+          "path": "notes/reactions/create",
+          "body": {
+            "noteId": "{{noteId}}",
+            "reaction": "\ud83d\udc4d"
+          },
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "notes/reactions/create"
+          ]
+        },
+        {
+          "path": "notes/reactions",
+          "body": {
+            "noteId": "{{noteId}}"
+          },
+          "auth": true,
+          "check": "nonEmpty",
+          "targets": [
+            "notes/reactions"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Note Favorites",
+      "targets": [
+        "notes/favorites/create",
+        "i/favorites"
+      ],
+      "seed": {
+        "path": "notes/create",
+        "body": {
+          "text": "favorite-test-note"
+        },
+        "auth": true,
+        "capture": "noteId",
+        "captureFrom": "createdNote.id"
+      },
+      "verify": [
+        {
+          "path": "notes/favorites/create",
+          "body": {
+            "noteId": "{{noteId}}"
+          },
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "notes/favorites/create"
+          ]
+        },
+        {
+          "path": "i/favorites",
+          "body": {},
+          "auth": true,
+          "check": "nonEmpty",
+          "targets": [
+            "i/favorites"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User Profile",
+      "targets": [
+        "i/update",
+        "i"
+      ],
+      "seed": {
+        "path": "i/update",
+        "body": {
+          "name": "StubTest_{{timestamp}}"
+        },
+        "auth": true,
+        "capture": "expectedName",
+        "captureFrom": "name"
+      },
+      "verify": [
+        {
+          "path": "i",
+          "body": {},
+          "auth": true,
+          "check": "hasField",
+          "checkField": "name",
+          "targets": [
+            "i",
+            "i/update"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Registry",
+      "targets": [
+        "i/registry/set",
+        "i/registry/get",
+        "i/registry/keys",
+        "i/registry/get-all"
+      ],
+      "seed": {
+        "path": "i/registry/set",
+        "body": {
+          "key": "stubtest_{{timestamp}}",
+          "value": {
+            "test": true,
+            "ts": "{{timestamp}}"
+          },
+          "scope": [
+            "client",
+            "base"
+          ]
+        },
+        "auth": true,
+        "capture": "key"
+      },
+      "verify": [
+        {
+          "path": "i/registry/get",
+          "body": {
+            "key": "{{key}}",
+            "scope": [
+              "client",
+              "base"
+            ]
+          },
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "i/registry/get",
+            "i/registry/set"
+          ]
+        },
+        {
+          "path": "i/registry/keys",
+          "body": {
+            "scope": [
+              "client",
+              "base"
+            ]
+          },
+          "auth": true,
+          "check": "contains",
+          "checkField": "key",
+          "checkCapture": "key",
+          "targets": [
+            "i/registry/keys"
+          ]
+        },
+        {
+          "path": "i/registry/get-all",
+          "body": {
+            "scope": [
+              "client",
+              "base"
+            ]
+          },
+          "auth": true,
+          "check": "hasField",
+          "checkField": "{{key}}",
+          "targets": [
+            "i/registry/get-all"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Push Notifications",
+      "targets": [
+        "sw/register"
+      ],
+      "seed": {
+        "path": "sw/register",
+        "body": {
+          "endpoint": "https://example.com/push/{{timestamp}}",
+          "auth": "testauthkey",
+          "publickey": "testpubkey"
+        },
+        "auth": true,
+        "capture": "endpoint"
+      },
+      "verify": [
+        {
+          "path": "sw/register",
+          "body": {
+            "endpoint": "{{endpoint}}",
+            "auth": "testauthkey",
+            "publickey": "testpubkey"
+          },
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "sw/register"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Announcements Lifecycle",
+      "targets": [
+        "admin/announcements/create",
+        "announcements"
+      ],
+      "seed": {
+        "path": "admin/announcements/create",
+        "body": {
+          "title": "StubTest Announcement {{timestamp}}",
+          "text": "test body",
+          "imageUrl": null
+        },
+        "auth": true,
+        "capture": "announcementId",
+        "captureFrom": "id"
+      },
+      "verify": [
+        {
+          "path": "announcements",
+          "body": {},
+          "auth": true,
+          "check": "contains",
+          "checkField": "id",
+          "checkCapture": "announcementId",
+          "targets": [
+            "announcements",
+            "admin/announcements/create"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Invites Lifecycle",
+      "targets": [
+        "invite/create",
+        "invite/list"
+      ],
+      "seed": {
+        "path": "invite/create",
+        "body": {},
+        "auth": true,
+        "capture": "code",
+        "captureFrom": "code"
+      },
+      "verify": [
+        {
+          "path": "invite/list",
+          "body": {},
+          "auth": true,
+          "check": "nonEmpty",
+          "targets": [
+            "invite/list",
+            "invite/create"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User Discovery",
+      "targets": [
+        "users/show",
+        "users/search"
+      ],
+      "seed": {
+        "path": "i",
+        "body": {},
+        "auth": true,
+        "capture": "username",
+        "captureFrom": "username"
+      },
+      "verify": [
+        {
+          "path": "users/show",
+          "body": {
+            "username": "{{username}}"
+          },
+          "auth": true,
+          "check": "hasField",
+          "checkField": "username",
+          "targets": [
+            "users/show"
+          ]
+        },
+        {
+          "path": "users/search",
+          "body": {
+            "query": "{{username}}"
+          },
+          "auth": true,
+          "check": "nonEmpty",
+          "targets": [
+            "users/search"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "targets": [
+        "i/notifications"
+      ],
+      "verify": [
+        {
+          "path": "i/notifications",
+          "body": {
+            "limit": 10
+          },
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "i/notifications"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Server Info - meta",
+      "targets": [
+        "meta"
+      ],
+      "verify": [
+        {
+          "path": "meta",
+          "body": {},
+          "auth": false,
+          "check": "hasField",
+          "checkField": "name",
+          "targets": [
+            "meta"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Server Info - stats",
+      "targets": [
+        "stats"
+      ],
+      "verify": [
+        {
+          "path": "stats",
+          "body": {},
+          "auth": true,
+          "check": "hasField",
+          "checkField": "usersCount",
+          "targets": [
+            "stats"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Server Info - emojis",
+      "targets": [
+        "emojis"
+      ],
+      "verify": [
+        {
+          "path": "emojis",
+          "body": {},
+          "auth": false,
+          "check": "hasField",
+          "checkField": "emojis",
+          "targets": [
+            "emojis"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Server Info - ping",
+      "targets": [
+        "ping"
+      ],
+      "verify": [
+        {
+          "path": "ping",
+          "body": {},
+          "auth": false,
+          "check": "hasField",
+          "checkField": "pong",
+          "targets": [
+            "ping"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Abuse Reports",
+      "targets": [
+        "admin/abuse-user-reports"
+      ],
+      "verify": [
+        {
+          "path": "admin/abuse-user-reports",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/abuse-user-reports"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Accounts",
+      "targets": [
+        "admin/accounts/find-by-email"
+      ],
+      "verify": [
+        {
+          "path": "admin/accounts/find-by-email",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/accounts/find-by-email"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Ads",
+      "targets": [
+        "admin/ad/list"
+      ],
+      "verify": [
+        {
+          "path": "admin/ad/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/ad/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Announcements Extended",
+      "targets": [
+        "admin/announcements/list"
+      ],
+      "verify": [
+        {
+          "path": "admin/announcements/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/announcements/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Avatar Decorations",
+      "targets": [
+        "admin/avatar-decorations/list"
+      ],
+      "verify": [
+        {
+          "path": "admin/avatar-decorations/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/avatar-decorations/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Captcha",
+      "targets": [
+        "admin/captcha/current"
+      ],
+      "verify": [
+        {
+          "path": "admin/captcha/current",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/captcha/current"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Drive",
+      "targets": [
+        "admin/drive/files"
+      ],
+      "verify": [
+        {
+          "path": "admin/drive/files",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/drive/files"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Emoji",
+      "targets": [
+        "admin/emoji/list"
+      ],
+      "verify": [
+        {
+          "path": "admin/emoji/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/emoji/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Federation",
+      "targets": [
+        "admin/federation/refresh-remote-instance-metadata"
+      ],
+      "verify": [
+        {
+          "path": "admin/federation/refresh-remote-instance-metadata",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/federation/refresh-remote-instance-metadata"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin IndieAuth",
+      "targets": [
+        "admin/indie-auth/list"
+      ],
+      "verify": [
+        {
+          "path": "admin/indie-auth/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/indie-auth/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Invites Extended",
+      "targets": [
+        "admin/invite/list"
+      ],
+      "verify": [
+        {
+          "path": "admin/invite/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/invite/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Meta",
+      "targets": [
+        "admin/meta"
+      ],
+      "verify": [
+        {
+          "path": "admin/meta",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/meta"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Moderation",
+      "targets": [
+        "admin/show-moderation-logs"
+      ],
+      "verify": [
+        {
+          "path": "admin/show-moderation-logs",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/show-moderation-logs"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Promo",
+      "targets": [
+        "admin/promo/create"
+      ],
+      "verify": [
+        {
+          "path": "admin/promo/create",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/promo/create"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Queue",
+      "targets": [
+        "admin/queue/stats"
+      ],
+      "verify": [
+        {
+          "path": "admin/queue/stats",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/queue/stats"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Relays",
+      "targets": [
+        "admin/relays/list"
+      ],
+      "verify": [
+        {
+          "path": "admin/relays/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/relays/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Roles",
+      "targets": [
+        "admin/roles/list"
+      ],
+      "verify": [
+        {
+          "path": "admin/roles/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/roles/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin SSO",
+      "targets": [
+        "admin/sso/list"
+      ],
+      "verify": [
+        {
+          "path": "admin/sso/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/sso/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin System Webhooks",
+      "targets": [
+        "admin/system-webhook/list"
+      ],
+      "verify": [
+        {
+          "path": "admin/system-webhook/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/system-webhook/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin Server",
+      "targets": [
+        "admin/get-index-stats"
+      ],
+      "verify": [
+        {
+          "path": "admin/get-index-stats",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "admin/get-index-stats"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Announcements Extended",
+      "targets": [
+        "announcements/show"
+      ],
+      "verify": [
+        {
+          "path": "announcements/show",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "announcements/show"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Antennas Lifecycle",
+      "targets": [
+        "antennas/list"
+      ],
+      "verify": [
+        {
+          "path": "antennas/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "antennas/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ActivityPub",
+      "targets": [
+        "ap/show"
+      ],
+      "verify": [
+        {
+          "path": "ap/show",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "ap/show"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "App Auth",
+      "targets": [
+        "app/show"
+      ],
+      "verify": [
+        {
+          "path": "app/show",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "app/show"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "targets": [
+        "username/available"
+      ],
+      "verify": [
+        {
+          "path": "username/available",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "username/available"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Blocking",
+      "targets": [
+        "blocking/list"
+      ],
+      "verify": [
+        {
+          "path": "blocking/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "blocking/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bubble Game",
+      "targets": [
+        "bubble-game/ranking"
+      ],
+      "verify": [
+        {
+          "path": "bubble-game/ranking",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "bubble-game/ranking"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Channels Lifecycle",
+      "targets": [
+        "channels/featured"
+      ],
+      "verify": [
+        {
+          "path": "channels/featured",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "channels/featured"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Charts",
+      "targets": [
+        "charts/active-users"
+      ],
+      "verify": [
+        {
+          "path": "charts/active-users",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "charts/active-users"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Clips Lifecycle",
+      "targets": [
+        "clips/list"
+      ],
+      "verify": [
+        {
+          "path": "clips/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "clips/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Drive Files",
+      "targets": [
+        "drive/files"
+      ],
+      "verify": [
+        {
+          "path": "drive/files",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "drive/files"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Drive Folders",
+      "targets": [
+        "drive/folders"
+      ],
+      "verify": [
+        {
+          "path": "drive/folders",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "drive/folders"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Drive Root",
+      "targets": [
+        "drive"
+      ],
+      "verify": [
+        {
+          "path": "drive",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "drive"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Emoji",
+      "targets": [
+        "emoji"
+      ],
+      "verify": [
+        {
+          "path": "emoji",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "emoji"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Federation",
+      "targets": [
+        "federation/instances"
+      ],
+      "verify": [
+        {
+          "path": "federation/instances",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "federation/instances"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Flash Lifecycle",
+      "targets": [
+        "flash/featured"
+      ],
+      "verify": [
+        {
+          "path": "flash/featured",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "flash/featured"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Following Lifecycle",
+      "targets": [
+        "following/requests/list"
+      ],
+      "verify": [
+        {
+          "path": "following/requests/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "following/requests/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gallery Lifecycle",
+      "targets": [
+        "gallery/featured"
+      ],
+      "verify": [
+        {
+          "path": "gallery/featured",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "gallery/featured"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Hashtags",
+      "targets": [
+        "hashtags/list"
+      ],
+      "verify": [
+        {
+          "path": "hashtags/list",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "hashtags/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Misc",
+      "targets": [
+        "endpoints"
+      ],
+      "verify": [
+        {
+          "path": "endpoints",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "endpoints"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "MiAuth",
+      "targets": [
+        "miauth/gen-token"
+      ],
+      "verify": [
+        {
+          "path": "miauth/gen-token",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "miauth/gen-token"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Muting",
+      "targets": [
+        "mute/list"
+      ],
+      "verify": [
+        {
+          "path": "mute/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "mute/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Notes Extended",
+      "targets": [
+        "notes"
+      ],
+      "verify": [
+        {
+          "path": "notes",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "notes"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Notifications Extended",
+      "targets": [
+        "notifications/test-notification"
+      ],
+      "verify": [
+        {
+          "path": "notifications/test-notification",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "notifications/test-notification"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pages Lifecycle",
+      "targets": [
+        "pages/featured"
+      ],
+      "verify": [
+        {
+          "path": "pages/featured",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "pages/featured"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reversi",
+      "targets": [
+        "reversi/games"
+      ],
+      "verify": [
+        {
+          "path": "reversi/games",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "reversi/games"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "targets": [
+        "roles/list"
+      ],
+      "verify": [
+        {
+          "path": "roles/list",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "roles/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Service Worker Extended",
+      "targets": [
+        "sw/show-registration"
+      ],
+      "verify": [
+        {
+          "path": "sw/show-registration",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "sw/show-registration"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User 2FA",
+      "targets": [
+        "i/2fa/password-less"
+      ],
+      "verify": [
+        {
+          "path": "i/2fa/password-less",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "i/2fa/password-less"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User Apps",
+      "targets": [
+        "i/apps"
+      ],
+      "verify": [
+        {
+          "path": "i/apps",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "i/apps"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User Achievements",
+      "targets": [
+        "users/achievements"
+      ],
+      "verify": [
+        {
+          "path": "users/achievements",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "users/achievements"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User Export/Import",
+      "targets": [
+        "i/export-notes"
+      ],
+      "verify": [
+        {
+          "path": "i/export-notes",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "i/export-notes"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User Misc",
+      "targets": [
+        "users"
+      ],
+      "verify": [
+        {
+          "path": "users",
+          "body": {},
+          "auth": false,
+          "check": "exists",
+          "targets": [
+            "users"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User Lists Lifecycle",
+      "targets": [
+        "users/lists/list"
+      ],
+      "verify": [
+        {
+          "path": "users/lists/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "users/lists/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Webhooks Lifecycle",
+      "targets": [
+        "i/webhooks/list"
+      ],
+      "verify": [
+        {
+          "path": "i/webhooks/list",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "i/webhooks/list"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Registry Extended",
+      "targets": [
+        "i/registry/keys-with-type"
+      ],
+      "verify": [
+        {
+          "path": "i/registry/keys-with-type",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "i/registry/keys-with-type"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Invites Extended",
+      "targets": [
+        "invite/limit"
+      ],
+      "verify": [
+        {
+          "path": "invite/limit",
+          "body": {},
+          "auth": true,
+          "check": "exists",
+          "targets": [
+            "invite/limit"
+          ]
+        }
+      ]
     }
   ]
 }
