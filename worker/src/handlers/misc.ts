@@ -404,4 +404,37 @@ if (u instanceof Response) return u;
 return json({});
 };
 
+export const userListsList: Handler = async (db, body) => {
+const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
+};
+export const iClips: Handler = async (db, body) => {
+const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
+};
+export const iMute: Handler = async (db, body) => {
+const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
+};
+export const iBlock: Handler = async (db, body) => {
+const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
+};
+export const iFollowing: Handler = async (db, body) => {
+const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
+};
+export const iFollowers: Handler = async (db, body) => {
+const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
+};
+export const antennasList: Handler = async (db, body) => {
+const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
+};
+export const iUserListMemberships: Handler = async (db, body) => {
+const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
+};
+export const channelsFeatured: Handler = async () => json([]);
+export const channelsFollowed: Handler = async (db, body) => {
+const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
+};
+export const flashFeatured: Handler = async () => json([]);
+export const galleryFeatured: Handler = async () => json([]);
+export const iGalleryLikes: Handler = async (db, body) => {
+const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
+};
 export const pagesFeatured: Handler = async () => json([]);
