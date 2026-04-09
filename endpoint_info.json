@@ -2453,6 +2453,14 @@
         "invite/delete",
         "invite/limit"
       ]
+    },
+    {
+      "name": "Malfunction Control Group",
+      "description": "Diagnostic group: list-malfunction and post-malfunction return intentionally wrong response types. Both must be flagged as Malfunction to confirm the detector works.",
+      "endpoints": [
+        "test/list-malfunction",
+        "test/post-malfunction"
+      ]
     }
   ],
   "__diagnostic": [
@@ -2491,8 +2499,8 @@
     {
       "name": "Stub Control Group",
       "targets": [
-        "test/post-stub",
-        "test/list-stub"
+        "test/list-stub",
+        "test/post-stub"
       ],
       "forced_stub": true,
       "reason": "diagnostic control group: hardcoded responses, never reads/writes DB"
@@ -2501,13 +2509,13 @@
       "name": "Notes Lifecycle",
       "targets": [
         "notes/create",
+        "notes/global-timeline",
+        "notes/hybrid-timeline",
+        "notes/local-timeline",
+        "notes/search",
         "notes/show",
         "notes/timeline",
-        "notes/local-timeline",
-        "notes/hybrid-timeline",
-        "notes/global-timeline",
-        "users/notes",
-        "notes/search"
+        "users/notes"
       ],
       "seed": {
         "path": "notes/create",
@@ -2616,8 +2624,8 @@
     {
       "name": "Note Reactions",
       "targets": [
-        "notes/reactions/create",
-        "notes/reactions"
+        "notes/reactions",
+        "notes/reactions/create"
       ],
       "seed": {
         "path": "notes/create",
@@ -2633,7 +2641,7 @@
           "path": "notes/reactions/create",
           "body": {
             "noteId": "{{noteId}}",
-            "reaction": "\ud83d\udc4d"
+            "reaction": "👍"
           },
           "auth": true,
           "check": "exists",
@@ -2657,8 +2665,8 @@
     {
       "name": "Note Favorites",
       "targets": [
-        "notes/favorites/create",
-        "i/favorites"
+        "i/favorites",
+        "notes/favorites/create"
       ],
       "seed": {
         "path": "notes/create",
@@ -2695,8 +2703,8 @@
     {
       "name": "User Profile",
       "targets": [
-        "i/update",
-        "i"
+        "i",
+        "i/update"
       ],
       "seed": {
         "path": "i/update",
@@ -2724,10 +2732,10 @@
     {
       "name": "Registry",
       "targets": [
-        "i/registry/set",
         "i/registry/get",
+        "i/registry/get-all",
         "i/registry/keys",
-        "i/registry/get-all"
+        "i/registry/set"
       ],
       "seed": {
         "path": "i/registry/set",
@@ -2887,8 +2895,8 @@
     {
       "name": "User Discovery",
       "targets": [
-        "users/show",
-        "users/search"
+        "users/search",
+        "users/show"
       ],
       "seed": {
         "path": "i",
@@ -2945,7 +2953,10 @@
     {
       "name": "Server Info - meta",
       "targets": [
-        "meta"
+        "emojis",
+        "meta",
+        "ping",
+        "stats"
       ],
       "verify": [
         {
@@ -2963,6 +2974,9 @@
     {
       "name": "Server Info - stats",
       "targets": [
+        "emojis",
+        "meta",
+        "ping",
         "stats"
       ],
       "verify": [
@@ -2981,7 +2995,10 @@
     {
       "name": "Server Info - emojis",
       "targets": [
-        "emojis"
+        "emojis",
+        "meta",
+        "ping",
+        "stats"
       ],
       "verify": [
         {
@@ -2999,7 +3016,10 @@
     {
       "name": "Server Info - ping",
       "targets": [
-        "ping"
+        "emojis",
+        "meta",
+        "ping",
+        "stats"
       ],
       "verify": [
         {
@@ -3017,7 +3037,19 @@
     {
       "name": "Admin Abuse Reports",
       "targets": [
-        "admin/abuse-user-reports"
+        "admin/abuse-report-resolver/create",
+        "admin/abuse-report-resolver/delete",
+        "admin/abuse-report-resolver/list",
+        "admin/abuse-report-resolver/update",
+        "admin/abuse-report/notification-recipient/create",
+        "admin/abuse-report/notification-recipient/delete",
+        "admin/abuse-report/notification-recipient/list",
+        "admin/abuse-report/notification-recipient/show",
+        "admin/abuse-report/notification-recipient/update",
+        "admin/abuse-user-reports",
+        "admin/forward-abuse-user-report",
+        "admin/resolve-abuse-user-report",
+        "admin/update-abuse-user-report"
       ],
       "verify": [
         {
@@ -3034,7 +3066,26 @@
     {
       "name": "Admin Accounts",
       "targets": [
-        "admin/accounts/find-by-email"
+        "admin/accounts/create",
+        "admin/accounts/delete",
+        "admin/accounts/find-by-email",
+        "admin/accounts/pending/list",
+        "admin/accounts/pending/revoke",
+        "admin/delete-account",
+        "admin/get-user-ips",
+        "admin/regenerate-user-token",
+        "admin/reset-password",
+        "admin/show-user",
+        "admin/show-user-account-move-logs",
+        "admin/show-users",
+        "admin/suspend-user",
+        "admin/unset-user-avatar",
+        "admin/unset-user-banner",
+        "admin/unset-user-mutual-link",
+        "admin/unsuspend-user",
+        "admin/update-proxy-account",
+        "admin/update-user-name",
+        "admin/update-user-note"
       ],
       "verify": [
         {
@@ -3051,7 +3102,10 @@
     {
       "name": "Admin Ads",
       "targets": [
-        "admin/ad/list"
+        "admin/ad/create",
+        "admin/ad/delete",
+        "admin/ad/list",
+        "admin/ad/update"
       ],
       "verify": [
         {
@@ -3068,7 +3122,9 @@
     {
       "name": "Admin Announcements Extended",
       "targets": [
-        "admin/announcements/list"
+        "admin/announcements/delete",
+        "admin/announcements/list",
+        "admin/announcements/update"
       ],
       "verify": [
         {
@@ -3085,7 +3141,10 @@
     {
       "name": "Admin Avatar Decorations",
       "targets": [
-        "admin/avatar-decorations/list"
+        "admin/avatar-decorations/create",
+        "admin/avatar-decorations/delete",
+        "admin/avatar-decorations/list",
+        "admin/avatar-decorations/update"
       ],
       "verify": [
         {
@@ -3102,7 +3161,8 @@
     {
       "name": "Admin Captcha",
       "targets": [
-        "admin/captcha/current"
+        "admin/captcha/current",
+        "admin/captcha/save"
       ],
       "verify": [
         {
@@ -3119,7 +3179,11 @@
     {
       "name": "Admin Drive",
       "targets": [
-        "admin/drive/files"
+        "admin/drive/clean-remote-files",
+        "admin/drive/cleanup",
+        "admin/drive/delete-all-files-of-a-user",
+        "admin/drive/files",
+        "admin/drive/show-file"
       ],
       "verify": [
         {
@@ -3136,7 +3200,20 @@
     {
       "name": "Admin Emoji",
       "targets": [
-        "admin/emoji/list"
+        "admin/emoji/add",
+        "admin/emoji/add-aliases-bulk",
+        "admin/emoji/copy",
+        "admin/emoji/delete",
+        "admin/emoji/delete-bulk",
+        "admin/emoji/import-zip",
+        "admin/emoji/list",
+        "admin/emoji/list-remote",
+        "admin/emoji/remove-aliases-bulk",
+        "admin/emoji/set-aliases-bulk",
+        "admin/emoji/set-category-bulk",
+        "admin/emoji/set-license-bulk",
+        "admin/emoji/update",
+        "v2/admin/emoji/list"
       ],
       "verify": [
         {
@@ -3153,7 +3230,10 @@
     {
       "name": "Admin Federation",
       "targets": [
-        "admin/federation/refresh-remote-instance-metadata"
+        "admin/federation/delete-all-files",
+        "admin/federation/refresh-remote-instance-metadata",
+        "admin/federation/remove-all-following",
+        "admin/federation/update-instance"
       ],
       "verify": [
         {
@@ -3170,7 +3250,10 @@
     {
       "name": "Admin IndieAuth",
       "targets": [
-        "admin/indie-auth/list"
+        "admin/indie-auth/create",
+        "admin/indie-auth/delete",
+        "admin/indie-auth/list",
+        "admin/indie-auth/update"
       ],
       "verify": [
         {
@@ -3187,6 +3270,7 @@
     {
       "name": "Admin Invites Extended",
       "targets": [
+        "admin/invite/create",
         "admin/invite/list"
       ],
       "verify": [
@@ -3204,7 +3288,8 @@
     {
       "name": "Admin Meta",
       "targets": [
-        "admin/meta"
+        "admin/meta",
+        "admin/update-meta"
       ],
       "verify": [
         {
@@ -3221,6 +3306,8 @@
     {
       "name": "Admin Moderation",
       "targets": [
+        "admin/moderators/add",
+        "admin/moderators/remove",
         "admin/show-moderation-logs"
       ],
       "verify": [
@@ -3255,6 +3342,10 @@
     {
       "name": "Admin Queue",
       "targets": [
+        "admin/queue/clear",
+        "admin/queue/deliver-delayed",
+        "admin/queue/inbox-delayed",
+        "admin/queue/promote",
         "admin/queue/stats"
       ],
       "verify": [
@@ -3272,7 +3363,9 @@
     {
       "name": "Admin Relays",
       "targets": [
-        "admin/relays/list"
+        "admin/relays/add",
+        "admin/relays/list",
+        "admin/relays/remove"
       ],
       "verify": [
         {
@@ -3289,7 +3382,16 @@
     {
       "name": "Admin Roles",
       "targets": [
-        "admin/roles/list"
+        "admin/roles/assign",
+        "admin/roles/create",
+        "admin/roles/delete",
+        "admin/roles/list",
+        "admin/roles/show",
+        "admin/roles/unassign",
+        "admin/roles/update",
+        "admin/roles/update-default-policies",
+        "admin/roles/update-inline-policies",
+        "admin/roles/users"
       ],
       "verify": [
         {
@@ -3306,7 +3408,10 @@
     {
       "name": "Admin SSO",
       "targets": [
-        "admin/sso/list"
+        "admin/sso/create",
+        "admin/sso/delete",
+        "admin/sso/list",
+        "admin/sso/update"
       ],
       "verify": [
         {
@@ -3323,7 +3428,12 @@
     {
       "name": "Admin System Webhooks",
       "targets": [
-        "admin/system-webhook/list"
+        "admin/system-webhook/create",
+        "admin/system-webhook/delete",
+        "admin/system-webhook/list",
+        "admin/system-webhook/show",
+        "admin/system-webhook/test",
+        "admin/system-webhook/update"
       ],
       "verify": [
         {
@@ -3340,7 +3450,9 @@
     {
       "name": "Admin Server",
       "targets": [
-        "admin/get-index-stats"
+        "admin/get-index-stats",
+        "admin/get-table-stats",
+        "admin/send-email"
       ],
       "verify": [
         {
@@ -3357,6 +3469,7 @@
     {
       "name": "Announcements Extended",
       "targets": [
+        "announcement",
         "announcements/show"
       ],
       "verify": [
@@ -3374,7 +3487,12 @@
     {
       "name": "Antennas Lifecycle",
       "targets": [
-        "antennas/list"
+        "antennas/create",
+        "antennas/delete",
+        "antennas/list",
+        "antennas/notes",
+        "antennas/show",
+        "antennas/update"
       ],
       "verify": [
         {
@@ -3391,6 +3509,7 @@
     {
       "name": "ActivityPub",
       "targets": [
+        "ap/get",
         "ap/show"
       ],
       "verify": [
@@ -3408,7 +3527,12 @@
     {
       "name": "App Auth",
       "targets": [
-        "app/show"
+        "app/create",
+        "app/show",
+        "auth/accept",
+        "auth/session/generate",
+        "auth/session/show",
+        "auth/session/userkey"
       ],
       "verify": [
         {
@@ -3425,6 +3549,19 @@
     {
       "name": "Auth",
       "targets": [
+        "email-address/available",
+        "i/change-password",
+        "i/delete-account",
+        "i/move",
+        "i/regenerate-token",
+        "i/revoke-token",
+        "i/signin-history",
+        "i/update-email",
+        "request-reset-password",
+        "reset-password",
+        "signin",
+        "signout",
+        "signup",
         "username/available"
       ],
       "verify": [
@@ -3442,6 +3579,8 @@
     {
       "name": "Blocking",
       "targets": [
+        "blocking/create",
+        "blocking/delete",
         "blocking/list"
       ],
       "verify": [
@@ -3459,7 +3598,8 @@
     {
       "name": "Bubble Game",
       "targets": [
-        "bubble-game/ranking"
+        "bubble-game/ranking",
+        "bubble-game/register"
       ],
       "verify": [
         {
@@ -3476,7 +3616,20 @@
     {
       "name": "Channels Lifecycle",
       "targets": [
-        "channels/featured"
+        "channels/create",
+        "channels/favorite",
+        "channels/featured",
+        "channels/featured-games",
+        "channels/follow",
+        "channels/followed",
+        "channels/my-favorites",
+        "channels/owned",
+        "channels/search",
+        "channels/show",
+        "channels/timeline",
+        "channels/unfavorite",
+        "channels/unfollow",
+        "channels/update"
       ],
       "verify": [
         {
@@ -3493,7 +3646,18 @@
     {
       "name": "Charts",
       "targets": [
-        "charts/active-users"
+        "charts/active-users",
+        "charts/ap-request",
+        "charts/drive",
+        "charts/federation",
+        "charts/instance",
+        "charts/notes",
+        "charts/user/drive",
+        "charts/user/following",
+        "charts/user/notes",
+        "charts/user/pv",
+        "charts/user/reactions",
+        "charts/users"
       ],
       "verify": [
         {
@@ -3510,7 +3674,17 @@
     {
       "name": "Clips Lifecycle",
       "targets": [
-        "clips/list"
+        "clips/add-note",
+        "clips/create",
+        "clips/delete",
+        "clips/favorite",
+        "clips/list",
+        "clips/my-favorites",
+        "clips/notes",
+        "clips/remove-note",
+        "clips/show",
+        "clips/unfavorite",
+        "clips/update"
       ],
       "verify": [
         {
@@ -3527,7 +3701,16 @@
     {
       "name": "Drive Files",
       "targets": [
-        "drive/files"
+        "drive/files",
+        "drive/files/attached-notes",
+        "drive/files/check-existence",
+        "drive/files/create",
+        "drive/files/delete",
+        "drive/files/find",
+        "drive/files/find-by-hash",
+        "drive/files/show",
+        "drive/files/update",
+        "drive/files/upload-from-url"
       ],
       "verify": [
         {
@@ -3544,7 +3727,12 @@
     {
       "name": "Drive Folders",
       "targets": [
-        "drive/folders"
+        "drive/folders",
+        "drive/folders/create",
+        "drive/folders/delete",
+        "drive/folders/find",
+        "drive/folders/show",
+        "drive/folders/update"
       ],
       "verify": [
         {
@@ -3561,7 +3749,8 @@
     {
       "name": "Drive Root",
       "targets": [
-        "drive"
+        "drive",
+        "drive/stream"
       ],
       "verify": [
         {
@@ -3578,7 +3767,8 @@
     {
       "name": "Emoji",
       "targets": [
-        "emoji"
+        "emoji",
+        "export-custom-emojis"
       ],
       "verify": [
         {
@@ -3595,7 +3785,13 @@
     {
       "name": "Federation",
       "targets": [
-        "federation/instances"
+        "federation/followers",
+        "federation/following",
+        "federation/instances",
+        "federation/show-instance",
+        "federation/stats",
+        "federation/update-remote-user",
+        "federation/users"
       ],
       "verify": [
         {
@@ -3612,7 +3808,15 @@
     {
       "name": "Flash Lifecycle",
       "targets": [
-        "flash/featured"
+        "flash/create",
+        "flash/delete",
+        "flash/featured",
+        "flash/like",
+        "flash/my",
+        "flash/my-likes",
+        "flash/show",
+        "flash/unlike",
+        "flash/update"
       ],
       "verify": [
         {
@@ -3629,7 +3833,16 @@
     {
       "name": "Following Lifecycle",
       "targets": [
-        "following/requests/list"
+        "following/create",
+        "following/delete",
+        "following/invalidate",
+        "following/requests/accept",
+        "following/requests/cancel",
+        "following/requests/list",
+        "following/requests/reject",
+        "following/requests/sent",
+        "following/update",
+        "following/update-all"
       ],
       "verify": [
         {
@@ -3646,7 +3859,18 @@
     {
       "name": "Gallery Lifecycle",
       "targets": [
-        "gallery/featured"
+        "gallery/featured",
+        "gallery/popular",
+        "gallery/posts",
+        "gallery/posts/create",
+        "gallery/posts/delete",
+        "gallery/posts/like",
+        "gallery/posts/show",
+        "gallery/posts/unlike",
+        "gallery/posts/update",
+        "i/gallery/likes",
+        "i/gallery/posts",
+        "users/gallery/posts"
       ],
       "verify": [
         {
@@ -3663,7 +3887,11 @@
     {
       "name": "Hashtags",
       "targets": [
-        "hashtags/list"
+        "hashtags/list",
+        "hashtags/search",
+        "hashtags/show",
+        "hashtags/trend",
+        "hashtags/users"
       ],
       "verify": [
         {
@@ -3680,7 +3908,19 @@
     {
       "name": "Misc",
       "targets": [
-        "endpoints"
+        "endpoint",
+        "endpoints",
+        "fetch-external-resources",
+        "fetch-rss",
+        "get-avatar-decorations",
+        "get-online-users-count",
+        "page-push",
+        "pinned-users",
+        "promo/read",
+        "reset-db",
+        "retention",
+        "server-info",
+        "test"
       ],
       "verify": [
         {
@@ -3714,7 +3954,12 @@
     {
       "name": "Muting",
       "targets": [
-        "mute/list"
+        "mute/create",
+        "mute/delete",
+        "mute/list",
+        "renote-mute/create",
+        "renote-mute/delete",
+        "renote-mute/list"
       ],
       "verify": [
         {
@@ -3731,7 +3976,28 @@
     {
       "name": "Notes Extended",
       "targets": [
-        "notes"
+        "notes",
+        "notes/children",
+        "notes/clips",
+        "notes/conversation",
+        "notes/delete",
+        "notes/favorites/delete",
+        "notes/featured",
+        "notes/mentions",
+        "notes/polls/recommendation",
+        "notes/polls/vote",
+        "notes/reactions/delete",
+        "notes/renotes",
+        "notes/replies",
+        "notes/scheduled/cancel",
+        "notes/scheduled/list",
+        "notes/search-by-tag",
+        "notes/state",
+        "notes/thread-muting/create",
+        "notes/thread-muting/delete",
+        "notes/translate",
+        "notes/unrenote",
+        "notes/user-list-timeline"
       ],
       "verify": [
         {
@@ -3748,6 +4014,10 @@
     {
       "name": "Notifications Extended",
       "targets": [
+        "i/notifications-grouped",
+        "notifications/create",
+        "notifications/flush",
+        "notifications/mark-all-as-read",
         "notifications/test-notification"
       ],
       "verify": [
@@ -3765,7 +4035,16 @@
     {
       "name": "Pages Lifecycle",
       "targets": [
-        "pages/featured"
+        "i/page-likes",
+        "i/pages",
+        "pages/create",
+        "pages/delete",
+        "pages/featured",
+        "pages/like",
+        "pages/show",
+        "pages/unlike",
+        "pages/update",
+        "users/pages"
       ],
       "verify": [
         {
@@ -3782,7 +4061,13 @@
     {
       "name": "Reversi",
       "targets": [
-        "reversi/games"
+        "reversi/cancel-match",
+        "reversi/games",
+        "reversi/invitations",
+        "reversi/match",
+        "reversi/show-game",
+        "reversi/surrender",
+        "reversi/verify"
       ],
       "verify": [
         {
@@ -3799,7 +4084,10 @@
     {
       "name": "Roles",
       "targets": [
-        "roles/list"
+        "roles/list",
+        "roles/notes",
+        "roles/show",
+        "roles/users"
       ],
       "verify": [
         {
@@ -3816,7 +4104,9 @@
     {
       "name": "Service Worker Extended",
       "targets": [
-        "sw/show-registration"
+        "sw/show-registration",
+        "sw/unregister",
+        "sw/update-registration"
       ],
       "verify": [
         {
@@ -3833,7 +4123,14 @@
     {
       "name": "User 2FA",
       "targets": [
-        "i/2fa/password-less"
+        "i/2fa/done",
+        "i/2fa/key-done",
+        "i/2fa/password-less",
+        "i/2fa/register",
+        "i/2fa/register-key",
+        "i/2fa/remove-key",
+        "i/2fa/unregister",
+        "i/2fa/update-key"
       ],
       "verify": [
         {
@@ -3850,7 +4147,9 @@
     {
       "name": "User Apps",
       "targets": [
-        "i/apps"
+        "i/apps",
+        "i/authorized-apps",
+        "my/apps"
       ],
       "verify": [
         {
@@ -3867,6 +4166,7 @@
     {
       "name": "User Achievements",
       "targets": [
+        "i/claim-achievement",
         "users/achievements"
       ],
       "verify": [
@@ -3884,7 +4184,19 @@
     {
       "name": "User Export/Import",
       "targets": [
-        "i/export-notes"
+        "i/export-antennas",
+        "i/export-blocking",
+        "i/export-clips",
+        "i/export-favorites",
+        "i/export-following",
+        "i/export-mute",
+        "i/export-notes",
+        "i/export-user-lists",
+        "i/import-antennas",
+        "i/import-blocking",
+        "i/import-following",
+        "i/import-muting",
+        "i/import-user-lists"
       ],
       "verify": [
         {
@@ -3901,7 +4213,27 @@
     {
       "name": "User Misc",
       "targets": [
-        "users"
+        "i/pin",
+        "i/purge-timeline-cache",
+        "i/read-announcement",
+        "i/unpin",
+        "users",
+        "users/clips",
+        "users/featured-notes",
+        "users/flashs",
+        "users/followers",
+        "users/following",
+        "users/get-following-birthday-users",
+        "users/get-frequently-replied-users",
+        "users/get-security-info",
+        "users/get-skeb-status",
+        "users/reactions",
+        "users/recommendation",
+        "users/relation",
+        "users/report-abuse",
+        "users/search-by-username-and-host",
+        "users/stats",
+        "users/update-memo"
       ],
       "verify": [
         {
@@ -3918,7 +4250,18 @@
     {
       "name": "User Lists Lifecycle",
       "targets": [
-        "users/lists/list"
+        "users/lists/create",
+        "users/lists/create-from-public",
+        "users/lists/delete",
+        "users/lists/favorite",
+        "users/lists/get-memberships",
+        "users/lists/list",
+        "users/lists/pull",
+        "users/lists/push",
+        "users/lists/show",
+        "users/lists/unfavorite",
+        "users/lists/update",
+        "users/lists/update-membership"
       ],
       "verify": [
         {
@@ -3935,7 +4278,12 @@
     {
       "name": "Webhooks Lifecycle",
       "targets": [
-        "i/webhooks/list"
+        "i/webhooks/create",
+        "i/webhooks/delete",
+        "i/webhooks/list",
+        "i/webhooks/show",
+        "i/webhooks/test",
+        "i/webhooks/update"
       ],
       "verify": [
         {
@@ -3952,7 +4300,10 @@
     {
       "name": "Registry Extended",
       "targets": [
-        "i/registry/keys-with-type"
+        "i/registry/get-detail",
+        "i/registry/keys-with-type",
+        "i/registry/remove",
+        "i/registry/scopes-with-domain"
       ],
       "verify": [
         {
@@ -3969,6 +4320,7 @@
     {
       "name": "Invites Extended",
       "targets": [
+        "invite/delete",
         "invite/limit"
       ],
       "verify": [
