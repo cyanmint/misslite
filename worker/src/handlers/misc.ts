@@ -330,6 +330,27 @@ return json(result);
 
 export const testEndpoint: Handler = async () => json({});
 
+// ── Diagnostic endpoints (CI control group) ────────────────────────────────
+
+/** test/list-stub — returns a valid array schema but performs no DB operations.
+ *  Grouped with test/post-stub; the group stub test must flag both as Stub. */
+export const testListStub: Handler = async () => json([]);
+
+/** test/post-stub — returns a valid object schema but performs no DB operations.
+ *  Grouped with test/list-stub; the group stub test must flag both as Stub. */
+export const testPostStub: Handler = async () =>
+	json({ id: 'stub-id', createdAt: '2000-01-01T00:00:00.000Z' });
+
+/** test/list-malfunction — intentionally returns an object when an array is expected.
+ *  Must be detected as Malfunction by the schema validator. */
+export const testListMalfunction: Handler = async () =>
+	json({ intentional: 'malfunction', expected: 'array', got: 'object' });
+
+/** test/post-malfunction — intentionally returns an array when an object is expected.
+ *  Must be detected as Malfunction by the schema validator. */
+export const testPostMalfunction: Handler = async () =>
+	json(['intentional', 'malfunction', 'expected', 'object']);
+
 export const iPurgeTimelineCache: Handler = async (db, body) => {
 const u = await requireUser(db, body);
 if (u instanceof Response) return u;

@@ -63,6 +63,7 @@ import {
 	requestResetPassword, resetPasswordHandler, iRevokeToken, iMove,
 	hashtagsList, hashtagsSearch, hashtagsShow, hashtagsUsers,
 	notesPollsVote, notesPollsRecommendation,
+	testListStub, testPostStub, testListMalfunction, testPostMalfunction,
 } from './handlers/misc.js';
 import { registryGetAll, registryGet, registrySet, registryRemove, registryKeys } from './handlers/registry.js';
 import {
@@ -287,6 +288,11 @@ const routes: Record<string, Handler> = {
 	'reset-db': resetDb,
 	'page-push': pagePush,
 	'request-reset-password': requestResetPassword,
+	// Diagnostic endpoints — CI control group (see endpoint_info.json __diagnostic)
+	'test/list-stub': testListStub,
+	'test/post-stub': testPostStub,
+	'test/list-malfunction': testListMalfunction,
+	'test/post-malfunction': testPostMalfunction,
 	'reset-password': resetPasswordHandler,
 
 	// Following
