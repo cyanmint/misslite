@@ -124,3 +124,10 @@ npx wrangler deploy       # Deploy to Cloudflare
 cd worker
 npm test                  # Run vitest tests
 ```
+
+## API Coverage Report
+
+The latest API Coverage Report is generated automatically on every CI run and published as a
+[GitHub Actions job summary](../../actions/workflows/test-worker.yml).
+It classifies every `api.json` endpoint as **Correct**, **Stub**, **Malfunction**, or **Missing** —
+see the [root README](../README.md) for full definitions.

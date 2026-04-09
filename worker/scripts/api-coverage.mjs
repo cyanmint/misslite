@@ -28,9 +28,15 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = resolve(__dirname, '..');
 const API_JSON   = resolve(__dirname, '../../api.json');
+const ENDPOINT_INFO = resolve(__dirname, '../../endpoint_info.json');
 
 // ── Load spec ─────────────────────────────────────────────────────────────────
 const apiSpec  = JSON.parse(readFileSync(API_JSON, 'utf-8'));
+
+// ── Load endpoint-info.json (groups & diagnostic endpoints) ───────────────────
+const endpointInfo = JSON.parse(readFileSync(ENDPOINT_INFO, 'utf-8'));
+const apiGroups    = endpointInfo.__groups ?? [];
+const diagnosticEndpoints = endpointInfo.__diagnostic ?? [];
 
 // ── Schema helpers ────────────────────────────────────────────────────────────
 
@@ -112,6 +118,22 @@ for (const [rawPath, methods] of Object.entries(apiSpec.paths ?? {})) {
   }
 }
 console.log(`\nLoaded ${endpoints.length} endpoints from api.json\n`);
+
+// ── Add diagnostic endpoints from endpoint_info.json ──────────────────────────
+for (const diag of diagnosticEndpoints) {
+  const typeMap = { array: 'array', object: 'object' };
+  endpoints.push({
+    path: diag.path,
+    method: diag.method ?? 'post',
+    successSpec: { code: 200, type: typeMap[diag.expectedResponseType] ?? null, required: new Set() },
+    authRequired: diag.hasSecurity ?? false,
+    requiredParams: [],
+    isDiagnostic: true,
+  });
+}
+if (diagnosticEndpoints.length > 0) {
+  console.log(`Added ${diagnosticEndpoints.length} diagnostic endpoints from endpoint_info.json\n`);
+}
 
 // ── Worker lifecycle helpers ──────────────────────────────────────────────────
 const wranglerCli = resolve(WORKER_DIR, 'node_modules/wrangler/wrangler-dist/cli.js');
@@ -701,6 +723,28 @@ for (const r of results) {
   }
 }
 
+// ── Group-level stub propagation ──────────────────────────────────────────────
+// If ANY endpoint in a group is flagged as Stub, mark ALL endpoints in that
+// group as Stub. This ensures collective attribution — when a lifecycle test
+// fails, all participating endpoints are flagged for investigation.
+const resultsByPath = new Map(results.map(r => [r.path, r]));
+for (const group of apiGroups) {
+  const members = group.endpoints ?? [];
+  const anyStub = members.some(ep => resultsByPath.get(ep)?.verdict === 'stub');
+  if (!anyStub) continue;
+
+  for (const ep of members) {
+    const r = resultsByPath.get(ep);
+    if (!r || r.verdict === 'stub') continue;
+    if (r.verdict === 'correct') {
+      r.verdict = 'stub';
+      r.reason = `group "${group.name}" failed — collective stub attribution`;
+      tally.correct--;
+      tally.stub++;
+    }
+  }
+}
+
 // ── Print per-verdict lists ───────────────────────────────────────────────────
 for (const [label, sym, key] of [
   ['Stub (matches spec but non-functional / not persisted)', '⊘', 'stub'],
@@ -717,7 +761,37 @@ for (const [label, sym, key] of [
   console.log('');
 }
 
-// ── Summary ───────────────────────────────────────────────────────────────────
+// ── Group visualization (console) ─────────────────────────────────────────────
+if (apiGroups.length > 0) {
+  console.log('Defined API Groups:');
+  for (const group of apiGroups) {
+    const members = group.endpoints ?? [];
+    const verdicts = members.map(ep => {
+      const r = resultsByPath.get(ep);
+      if (!r) return '?';
+      return r.verdict === 'correct' ? '✓' : r.verdict === 'stub' ? '⊘' : r.verdict === 'malfunction' ? '~' : '✗';
+    });
+    const allPass = verdicts.every(v => v === '✓');
+    const groupSym = allPass ? '✓' : '⊘';
+    console.log(`  ${groupSym} ${group.name}`);
+    for (let i = 0; i < members.length; i++) {
+      console.log(`      ${verdicts[i]} ${members[i]}`);
+    }
+  }
+  console.log('');
+}
+
+// ── Orphan detection (console) ────────────────────────────────────────────────
+const groupedPaths = new Set(apiGroups.flatMap(g => g.endpoints ?? []));
+const allProbedPaths = results.map(r => r.path);
+const orphans = allProbedPaths.filter(p => !groupedPaths.has(p));
+if (orphans.length > 0) {
+  console.log(`Unclassified APIs (${orphans.length} not in any group):`);
+  for (const p of orphans) {
+    console.log(`  · ${p}`);
+  }
+  console.log('');
+}
 const total = endpoints.length;
 const pct  = n => total > 0 ? ((n / total) * 100).toFixed(1).padStart(5) : '  0.0';
 const pad  = n => String(n).padStart(6);
@@ -785,6 +859,37 @@ if (summaryFile) {
     for (const { method, path } of missing) {
       md.push(`| ${method} | \`/${path}\` |`);
     }
+    md.push('');
+  }
+
+  // ── Groups visualization ──────────────────────────────────────────────────
+  if (apiGroups.length > 0) {
+    md.push('### API Test Groups');
+    md.push('');
+    md.push('| Group | Status | Endpoints |');
+    md.push('|-------|--------|-----------|');
+    for (const group of apiGroups) {
+      const members = group.endpoints ?? [];
+      const allPass = members.every(ep => resultsByPath.get(ep)?.verdict === 'correct');
+      const sym = allPass ? '✓ Pass' : '⊘ Stub';
+      md.push(`| ${group.name} | ${sym} | ${members.map(e => '`' + e + '`').join(', ')} |`);
+    }
+    md.push('');
+  }
+
+  // ── Orphan detection ──────────────────────────────────────────────────────
+  if (orphans.length > 0) {
+    md.push('### Unclassified APIs');
+    md.push('');
+    md.push(`${orphans.length} endpoint(s) not assigned to any test group:`);
+    md.push('');
+    md.push('<details><summary>Show all</summary>');
+    md.push('');
+    for (const p of orphans) {
+      md.push(`- \`${p}\``);
+    }
+    md.push('');
+    md.push('</details>');
     md.push('');
   }
 

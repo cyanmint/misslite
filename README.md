@@ -1,0 +1,99 @@
+# MissLite CF
+
+A lightweight, Cloudflare Workers-based implementation of the Misskey API, designed for minimal hosting costs and maximum compatibility with the official Misskey frontend.
+
+## Architecture
+
+```
+┌───────────────────┐     ┌────────────────────┐
+│  Misskey Frontend  │────▶│  Cloudflare Worker  │
+│  (Static Assets)   │     │  (API Handlers)     │
+└───────────────────┘     └────────┬───────────┘
+                                   │
+                              ┌────▼────┐
+                              │ D1 (SQL) │
+                              └─────────┘
+```
+
+- **Frontend**: Pre-built Misskey frontend served as static assets via Cloudflare Pages or the worker itself.
+- **Worker**: A single Cloudflare Worker handles all `/api/*` routes, implementing the Misskey API surface against D1.
+- **Database**: Cloudflare D1 (SQLite-compatible) stores users, notes, reactions, notifications, and all other persistent data.
+
+## CI / Testing Pipeline
+
+The project runs two CI stages on every push:
+
+1. **Unit Tests** (`vitest run`) — 91+ handler-level tests covering authentication, CRUD operations, and edge cases.
+2. **API Coverage Report** (`worker/scripts/api-coverage.mjs`) — automatically probes every endpoint in `api.json` (the Misskey OpenAPI spec) and classifies each one.
+
+### API Status Definitions
+
+Every endpoint receives one of four statuses:
+
+| Status | Symbol | Meaning |
+|--------|--------|---------|
+| **Correct** | ✓ | Handler exists, response matches the OpenAPI spec, AND data persists across worker restarts. |
+| **Stub** | ⊘ | Handler exists and returns a schema-valid response, but the data is hardcoded, not persisted, or non-functional. |
+| **Malfunction** | ~ | Handler exists but the response body does not match the OpenAPI spec (wrong type, missing required fields). |
+| **Missing** | ✗ | No handler — the endpoint returns HTTP 404. |
+
+### Stub Detection
+
+Stub detection uses a multi-phase approach:
+
+1. **Phase 1 — Schema Probe**: Every endpoint is called and the response is validated against `api.json`.
+2. **Phase 2 — Behavioural Verification**: For endpoints marked "correct" in Phase 1, seed data is created via mutation endpoints and then verified via read endpoints.
+3. **Phase 3 — Persistence Check**: The worker is restarted and the same read endpoints are re-verified to confirm that data persists across restarts.
+
+If either Phase 2 or Phase 3 fails for an endpoint, it is downgraded from Correct to Stub.
+
+### API Grouping & Collective Attribution
+
+Endpoints are organized into **test groups** defined in `endpoint_info.json` under the `__groups` key. Each group represents a functional lifecycle, for example:
+
+```
+Notes Lifecycle:
+  notes/create → notes/show → notes/timeline → users/notes
+```
+
+**Collective Stub Rule**: If any endpoint within a group fails the stub test, **all** endpoints in that group are marked as Stub. This is because a failed lifecycle test cannot determine which specific endpoint is at fault — both the mutation and the query must be flagged for developer investigation.
+
+### Diagnostic Endpoints (Control Group)
+
+Four diagnostic endpoints exist solely for CI validation:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `test/list-stub` | Returns `[]` — valid schema, zero DB ops. Must be detected as **Stub**. |
+| `test/post-stub` | Returns `{ id, createdAt }` — valid schema, zero DB ops. Must be detected as **Stub**. |
+| `test/list-malfunction` | Returns an object when an array is expected. Must be detected as **Malfunction**. |
+| `test/post-malfunction` | Returns an array when an object is expected. Must be detected as **Malfunction**. |
+
+These are grouped together in the "Stub Control Group" to verify that the Stub Detector correctly identifies non-functional code.
+
+### Orphan Detection
+
+The coverage report identifies all endpoints that are **not assigned to any test group** (orphans). This ensures that as new endpoints are added to `api.json`, they are tracked and eventually assigned to a group for full test coverage.
+
+## Project Structure
+
+```
+├── api.json              # Misskey OpenAPI specification (source of truth)
+├── endpoint_info.json    # Testing metadata: groups, diagnostic endpoints
+├── worker/               # Cloudflare Worker source
+│   ├── src/
+│   │   ├── index.ts      # Route table
+│   │   ├── handlers/     # API handler modules
+│   │   ├── helpers.ts    # Shared utilities
+│   │   ├── types.ts      # TypeScript interfaces
+│   │   └── __tests__/    # Vitest unit tests
+│   ├── scripts/
+│   │   └── api-coverage.mjs  # Coverage report generator
+│   └── wrangler.toml     # Cloudflare config
+├── patches/              # Frontend build patches
+└── .github/workflows/    # CI definitions
+```
+
+## License
+
+AGPL-3.0-only — see [LICENSE](LICENSE).
