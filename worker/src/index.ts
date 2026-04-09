@@ -30,6 +30,16 @@ import {
 	createInvite, listInvites,
 	deleteAccount, resetPassword, updateMeta, showModerationLogs,
 	listAnnouncements, createAnnouncement, deleteAnnouncement,
+	adminAnnouncementsList, adminAnnouncementsUpdate,
+	adminMeta, adminShowUser,
+	adminGetIndexStats, adminGetTableStats,
+	adminInviteCreate, adminInviteList,
+	adminRegenerateUserToken,
+	adminAbuseUserReports, adminResolveAbuseUserReport,
+	adminForwardAbuseUserReport, adminUpdateAbuseUserReport,
+	adminShowUserAccountMoveLogs,
+	adminUnsetUserAvatar, adminUnsetUserBanner,
+	adminUpdateUserName, adminUpdateUserNote,
 } from './handlers/admin.js';
 import {
 	emojis, stats, ping, serverInfo, listNotifications, markNotificationsRead,
@@ -51,6 +61,8 @@ import {
 	bubbleGameRegister, fetchRss, fetchExternalResources,
 	promoRead, resetDb, pagePush,
 	requestResetPassword, resetPasswordHandler, iRevokeToken, iMove,
+	hashtagsList, hashtagsSearch, hashtagsShow, hashtagsUsers,
+	notesPollsVote, notesPollsRecommendation,
 } from './handlers/misc.js';
 import { registryGetAll, registryGet, registrySet, registryRemove, registryKeys } from './handlers/registry.js';
 import {
@@ -184,6 +196,24 @@ const routes: Record<string, Handler> = {
 	'admin/show-moderation-logs': showModerationLogs,
 	'admin/announcements/create': createAnnouncement,
 	'admin/announcements/delete': deleteAnnouncement,
+	'admin/announcements/list': adminAnnouncementsList,
+	'admin/announcements/update': adminAnnouncementsUpdate,
+	'admin/meta': adminMeta,
+	'admin/show-user': adminShowUser,
+	'admin/get-index-stats': adminGetIndexStats,
+	'admin/get-table-stats': adminGetTableStats,
+	'admin/invite/create': adminInviteCreate,
+	'admin/invite/list': adminInviteList,
+	'admin/regenerate-user-token': adminRegenerateUserToken,
+	'admin/abuse-user-reports': adminAbuseUserReports,
+	'admin/resolve-abuse-user-report': adminResolveAbuseUserReport,
+	'admin/forward-abuse-user-report': adminForwardAbuseUserReport,
+	'admin/update-abuse-user-report': adminUpdateAbuseUserReport,
+	'admin/show-user-account-move-logs': adminShowUserAccountMoveLogs,
+	'admin/unset-user-avatar': adminUnsetUserAvatar,
+	'admin/unset-user-banner': adminUnsetUserBanner,
+	'admin/update-user-name': adminUpdateUserName,
+	'admin/update-user-note': adminUpdateUserNote,
 
 	// Invites
 	'invite/create': createInvite,
@@ -207,6 +237,12 @@ const routes: Record<string, Handler> = {
 	// Various endpoints from misc.ts
 	'notes/featured': notesFeatured,
 	'hashtags/trend': hashtagsTrend,
+	'hashtags/list': hashtagsList,
+	'hashtags/search': hashtagsSearch,
+	'hashtags/show': hashtagsShow,
+	'hashtags/users': hashtagsUsers,
+	'notes/polls/vote': notesPollsVote,
+	'notes/polls/recommendation': notesPollsRecommendation,
 	'i/read-announcement': readAnnouncement,
 	'drive/files': driveFiles,
 	'drive/folders': driveFolders,
@@ -412,6 +448,8 @@ const routes: Record<string, Handler> = {
 	'users/reactions': usersReactions,
 	'users/get-frequently-replied-users': usersGetFrequentlyRepliedUsers,
 	'users/get-following-birthday-users': usersGetFollowingBirthdayUsers,
+
+	'pages/featured': pagesFeatured,
 
 	// Stubs — auto-generated from api.json for all unimplemented endpoints
 	...stubRoutes,

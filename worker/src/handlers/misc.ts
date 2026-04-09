@@ -85,6 +85,31 @@ return json([]);
 
 export const notesFeatured: Handler = async () => json([]);
 export const hashtagsTrend: Handler = async () => json([]);
+
+export const hashtagsList: Handler = async () => json([]);
+export const hashtagsSearch: Handler = async (db, body) => {
+	const query = ((body.query ?? '') as string).trim();
+	if (!query) return err('query required');
+	return json([]);
+};
+export const hashtagsShow: Handler = async (db, body) => {
+	const tag = (body.tag ?? '') as string;
+	if (!tag) return err('tag required');
+	return json({ tag, mentionedUsersCount: 0, mentionedLocalUsersCount: 0, mentionedRemoteUsersCount: 0, attachedUsersCount: 0, attachedLocalUsersCount: 0, attachedRemoteUsersCount: 0 });
+};
+export const hashtagsUsers: Handler = async (db, body) => {
+	return json([]);
+};
+export const notesPollsVote: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	return json({});
+};
+export const notesPollsRecommendation: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	return json([]);
+};
 export const bubbleGameRanking: Handler = async () => json([]);
 export const driveFiles: Handler = async (db, body) => {
 const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);

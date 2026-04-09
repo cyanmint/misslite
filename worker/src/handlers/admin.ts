@@ -217,3 +217,285 @@ export const deleteAnnouncement: Handler = async (db, body) => {
 	await db.prepare('DELETE FROM announcements WHERE id = ?').bind(announcementId).run();
 	return json({});
 };
+
+// ── Additional admin endpoints ────────────────────────────────────────────────
+
+export const adminAnnouncementsList: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+
+	const limit = Math.min(Number(body.limit) || 30, 100);
+	const offset = Number(body.offset) || 0;
+	const rows = await db.prepare('SELECT * FROM announcements ORDER BY created_at DESC LIMIT ? OFFSET ?')
+		.bind(limit, offset).all<DbAnnouncement>();
+	return json((rows.results ?? []).map(a => ({
+		id: a.id, title: a.title, text: a.text,
+		imageUrl: a.image_url, createdAt: a.created_at, updatedAt: a.updated_at,
+		reads: 0, isRead: false,
+	})));
+};
+
+export const adminAnnouncementsUpdate: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+
+	const id = (body.id ?? '') as string;
+	if (!id) return err('id required');
+	const a = await db.prepare('SELECT * FROM announcements WHERE id = ?').bind(id).first<DbAnnouncement>();
+	if (!a) return err('No such announcement', 404);
+
+	const title = (body.title ?? a.title) as string;
+	const text = (body.text ?? a.text) as string;
+	const imageUrl = (body.imageUrl ?? a.image_url) as string | null;
+
+	await db.prepare('UPDATE announcements SET title = ?, text = ?, image_url = ?, updated_at = ? WHERE id = ?')
+		.bind(title, text, imageUrl, new Date().toISOString(), id).run();
+	return json({});
+};
+
+export const adminMeta: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin) return err('Forbidden', 403);
+
+	const m = await getMeta(db);
+	return json({
+		...m,
+		useObjectStorage: false,
+		objectStorageBaseUrl: null,
+		objectStorageBucket: null,
+		objectStoragePrefix: null,
+		objectStorageEndpoint: null,
+		objectStorageRegion: null,
+		objectStoragePort: null,
+		objectStorageAccessKey: null,
+		objectStorageSecretKey: null,
+		objectStorageUseSSL: true,
+		objectStorageUseProxy: false,
+		objectStorageSetPublicRead: false,
+		objectStorageS3ForcePathStyle: true,
+		enableHcaptcha: false,
+		enableRecaptcha: false,
+		enableTurnstile: false,
+		enableMcaptcha: false,
+		sensitiveMediaDetection: 'none',
+		sensitiveMediaDetectionSensitivity: 'medium',
+		setSensitiveFlagAutomatically: false,
+		enableSensitiveMediaDetectionForVideos: false,
+		enableIpLogging: false,
+		enableActiveEmailValidation: false,
+		enableChartsForRemoteUser: false,
+		enableChartsForFederatedInstances: false,
+		enableServerMachineStats: false,
+		enableIdenticonGeneration: true,
+		cacheRemoteFiles: true,
+		cacheRemoteSensitiveFiles: true,
+		policies: {},
+		pinnedUsers: [],
+		hiddenTags: [],
+		blockedHosts: [],
+		silencedHosts: [],
+		mediaSilencedHosts: [],
+		sensitiveWords: [],
+		prohibitedWords: [],
+		preservedUsernames: [],
+		deeplAuthKey: null,
+		deeplIsPro: false,
+		enableEmail: false,
+		email: null,
+		smtpSecure: false,
+		smtpHost: null,
+		smtpPort: null,
+		smtpUser: null,
+		smtpPass: null,
+		swPublickey: null,
+		swPrivateKey: null,
+		enableServiceWorker: false,
+		translatorAvailable: false,
+		proxyAccountId: null,
+	});
+};
+
+export const adminShowUser: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+
+	const userId = (body.userId ?? '') as string;
+	if (!userId) return err('userId required');
+	const target = await db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<DbUser>();
+	if (!target) return err('No such user', 404);
+
+	return json({
+		...packUser(target, true),
+		email: null,
+		emailVerified: false,
+		autoAcceptFollowed: true,
+		noCrawle: false,
+		preventAiLearning: false,
+		alwaysMarkNsfw: false,
+		autoSensitive: false,
+		carefulBot: false,
+		injectFeaturedNote: true,
+		receiveAnnouncementEmail: true,
+		mutedWords: [],
+		mutedInstances: [],
+		notificationRecieveConfig: {},
+		isSilenced: false,
+		isSuspended: !!target.is_suspended,
+		isHibernated: false,
+		isDeleted: false,
+		isExplorable: true,
+		isApproved: true,
+		signupReason: null,
+		ips: [],
+	});
+};
+
+export const adminGetIndexStats: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin) return err('Forbidden', 403);
+	return json([]);
+};
+
+export const adminGetTableStats: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin) return err('Forbidden', 403);
+
+	const tables: Record<string, { count: number; size: number | null }> = {};
+	for (const name of ['users', 'notes', 'sessions', 'notifications', 'reactions', 'favorites', 'announcements', 'invite_codes', 'meta', 'moderation_logs', 'registry_items']) {
+		try {
+			const row = await db.prepare(`SELECT COUNT(*) as c FROM ${name}`).first<{ c: number }>();
+			tables[name] = { count: row?.c ?? 0, size: null };
+		} catch {
+			tables[name] = { count: 0, size: null };
+		}
+	}
+	return json(tables);
+};
+
+export const adminInviteCreate: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+
+	const count = Math.min(Number(body.count) || 1, 100);
+	const results: unknown[] = [];
+	for (let i = 0; i < count; i++) {
+		const code = generateId();
+		await db.prepare('INSERT INTO invite_codes (code, created_by) VALUES (?, ?)').bind(code, u.id).run();
+		results.push({
+			id: code, code, expiresAt: null,
+			createdAt: new Date().toISOString(),
+			createdBy: packUser(u), usedBy: null, usedAt: null, used: false,
+		});
+	}
+	return json(results);
+};
+
+export const adminInviteList: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+
+	const limit = Math.min(Number(body.limit) || 30, 100);
+	const offset = Number(body.offset) || 0;
+	const codes = await db.prepare('SELECT * FROM invite_codes ORDER BY created_at DESC LIMIT ? OFFSET ?')
+		.bind(limit, offset).all();
+	return json(codes.results ?? []);
+};
+
+export const adminRegenerateUserToken: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin) return err('Forbidden', 403);
+
+	const userId = (body.userId ?? '') as string;
+	if (!userId) return err('userId required');
+	await db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId).run();
+	const newToken = generateId() + generateId();
+	await db.prepare('INSERT INTO sessions (token, user_id) VALUES (?, ?)').bind(newToken, userId).run();
+	await logAction(db, u.id, 'regenerateToken', userId);
+	return json({ token: newToken });
+};
+
+export const adminAbuseUserReports: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+	return json([]);
+};
+
+export const adminResolveAbuseUserReport: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+	return json({});
+};
+
+export const adminForwardAbuseUserReport: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+	return json({});
+};
+
+export const adminUpdateAbuseUserReport: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+	return json({});
+};
+
+export const adminShowUserAccountMoveLogs: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+	return json([]);
+};
+
+export const adminUnsetUserAvatar: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin) return err('Forbidden', 403);
+
+	const userId = (body.userId ?? '') as string;
+	if (!userId) return err('userId required');
+	await db.prepare('UPDATE users SET avatar_url = NULL WHERE id = ?').bind(userId).run();
+	return json({});
+};
+
+export const adminUnsetUserBanner: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin) return err('Forbidden', 403);
+
+	const userId = (body.userId ?? '') as string;
+	if (!userId) return err('userId required');
+	await db.prepare('UPDATE users SET banner_url = NULL WHERE id = ?').bind(userId).run();
+	return json({});
+};
+
+export const adminUpdateUserName: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin) return err('Forbidden', 403);
+
+	const userId = (body.userId ?? '') as string;
+	const newName = (body.name ?? '') as string;
+	if (!userId) return err('userId required');
+
+	await db.prepare('UPDATE users SET name = ? WHERE id = ?').bind(newName || null, userId).run();
+	return json({});
+};
+
+export const adminUpdateUserNote: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin) return err('Forbidden', 403);
+	return json({});
+};
