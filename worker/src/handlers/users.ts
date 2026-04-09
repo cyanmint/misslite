@@ -57,3 +57,130 @@ export const searchUsers: Handler = async (db, body) => {
 	).bind(pattern, pattern, limit, offset).all<DbUser>();
 	return json((users.results ?? []).map(u => packUser(u, true)));
 };
+
+// ── Additional user endpoints ─────────────────────────────────────────────────
+
+import { generateId, getUser } from '../helpers.js';
+
+export const userRelation: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+const targetId = (body.userId ?? '') as string;
+if (!targetId) return err('userId required');
+const following = await db.prepare('SELECT id FROM following WHERE follower_id = ? AND followee_id = ?').bind(u.id, targetId).first();
+const followedBy = await db.prepare('SELECT id FROM following WHERE follower_id = ? AND followee_id = ?').bind(targetId, u.id).first();
+const blocking = await db.prepare('SELECT id FROM blocking WHERE blocker_id = ? AND blockee_id = ?').bind(u.id, targetId).first();
+const blocked = await db.prepare('SELECT id FROM blocking WHERE blocker_id = ? AND blockee_id = ?').bind(targetId, u.id).first();
+const muting = await db.prepare('SELECT id FROM muting WHERE muter_id = ? AND mutee_id = ?').bind(u.id, targetId).first();
+const renoteMuting = await db.prepare('SELECT id FROM renote_muting WHERE muter_id = ? AND mutee_id = ?').bind(u.id, targetId).first();
+return json({
+id: targetId,
+isFollowing: !!following,
+isFollowed: !!followedBy,
+hasPendingFollowRequestFromYou: false,
+hasPendingFollowRequestToYou: false,
+isBlocking: !!blocking,
+isBlocked: !!blocked,
+isMuted: !!muting,
+isRenoteMuted: !!renoteMuting,
+});
+};
+
+export const userStats: Handler = async (db, body) => {
+const userId = (body.userId ?? '') as string;
+if (!userId) return err('userId required');
+const notes = await db.prepare('SELECT COUNT(*) as c FROM notes WHERE user_id = ?').bind(userId).first<{ c: number }>();
+const following = await db.prepare('SELECT COUNT(*) as c FROM following WHERE follower_id = ?').bind(userId).first<{ c: number }>();
+const followers = await db.prepare('SELECT COUNT(*) as c FROM following WHERE followee_id = ?').bind(userId).first<{ c: number }>();
+return json({
+notesCount: notes?.c ?? 0,
+repliesCount: 0, renotesCount: 0,
+repliedCount: 0, renotedCount: 0,
+pollVotesCount: 0, pollVotedCount: 0,
+localFollowingCount: following?.c ?? 0,
+remoteFollowingCount: 0,
+localFollowersCount: followers?.c ?? 0,
+remoteFollowersCount: 0,
+followingCount: following?.c ?? 0,
+followersCount: followers?.c ?? 0,
+sentReactionsCount: 0, receivedReactionsCount: 0,
+driveUsage: 0, driveFilesCount: 0,
+});
+};
+
+export const usersSearchByUsernameAndHost: Handler = async (db, body) => {
+const username = ((body.username ?? '') as string).trim();
+if (!username) return json([]);
+const limit = Math.min(Number(body.limit) || 10, 100);
+const pattern = username.replace(/%/g, '\\%').replace(/_/g, '\\_') + '%';
+const users = await db.prepare('SELECT * FROM users WHERE username LIKE ? ORDER BY username ASC LIMIT ?')
+.bind(pattern, limit).all<DbUser>();
+return json((users.results ?? []).map(u2 => packUser(u2, true)));
+};
+
+export const userAchievements: Handler = async () => json([]);
+
+export const userFeaturedNotes: Handler = async (db, body) => {
+const userId = (body.userId ?? '') as string;
+if (!userId) return err('userId required');
+const notes = await db.prepare("SELECT * FROM notes WHERE user_id = ? AND visibility = 'public' ORDER BY created_at DESC LIMIT 10")
+.bind(userId).all<import('../types.js').DbNote>();
+const { packNote } = await import('../helpers.js');
+const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
+return json(packed);
+};
+
+export const usersRecommendation: Handler = async () => json([]);
+
+export const usersReportAbuse: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+const targetUserId = (body.userId ?? '') as string;
+const comment = (body.comment ?? '') as string;
+if (!targetUserId) return err('userId required');
+if (!comment) return err('comment required');
+await db.prepare('INSERT INTO abuse_reports (id, reporter_id, target_user_id, comment) VALUES (?, ?, ?, ?)')
+.bind(generateId(), u.id, targetUserId, comment).run();
+return json({});
+};
+
+export const usersUpdateMemo: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+const targetUserId = (body.userId ?? '') as string;
+const memo = (body.memo ?? '') as string;
+if (!targetUserId) return err('userId required');
+await db.prepare('INSERT OR REPLACE INTO user_memos (user_id, target_user_id, memo) VALUES (?, ?, ?)')
+.bind(u.id, targetUserId, memo).run();
+return json({});
+};
+
+export const usersGetSecurityInfo: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+return json({ twoFactorEnabled: false, usePasswordLessLogin: false, securityKeys: [] });
+};
+
+export const listUsers: Handler = async (db, body) => {
+const limit = Math.min(Number(body.limit) || 10, 100);
+const offset = Number(body.offset) || 0;
+const users = await db.prepare('SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?')
+.bind(limit, offset).all<DbUser>();
+return json((users.results ?? []).map(u2 => packUser(u2)));
+};
+
+export const usersReactions: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+return json([]);
+};
+
+export const usersGetFrequentlyRepliedUsers: Handler = async (db, body) => {
+return json([]);
+};
+
+export const usersGetFollowingBirthdayUsers: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+return json([]);
+};

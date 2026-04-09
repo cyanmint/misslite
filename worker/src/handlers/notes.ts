@@ -276,3 +276,80 @@ export const listFavorites: Handler = async (db, body) => {
 	}));
 	return json(packed.filter(Boolean));
 };
+
+// ── Additional note endpoints ─────────────────────────────────────────────────
+
+export const notesChildren: Handler = async (db, body) => {
+const noteId = body.noteId as string;
+if (!noteId) return err('noteId required');
+const limit = Math.min(Number(body.limit) || 10, 100);
+const notes = await db.prepare('SELECT * FROM notes WHERE reply_id = ? ORDER BY created_at DESC LIMIT ?')
+.bind(noteId, limit).all<DbNote>();
+const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
+return json(packed);
+};
+
+export const notesReplies: Handler = async (db, body) => {
+const noteId = body.noteId as string;
+if (!noteId) return err('noteId required');
+const limit = Math.min(Number(body.limit) || 10, 100);
+const notes = await db.prepare('SELECT * FROM notes WHERE reply_id = ? ORDER BY created_at DESC LIMIT ?')
+.bind(noteId, limit).all<DbNote>();
+const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
+return json(packed);
+};
+
+export const notesRenotes: Handler = async (db, body) => {
+const noteId = body.noteId as string;
+if (!noteId) return err('noteId required');
+const limit = Math.min(Number(body.limit) || 10, 100);
+const notes = await db.prepare('SELECT * FROM notes WHERE renote_id = ? ORDER BY created_at DESC LIMIT ?')
+.bind(noteId, limit).all<DbNote>();
+const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
+return json(packed);
+};
+
+export const deleteRenote: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+const noteId = body.noteId as string;
+if (!noteId) return err('noteId required');
+await db.prepare('DELETE FROM notes WHERE renote_id = ? AND user_id = ? AND text IS NULL')
+.bind(noteId, u.id).run();
+return json({});
+};
+
+export const searchByTag: Handler = async (db, body) => {
+const tag = ((body.tag ?? '') as string).trim();
+if (!tag) return err('tag required');
+const limit = Math.min(Number(body.limit) || 10, 100);
+const pattern = '%#' + tag.replace(/%/g, '\\%').replace(/_/g, '\\_') + '%';
+const notes = await db.prepare(
+"SELECT * FROM notes WHERE visibility = 'public' AND text LIKE ? ORDER BY created_at DESC LIMIT ?"
+).bind(pattern, limit).all<DbNote>();
+const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
+return json(packed);
+};
+
+export const threadMuteCreate: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+const noteId = (body.noteId ?? '') as string;
+if (!noteId) return err('noteId required');
+const { generateId: genId } = await import('../helpers.js');
+try {
+await db.prepare('INSERT INTO thread_muting (id, user_id, thread_id) VALUES (?, ?, ?)')
+.bind(genId(), u.id, noteId).run();
+} catch { /* already muted */ }
+return json({});
+};
+
+export const threadMuteDelete: Handler = async (db, body) => {
+const u = await requireUser(db, body);
+if (u instanceof Response) return u;
+const noteId = (body.noteId ?? '') as string;
+if (!noteId) return err('noteId required');
+await db.prepare('DELETE FROM thread_muting WHERE user_id = ? AND thread_id = ?')
+.bind(u.id, noteId).run();
+return json({});
+};
