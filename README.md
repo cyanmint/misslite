@@ -6,13 +6,13 @@ A lightweight, Cloudflare Workers-based implementation of the Misskey API, desig
 
 ```
 ┌───────────────────┐     ┌────────────────────┐
-│  Misskey Frontend  │────▶│  Cloudflare Worker  │
-│  (Static Assets)   │     │  (API Handlers)     │
+│  Misskey Frontend │────▶│  Cloudflare Worker │
+│  (Static Assets)  │     │  (API Handlers)    │
 └───────────────────┘     └────────┬───────────┘
                                    │
-                              ┌────▼────┐
+                              ┌────▼─────┐
                               │ D1 (SQL) │
-                              └─────────┘
+                              └──────────┘
 ```
 
 - **Frontend**: Pre-built Misskey frontend served as static assets via Cloudflare Pages or the worker itself.
