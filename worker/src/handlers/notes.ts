@@ -411,6 +411,6 @@ export const notesTranslate: Handler = async (db, body) => {
 	if (!noteId) return json({ error: { message: 'noteId required', code: 'MISSING_PARAM' } }, 400);
 	const note = await db.prepare('SELECT text FROM notes WHERE id = ?').bind(noteId).first<{ text: string | null }>();
 	if (!note) return json({ error: { message: 'No such note', code: 'NO_SUCH_NOTE' } }, 404);
-	const targetLang = ((body.targetLang ?? 'en') as string).toLowerCase().slice(0, 5);
-	return json({ sourceLang: targetLang, text: note.text ?? '' });
+	// No translation API; return original text. Source language is unknown.
+	return json({ sourceLang: 'und', text: note.text ?? '' });
 };

@@ -4,7 +4,7 @@
 
 import type { Handler } from '../types.js';
 import type { DbUser } from '../types.js';
-import { json, requireUser, packUser, packSelf, generateId, getUser } from '../helpers.js';
+import { json, err, requireUser, packUser, packSelf, generateId, getUser } from '../helpers.js';
 
 const noContent = (): Response =>
 	new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
@@ -209,7 +209,7 @@ export const adminIndieAuthUpdate = authedNoContent;
 /* ── Promo / Queue / Relays ── */
 export const adminPromoCreate: Handler = async (db, body) => {
 	const u = await requireUser(db, body); if (u instanceof Response) return u;
-	if (!u.is_admin && !u.is_moderator) return new Response(JSON.stringify({ error: { message: 'Forbidden', code: 'FORBIDDEN' } }), { status: 403, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
 	return noContent();
 };
 export const adminQueueClear = authedNoContent;
