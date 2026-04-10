@@ -84,7 +84,9 @@ export const stubRoutes: Record<string, Handler> = {
 		if (!noteId) return json({ error: { message: 'noteId required', code: 'MISSING_PARAM' } }, 400);
 		const note = await db.prepare('SELECT text FROM notes WHERE id = ?').bind(noteId).first<{ text: string | null }>();
 		if (!note) return json({ error: { message: 'No such note', code: 'NO_SUCH_NOTE' } }, 404);
-		return json({ sourceLang: 'ja', text: note.text ?? '' });
+		// No translation API available; return original text with a neutral source language
+		const targetLang = ((body.targetLang ?? 'en') as string).toLowerCase().slice(0, 5);
+		return json({ sourceLang: targetLang, text: note.text ?? '' });
 	},
 
 	/* ── Notifications ── */
