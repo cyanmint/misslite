@@ -35,7 +35,16 @@ export const updateUser: Handler = async (db, body) => {
 
 export const showUser: Handler = async (db, body) => {
 	const userId = body.userId as string | undefined;
+	const userIds = body.userIds as string[] | undefined;
 	const username = body.username as string | undefined;
+	// Batch lookup
+	if (Array.isArray(userIds)) {
+		const results = await Promise.all(userIds.map(id =>
+			db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<DbUser>()
+		));
+		return json(results.filter(Boolean).map(u => packUser(u!, true)));
+	}
+	if (!userId && !username) return json([]);
 	let user: DbUser | null = null;
 	if (userId) {
 		user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<DbUser>();

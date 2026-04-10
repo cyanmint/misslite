@@ -110,7 +110,17 @@ export const notesPollsRecommendation: Handler = async (db, body) => {
 	if (u instanceof Response) return u;
 	return json([]);
 };
-export const bubbleGameRanking: Handler = async () => json([]);
+export const bubbleGameRanking: Handler = async (db, body) => {
+const limit = Math.min(Number(body.limit) || 10, 20);
+const rows = await db.prepare(
+'SELECT s.*, u.username, u.name, u.avatar_url FROM bubble_game_scores s JOIN users u ON u.id = s.user_id ORDER BY s.score DESC LIMIT ?'
+).bind(limit).all<Record<string, unknown>>();
+return json((rows.results ?? []).map(r => ({
+id: r.id,
+score: r.score,
+user: { id: r.user_id, username: r.username, name: r.name, avatarUrl: r.avatar_url },
+})));
+};
 export const driveFiles: Handler = async (db, body) => {
 const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
 };
@@ -189,7 +199,7 @@ const existing = await db.prepare('SELECT id FROM users WHERE username = ?').bin
 return json({ available: !existing });
 };
 
-export const emailAddressAvailable: Handler = async () => json({ available: true });
+export const emailAddressAvailable: Handler = async () => json({ available: true, reason: null });
 
 export const getOnlineUsersCount: Handler = async (db) => {
 const users = await db.prepare('SELECT COUNT(*) as c FROM users').first<{ c: number }>();
@@ -294,10 +304,11 @@ export const iRegistryGetDetail: Handler = async (db, body) => {
 const u = await requireUser(db, body);
 if (u instanceof Response) return u;
 const key = (body.key ?? '') as string;
+if (!key) return err('key is required');
 const scope = JSON.stringify(body.scope ?? []);
 const row = await db.prepare('SELECT * FROM registry_items WHERE user_id = ? AND domain IS NULL AND scope = ? AND key = ?')
 .bind(u.id, scope, key).first();
-if (!row) return err('No such key', 404);
+if (!row) return err('No such key');
 return json(row);
 };
 
@@ -319,16 +330,17 @@ const u = await requireUser(db, body);
 if (u instanceof Response) return u;
 const rows = await db.prepare('SELECT DISTINCT domain, scope FROM registry_items WHERE user_id = ?')
 .bind(u.id).all<{ domain: string | null; scope: string }>();
-const result: Record<string, string[][]> = {};
+// Return as array of {domain, scopes} objects
+const map = new Map<string, string[][]>();
 for (const r of rows.results ?? []) {
 const d = r.domain ?? '';
-if (!result[d]) result[d] = [];
-try { result[d].push(JSON.parse(r.scope)); } catch { result[d].push([]); }
+if (!map.has(d)) map.set(d, []);
+try { map.get(d)!.push(JSON.parse(r.scope)); } catch { map.get(d)!.push([]); }
 }
-return json(result);
+return json(Array.from(map.entries()).map(([domain, scopes]) => ({ domain: domain || null, scopes })));
 };
 
-export const testEndpoint: Handler = async () => json({});
+export const testEndpoint: Handler = async (db, body) => json({ required: body.required ?? null });
 
 // ── Diagnostic endpoints (CI control group) ────────────────────────────────
 
@@ -394,6 +406,10 @@ export const getAvatarDecorations: Handler = async () => json([]);
 export const bubbleGameRegister: Handler = async (db, body) => {
 const u = await requireUser(db, body);
 if (u instanceof Response) return u;
+const score = Number(body.score) || 0;
+const lang = (body.lang ?? 'en-US') as string;
+await db.prepare('INSERT INTO bubble_game_scores (id, user_id, score, lang) VALUES (?, ?, ?, ?)')
+.bind(generateId(), u.id, score, lang).run();
 return json({});
 };
 

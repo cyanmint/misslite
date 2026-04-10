@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE COLLATE NOCASE,
   password_hash TEXT NOT NULL, name TEXT, description TEXT DEFAULT '',
-  avatar_url TEXT, is_admin INTEGER NOT NULL DEFAULT 0,
+  avatar_url TEXT, banner_url TEXT, email TEXT,
+  is_admin INTEGER NOT NULL DEFAULT 0,
   is_moderator INTEGER NOT NULL DEFAULT 0, is_suspended INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
@@ -298,6 +299,14 @@ CREATE TABLE IF NOT EXISTS gallery_likes (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
   UNIQUE(user_id, post_id)
 );
+
+-- Bubble Game
+CREATE TABLE IF NOT EXISTS bubble_game_scores (
+  id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+  score INTEGER NOT NULL, lang TEXT NOT NULL DEFAULT 'en-US',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_bubble_game_scores ON bubble_game_scores(score DESC);
 `;
 
 export async function ensureSchema(db: D1Database): Promise<void> {

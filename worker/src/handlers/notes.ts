@@ -321,7 +321,7 @@ return json({});
 
 export const searchByTag: Handler = async (db, body) => {
 const tag = ((body.tag ?? '') as string).trim();
-if (!tag) return err('tag required');
+if (!tag) return json([]);
 const limit = Math.min(Number(body.limit) || 10, 100);
 const pattern = '%#' + tag.replace(/%/g, '\\%').replace(/_/g, '\\_') + '%';
 const notes = await db.prepare(

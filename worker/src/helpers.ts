@@ -171,6 +171,43 @@ export function packUser(u: DbUser, detail = false): Record<string, unknown> {
 		packed.avatarId = null;
 		packed.bannerId = null;
 		packed.followedMessage = null;
+		// Admin-visible user settings
+		packed.injectFeaturedNote = true;
+		packed.receiveAnnouncementEmail = true;
+		packed.alwaysMarkNsfw = false;
+		packed.autoSensitive = false;
+		packed.carefulBot = false;
+		packed.autoAcceptFollowed = true;
+		packed.noCrawle = false;
+		packed.preventAiLearning = false;
+		packed.isDeleted = false;
+		packed.twoFactorBackupCodesStock = 'none';
+		// Self/admin notification fields
+		packed.hideOnlineStatus = false;
+		packed.hasUnreadSpecifiedNotes = false;
+		packed.hasUnreadMentions = false;
+		packed.hasUnreadAnnouncement = false;
+		packed.unreadAnnouncements = [];
+		packed.hasUnreadAntenna = false;
+		packed.hasUnreadChannel = false;
+		packed.hasUnreadChatMessages = false;
+		packed.hasUnreadNotification = false;
+		packed.hasPendingReceivedFollowRequest = false;
+		packed.unreadNotificationsCount = 0;
+		// User preferences
+		packed.mutedWords = [];
+		packed.mutedInstances = [];
+		packed.postingLang = null;
+		packed.viewingLangs = [];
+		packed.showMediaInAllLanguages = false;
+		packed.showHashtagsInAllLanguages = false;
+		packed.notificationRecieveConfig = {};
+		packed.emailNotificationTypes = [];
+		packed.achievements = [];
+		packed.loggedInDays = 0;
+		packed.twoFactorEnabled = false;
+		packed.usePasswordLessLogin = false;
+		packed.securityKeys = [];
 	}
 	return packed;
 }
@@ -251,6 +288,15 @@ export async function packNote(db: D1Database, n: DbNote): Promise<Record<string
 export async function getMeta(db: D1Database, key: string): Promise<string | null> {
 	const row = await db.prepare('SELECT value FROM meta WHERE key = ?').bind(key).first<{ value: string }>();
 	return row?.value ?? null;
+}
+
+export async function getMetaAll(db: D1Database): Promise<Record<string, string>> {
+	const rows = await db.prepare('SELECT key, value FROM meta').all<{ key: string; value: string }>();
+	const result: Record<string, string> = {};
+	for (const row of rows.results ?? []) {
+		result[row.key] = row.value;
+	}
+	return result;
 }
 
 export async function setMeta(db: D1Database, key: string, value: string): Promise<void> {

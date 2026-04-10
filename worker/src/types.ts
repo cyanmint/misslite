@@ -25,6 +25,8 @@ export interface DbUser {
 	name: string | null;
 	description: string;
 	avatar_url: string | null;
+	banner_url: string | null;
+	email: string | null;
 	is_admin: number;
 	is_moderator: number;
 	is_suspended: number;

@@ -4,7 +4,7 @@
 
 import type { Handler } from '../types.js';
 import type { DbUser } from '../types.js';
-import { json, err, generateId, packUser, requireUser } from '../helpers.js';
+import { json, err, generateId, packUser, requireUser, getUser } from '../helpers.js';
 
 /* ------------------------------------------------------------------ */
 /*  following/create                                                   */
@@ -89,7 +89,12 @@ export const followRequestsAccept: Handler = async (db, body) => {
 export const followRequestsCancel: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
-	return json({});
+	const userId = (body.userId ?? '') as string;
+	if (userId) {
+		const target = await db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<DbUser>();
+		if (target) return json(packUser(target));
+	}
+	return json(packUser(u));
 };
 
 /* ------------------------------------------------------------------ */
@@ -125,7 +130,12 @@ export const followRequestsSent: Handler = async (db, body) => {
 export const followUpdate: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
-	return json({});
+	const userId = (body.userId ?? '') as string;
+	if (userId) {
+		const target = await db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<DbUser>();
+		if (target) return json(packUser(target));
+	}
+	return json(packUser(u));
 };
 
 /* ------------------------------------------------------------------ */
@@ -155,6 +165,9 @@ async function resolveTarget(db: D1Database, body: Record<string, unknown>): Pro
 		if (!u) return err('User not found');
 		return u;
 	}
+	// Fall back to the authenticated user if available
+	const me = await getUser(db, body);
+	if (me) return me;
 	return err('userId is required');
 }
 
@@ -162,8 +175,9 @@ async function resolveTarget(db: D1Database, body: Record<string, unknown>): Pro
 /*  users/followers                                                    */
 /* ------------------------------------------------------------------ */
 export const usersFollowers: Handler = async (db, body) => {
-	const target = await resolveTarget(db, body);
-	if (target instanceof Response) return target;
+	const targetResult = await resolveTarget(db, body);
+	if (targetResult instanceof Response) return json([]);
+	const target = targetResult;
 
 	const limit = Math.min(Number(body.limit) || 10, 100);
 	const untilId = body.untilId as string | undefined;
@@ -212,8 +226,9 @@ export const usersFollowers: Handler = async (db, body) => {
 /*  users/following                                                    */
 /* ------------------------------------------------------------------ */
 export const usersFollowing: Handler = async (db, body) => {
-	const target = await resolveTarget(db, body);
-	if (target instanceof Response) return target;
+	const targetResult = await resolveTarget(db, body);
+	if (targetResult instanceof Response) return json([]);
+	const target = targetResult;
 
 	const limit = Math.min(Number(body.limit) || 10, 100);
 	const untilId = body.untilId as string | undefined;
