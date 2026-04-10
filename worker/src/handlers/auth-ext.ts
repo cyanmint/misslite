@@ -15,7 +15,8 @@ function makeApp(): Record<string, unknown> {
 function makeWebhook(userId: string): Record<string, unknown> {
 	return {
 		id: generateId(), userId, name: '', on: [], url: '', secret: null,
-		active: true, createdAt: new Date().toISOString(), latestSentAt: null, latestStatus: null,
+		active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+		latestSentAt: null, latestStatus: null,
 	};
 }
 
