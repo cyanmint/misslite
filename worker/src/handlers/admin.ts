@@ -493,13 +493,51 @@ export const adminAbuseUserReports: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
 	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
-	return json([]);
+
+	const limit = Math.min(Number(body.limit) || 10, 100);
+	const offset = Number(body.offset) || 0;
+	const resolved = body.resolved as boolean | undefined;
+
+	let query: string;
+	let params: (string | number | null)[];
+	if (resolved === true) {
+		query = 'SELECT * FROM abuse_reports WHERE resolved = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?';
+		params = [limit, offset];
+	} else if (resolved === false) {
+		query = 'SELECT * FROM abuse_reports WHERE resolved = 0 ORDER BY created_at DESC LIMIT ? OFFSET ?';
+		params = [limit, offset];
+	} else {
+		query = 'SELECT * FROM abuse_reports ORDER BY created_at DESC LIMIT ? OFFSET ?';
+		params = [limit, offset];
+	}
+
+	const rows = await db.prepare(query).bind(...params).all<Record<string, unknown>>();
+	const results = await Promise.all((rows.results ?? []).map(async r => {
+		const reporter = await db.prepare('SELECT * FROM users WHERE id = ?').bind(r.reporter_id).first<DbUser>();
+		const target = await db.prepare('SELECT * FROM users WHERE id = ?').bind(r.target_user_id).first<DbUser>();
+		return {
+			id: r.id,
+			createdAt: r.created_at,
+			comment: r.comment,
+			resolved: !!r.resolved,
+			forwarded: !!r.forwarded,
+			reporter: reporter ? packUser(reporter) : null,
+			targetUser: target ? packUser(target) : null,
+			assignee: null,
+		};
+	}));
+	return json(results);
 };
 
 export const adminResolveAbuseUserReport: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
 	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+
+	const reportId = (body.reportId ?? '') as string;
+	if (!reportId) return err('reportId required');
+	await db.prepare('UPDATE abuse_reports SET resolved = 1 WHERE id = ?').bind(reportId).run();
+	await logAction(db, u.id, 'resolveAbuseReport', reportId);
 	return json({});
 };
 
@@ -507,6 +545,11 @@ export const adminForwardAbuseUserReport: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
 	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+
+	const reportId = (body.reportId ?? '') as string;
+	if (!reportId) return err('reportId required');
+	await db.prepare('UPDATE abuse_reports SET forwarded = 1 WHERE id = ?').bind(reportId).run();
+	await logAction(db, u.id, 'forwardAbuseReport', reportId);
 	return json({});
 };
 
@@ -514,6 +557,15 @@ export const adminUpdateAbuseUserReport: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
 	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+
+	const reportId = (body.reportId ?? '') as string;
+	if (!reportId) return err('reportId required');
+	const report = await db.prepare('SELECT * FROM abuse_reports WHERE id = ?').bind(reportId).first<Record<string, unknown>>();
+	if (!report) return err('No such report', 404);
+
+	const assigneeId = (body.assigneeId ?? report.assigned_moderator_id ?? null) as string | null;
+	await db.prepare('UPDATE abuse_reports SET assigned_moderator_id = ? WHERE id = ?')
+		.bind(assigneeId, reportId).run();
 	return json({});
 };
 
@@ -563,5 +615,12 @@ export const adminUpdateUserNote: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
 	if (!u.is_admin) return err('Forbidden', 403);
+
+	const userId = (body.userId ?? '') as string;
+	if (!userId) return err('userId required');
+	const memo = (body.text ?? '') as string;
+
+	await db.prepare('INSERT OR REPLACE INTO user_memos (user_id, target_user_id, memo) VALUES (?, ?, ?)')
+		.bind(u.id, userId, memo).run();
 	return json({});
 };

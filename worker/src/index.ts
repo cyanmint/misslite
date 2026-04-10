@@ -46,7 +46,7 @@ import {
 	readAnnouncement, swRegister, swUnregister,
 	bubbleGameRanking, iClaimAchievement,
 	swShowRegistration, swUpdateRegistration,
-	usernameAvailable, getOnlineUsersCount,
+	usernameAvailable, emailAddressAvailable, getOnlineUsersCount,
 	emojiSingle, endpointSingle, announcementShow,
 	iPin, iUnpin, iDeleteAccount, iRegenerateToken,
 	iRegistryGetDetail, iRegistryKeysWithType, iRegistryScopesWithDomain,
@@ -233,6 +233,7 @@ const routes: Record<string, Handler> = {
 
 	// Misc endpoints implemented in misc.ts
 	'username/available': usernameAvailable,
+	'email-address/available': emailAddressAvailable,
 	'get-online-users-count': getOnlineUsersCount,
 	'emoji': emojiSingle,
 	'endpoint': endpointSingle,
