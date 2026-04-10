@@ -43,26 +43,18 @@ import {
 } from './handlers/admin.js';
 import {
 	emojis, stats, ping, serverInfo, listNotifications, markNotificationsRead,
-	userListsList, iClips, iMute, iBlock, iFollowing, iFollowers,
-	driveFiles, driveFolders, antennasList, iUserListMemberships,
-	notesFeatured, channelsFeatured, channelsFollowed,
-	flashFeatured, pagesFeatured, galleryFeatured, iGalleryLikes,
-	hashtagsTrend, readAnnouncement, swRegister, swUnregister,
-	iNotificationsGrouped,
+	readAnnouncement, swRegister, swUnregister,
 	bubbleGameRanking, iClaimAchievement,
 	swShowRegistration, swUpdateRegistration,
-	usernameAvailable, emailAddressAvailable, getOnlineUsersCount,
-	pinnedUsers, retention, emojiSingle, endpointSingle, announcementShow,
-	iPin, iUnpin, iDeleteAccount, iRegenerateToken, iSigninHistory,
+	usernameAvailable, getOnlineUsersCount,
+	emojiSingle, endpointSingle, announcementShow,
+	iPin, iUnpin, iDeleteAccount, iRegenerateToken,
 	iRegistryGetDetail, iRegistryKeysWithType, iRegistryScopesWithDomain,
-	testEndpoint, iPurgeTimelineCache,
+	testEndpoint,
 	notificationsCreate, notificationsFlush,
-	inviteDelete, inviteLimit, getAvatarDecorations,
-	bubbleGameRegister, fetchRss, fetchExternalResources,
-	promoRead, resetDb, pagePush,
-	requestResetPassword, resetPasswordHandler, iRevokeToken, iMove,
-	hashtagsList, hashtagsSearch, hashtagsShow, hashtagsUsers,
-	notesPollsVote, notesPollsRecommendation,
+	inviteDelete, inviteLimit,
+	bubbleGameRegister,
+	iRevokeToken,
 	testListStub, testPostStub, testListMalfunction, testPostMalfunction,
 } from './handlers/misc.js';
 import { registryGetAll, registryGet, registrySet, registryRemove, registryKeys } from './handlers/registry.js';
@@ -130,7 +122,6 @@ import {
 	iUserListMemberships as iUserListMembershipsFromUL,
 	notesUserListTimeline,
 } from './handlers/user-lists.js';
-import { stubRoutes } from './handlers/stubs.js';
 
 const routes: Record<string, Handler> = {
 	// Instance
@@ -182,7 +173,6 @@ const routes: Record<string, Handler> = {
 
 	// Notifications
 	'i/notifications': listNotifications,
-	'i/notifications-grouped': iNotificationsGrouped,
 	'notifications/mark-all-as-read': markNotificationsRead,
 
 	// Admin / Moderation
@@ -236,31 +226,14 @@ const routes: Record<string, Handler> = {
 	'sw/update-registration': swUpdateRegistration,
 
 	// Various endpoints from misc.ts
-	'notes/featured': notesFeatured,
-	'hashtags/trend': hashtagsTrend,
-	'hashtags/list': hashtagsList,
-	'hashtags/search': hashtagsSearch,
-	'hashtags/show': hashtagsShow,
-	'hashtags/users': hashtagsUsers,
-	'notes/polls/vote': notesPollsVote,
-	'notes/polls/recommendation': notesPollsRecommendation,
 	'i/read-announcement': readAnnouncement,
-	'drive/files': driveFiles,
-	'drive/folders': driveFolders,
-	'i/following': iFollowing,
-	'i/followers': iFollowers,
-	'i/mute': iMute,
-	'i/block': iBlock,
 	'bubble-game/ranking': bubbleGameRanking,
 	'bubble-game/register': bubbleGameRegister,
 	'i/claim-achievement': iClaimAchievement,
 
 	// Misc endpoints implemented in misc.ts
 	'username/available': usernameAvailable,
-	'email-address/available': emailAddressAvailable,
 	'get-online-users-count': getOnlineUsersCount,
-	'pinned-users': pinnedUsers,
-	'retention': retention,
 	'emoji': emojiSingle,
 	'endpoint': endpointSingle,
 	'announcements/show': announcementShow,
@@ -269,31 +242,20 @@ const routes: Record<string, Handler> = {
 	'i/unpin': iUnpin,
 	'i/delete-account': iDeleteAccount,
 	'i/regenerate-token': iRegenerateToken,
-	'i/signin-history': iSigninHistory,
 	'i/registry/get-detail': iRegistryGetDetail,
 	'i/registry/keys-with-type': iRegistryKeysWithType,
 	'i/registry/scopes-with-domain': iRegistryScopesWithDomain,
 	'i/revoke-token': iRevokeToken,
-	'i/move': iMove,
-	'i/purge-timeline-cache': iPurgeTimelineCache,
 	'test': testEndpoint,
 	'notifications/create': notificationsCreate,
 	'notifications/flush': notificationsFlush,
 	'invite/delete': inviteDelete,
 	'invite/limit': inviteLimit,
-	'get-avatar-decorations': getAvatarDecorations,
-	'fetch-rss': fetchRss,
-	'fetch-external-resources': fetchExternalResources,
-	'promo/read': promoRead,
-	'reset-db': resetDb,
-	'page-push': pagePush,
-	'request-reset-password': requestResetPassword,
 	// Diagnostic endpoints — CI control group (see endpoint_info.json __diagnostic)
 	'test/list-stub': testListStub,
 	'test/post-stub': testPostStub,
 	'test/list-malfunction': testListMalfunction,
 	'test/post-malfunction': testPostMalfunction,
-	'reset-password': resetPasswordHandler,
 
 	// Following
 	'following/create': followCreate,
@@ -454,11 +416,6 @@ const routes: Record<string, Handler> = {
 	'users/reactions': usersReactions,
 	'users/get-frequently-replied-users': usersGetFrequentlyRepliedUsers,
 	'users/get-following-birthday-users': usersGetFollowingBirthdayUsers,
-
-	'pages/featured': pagesFeatured,
-
-	// Stubs — auto-generated from api.json for all unimplemented endpoints
-	...stubRoutes,
 };
 
 export default {
