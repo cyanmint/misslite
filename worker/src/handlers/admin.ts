@@ -494,8 +494,10 @@ export const adminAbuseUserReports: Handler = async (db, body) => {
 	if (u instanceof Response) return u;
 	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
 
-	const limit = Math.min(Number(body.limit) || 10, 100);
-	const offset = Number(body.offset) || 0;
+	const limitRaw = Number(body.limit);
+	const offsetRaw = Number(body.offset);
+	const limit = Math.min(!isNaN(limitRaw) && limitRaw > 0 ? limitRaw : 10, 100);
+	const offset = !isNaN(offsetRaw) && offsetRaw >= 0 ? offsetRaw : 0;
 	const resolved = body.resolved as boolean | undefined;
 
 	let query: string;
@@ -512,9 +514,23 @@ export const adminAbuseUserReports: Handler = async (db, body) => {
 	}
 
 	const rows = await db.prepare(query).bind(...params).all<Record<string, unknown>>();
-	const results = await Promise.all((rows.results ?? []).map(async r => {
-		const reporter = await db.prepare('SELECT * FROM users WHERE id = ?').bind(r.reporter_id).first<DbUser>();
-		const target = await db.prepare('SELECT * FROM users WHERE id = ?').bind(r.target_user_id).first<DbUser>();
+	const reports = rows.results ?? [];
+
+	// Batch-fetch all referenced users to avoid N+1 queries
+	const userIds = [...new Set([
+		...reports.map(r => r.reporter_id as string),
+		...reports.map(r => r.target_user_id as string),
+	].filter(Boolean))];
+	const usersMap = new Map<string, DbUser>();
+	if (userIds.length > 0) {
+		const placeholders = userIds.map(() => '?').join(',');
+		const usersRows = await db.prepare(`SELECT * FROM users WHERE id IN (${placeholders})`).bind(...userIds).all<DbUser>();
+		for (const usr of usersRows.results ?? []) usersMap.set(usr.id, usr);
+	}
+
+	const results = reports.map(r => {
+		const reporter = usersMap.get(r.reporter_id as string);
+		const target = usersMap.get(r.target_user_id as string);
 		return {
 			id: r.id,
 			createdAt: r.created_at,
@@ -525,7 +541,7 @@ export const adminAbuseUserReports: Handler = async (db, body) => {
 			targetUser: target ? packUser(target) : null,
 			assignee: null,
 		};
-	}));
+	});
 	return json(results);
 };
 

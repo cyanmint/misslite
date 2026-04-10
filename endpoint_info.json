@@ -2643,7 +2643,7 @@
           "path": "notes/reactions/create",
           "body": {
             "noteId": "{{noteId}}",
-            "reaction": "\ud83d\udc4d"
+            "reaction": "👍"
           },
           "auth": true,
           "check": "exists",
