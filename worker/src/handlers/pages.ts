@@ -50,16 +50,12 @@ export const pagesCreate: Handler = async (db, body) => {
 	const now = new Date().toISOString();
 
 	await db.prepare(
-		'INSERT INTO pages (id, user_id, name, title, summary, content, variables, script, font, align_center, hide_title_when_pinned, visibility, eye_catching_image_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+		'INSERT OR IGNORE INTO pages (id, user_id, name, title, summary, content, variables, script, font, align_center, hide_title_when_pinned, visibility, eye_catching_image_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 	).bind(id, u.id, name, title, summary, content, variables, script, font, alignCenter, hideTitleWhenPinned, visibility, eyeCatchingImageId, now, now).run();
 
-	const newPage: DbPage = {
-		id, user_id: u.id, name, title, summary, content, variables, script, font,
-		align_center: alignCenter, hide_title_when_pinned: hideTitleWhenPinned,
-		visibility, eye_catching_image_id: eyeCatchingImageId,
-		created_at: now, updated_at: now,
-	};
-	return json(packPage(newPage, packUser(u)));
+	const page = await db.prepare('SELECT * FROM pages WHERE user_id = ? AND name = ?').bind(u.id, name).first<DbPage>();
+	if (!page) return err('Failed to create page', 500);
+	return json(packPage(page, packUser(u)));
 };
 
 export const pagesDelete: Handler = async (db, body) => {
