@@ -307,6 +307,14 @@ CREATE TABLE IF NOT EXISTS bubble_game_scores (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_bubble_game_scores ON bubble_game_scores(score DESC);
+
+-- Scheduled Notes
+CREATE TABLE IF NOT EXISTS scheduled_notes (
+  id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+  text TEXT, cw TEXT, visibility TEXT NOT NULL DEFAULT 'public',
+  reply_id TEXT, scheduled_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+);
 `;
 
 export async function ensureSchema(db: D1Database): Promise<void> {

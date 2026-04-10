@@ -56,6 +56,12 @@ import {
 	bubbleGameRegister,
 	iRevokeToken,
 	testListStub, testPostStub, testListMalfunction, testPostMalfunction,
+	iNotificationsGrouped, iSigninHistory, iPurgeTimelineCache, iMove,
+	notesFeatured, notesPollsVote, notesPollsRecommendation,
+	fetchRss, fetchExternalResources, getAvatarDecorations,
+	pinnedUsers, retention,
+	pagesFeatured, promoRead, pagePush,
+	requestResetPassword, resetPasswordHandler, resetDb,
 } from './handlers/misc.js';
 import { registryGetAll, registryGet, registrySet, registryRemove, registryKeys } from './handlers/registry.js';
 import {
@@ -643,6 +649,26 @@ const routes: Record<string, Handler> = {
 	'i/webhooks/update': iWebhooksUpdate,
 	'miauth/gen-token': miauthGenToken,
 	'my/apps': myApps,
+
+	// Previously missing – now wired from misc.ts
+	'i/notifications-grouped': iNotificationsGrouped,
+	'i/signin-history': iSigninHistory,
+	'i/purge-timeline-cache': iPurgeTimelineCache,
+	'i/move': iMove,
+	'notes/featured': notesFeatured,
+	'notes/polls/vote': notesPollsVote,
+	'notes/polls/recommendation': notesPollsRecommendation,
+	'fetch-rss': fetchRss,
+	'fetch-external-resources': fetchExternalResources,
+	'get-avatar-decorations': getAvatarDecorations,
+	'pinned-users': pinnedUsers,
+	'retention': retention,
+	'pages/featured': pagesFeatured,
+	'promo/read': promoRead,
+	'page-push': pagePush,
+	'request-reset-password': requestResetPassword,
+	'reset-password': resetPasswordHandler,
+	'reset-db': resetDb,
 
 	// Stub routes (remaining unimplemented endpoints)
 	...stubRoutes,

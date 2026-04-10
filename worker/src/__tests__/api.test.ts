@@ -697,4 +697,339 @@ expect(data.policies.gtlAvailable).toBe(true);
 expect(data.policies.chatAvailability).toBe('available');
 expect(data.policies.maxFileSizeMb).toBeGreaterThan(0);
 });
+
+// ---- Newly wired endpoints ----
+
+it('notes (public list) returns array', async () => {
+const { status, data } = await callApi('notes', { limit: 5 });
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('notes/translate returns sourceLang and text', async () => {
+const { data: noteData } = await callApi('notes/create', { i: userToken, text: 'Hello translation test' });
+const noteId = noteData.createdNote.id;
+const { status, data } = await callApi('notes/translate', { i: userToken, noteId, targetLang: 'en' });
+expect(status).toBe(200);
+expect(data.text).toBeTypeOf('string');
+expect(data.sourceLang).toBeTypeOf('string');
+});
+
+it('notes/translate requires auth', async () => {
+const { status } = await callApi('notes/translate', { noteId: 'fake' });
+expect(status).toBe(401);
+});
+
+it('notes/scheduled/list returns empty for new user', async () => {
+const { status, data } = await callApi('notes/scheduled/list', { i: userToken });
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('notes/scheduled/list requires auth', async () => {
+const { status } = await callApi('notes/scheduled/list', {});
+expect(status).toBe(401);
+});
+
+it('notes/scheduled/cancel requires auth', async () => {
+const { status } = await callApi('notes/scheduled/cancel', { noteId: 'fake' });
+expect(status).toBe(401);
+});
+
+it('notifications/test-notification creates a notification', async () => {
+const { status } = await callApi('notifications/test-notification', { i: userToken });
+expect(status).toBe(200);
+});
+
+it('notifications/test-notification requires auth', async () => {
+const { status } = await callApi('notifications/test-notification', {});
+expect(status).toBe(401);
+});
+
+it('i/notifications-grouped returns array', async () => {
+const { status, data } = await callApi('i/notifications-grouped', { i: userToken });
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('i/notifications-grouped requires auth', async () => {
+const { status } = await callApi('i/notifications-grouped', {});
+expect(status).toBe(401);
+});
+
+it('i/signin-history returns array', async () => {
+const { status, data } = await callApi('i/signin-history', { i: userToken });
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('i/signin-history requires auth', async () => {
+const { status } = await callApi('i/signin-history', {});
+expect(status).toBe(401);
+});
+
+it('i/purge-timeline-cache returns 200', async () => {
+const { status } = await callApi('i/purge-timeline-cache', { i: adminToken });
+expect(status).toBe(200);
+});
+
+it('i/purge-timeline-cache requires auth', async () => {
+const { status } = await callApi('i/purge-timeline-cache', {});
+expect(status).toBe(401);
+});
+
+it('i/move requires auth', async () => {
+const { status } = await callApi('i/move', {});
+expect(status).toBe(401);
+});
+
+it('i/move returns 200 for authenticated user', async () => {
+const { status } = await callApi('i/move', { i: userToken, moveToUri: 'https://example.com/@user' });
+expect(status).toBe(200);
+});
+
+it('notes/featured returns array', async () => {
+const { status, data } = await callApi('notes/featured');
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('notes/polls/vote requires auth', async () => {
+const { status } = await callApi('notes/polls/vote', { noteId: 'fake', choice: 0 });
+expect(status).toBe(401);
+});
+
+it('notes/polls/recommendation returns array', async () => {
+const { status, data } = await callApi('notes/polls/recommendation', { i: userToken });
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('fetch-rss returns items array', async () => {
+const { status, data } = await callApi('fetch-rss', { url: 'https://example.com/feed.xml' });
+expect(status).toBe(200);
+expect(Array.isArray(data.items)).toBe(true);
+});
+
+it('fetch-external-resources returns object', async () => {
+const { status, data } = await callApi('fetch-external-resources', { url: 'https://example.com/' });
+expect(status).toBe(200);
+expect(data.type).toBeTypeOf('string');
+});
+
+it('get-avatar-decorations returns array', async () => {
+const { status, data } = await callApi('get-avatar-decorations');
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('pinned-users returns array', async () => {
+const { status, data } = await callApi('pinned-users');
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('retention returns array', async () => {
+const { status, data } = await callApi('retention');
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('pages/featured returns array', async () => {
+const { status, data } = await callApi('pages/featured');
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('promo/read requires auth', async () => {
+const { status } = await callApi('promo/read', {});
+expect(status).toBe(401);
+});
+
+it('promo/read returns 200 for authenticated user', async () => {
+const { status } = await callApi('promo/read', { i: userToken, noteId: 'fake' });
+expect(status).toBe(200);
+});
+
+it('reset-password returns 204', async () => {
+const request = new Request(`${BASE_URL}/api/reset-password`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ token: 'fake', password: 'newpass' }),
+});
+const ctx = createExecutionContext();
+const response = await worker.fetch(request, env as unknown as WorkerEnv, ctx);
+await waitOnExecutionContext(ctx);
+expect(response.status).toBe(204);
+});
+
+it('request-reset-password returns 204', async () => {
+const request = new Request(`${BASE_URL}/api/request-reset-password`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ username: 'testuser', email: 'test@example.com' }),
+});
+const ctx = createExecutionContext();
+const response = await worker.fetch(request, env as unknown as WorkerEnv, ctx);
+await waitOnExecutionContext(ctx);
+expect(response.status).toBe(204);
+});
+
+it('reset-db requires admin', async () => {
+const { status } = await callApi('reset-db', { i: userToken });
+expect(status).toBe(403);
+});
+
+it('reset-db returns 200 for admin', async () => {
+const { status } = await callApi('reset-db', { i: adminToken });
+expect(status).toBe(200);
+});
+
+it('page-push requires auth', async () => {
+const { status } = await callApi('page-push', {});
+expect(status).toBe(401);
+});
+
+// ---- Auth enforcement: unauthenticated should be rejected ----
+
+it('i requires auth', async () => {
+const { status } = await callApi('i', {});
+expect(status).toBe(401);
+});
+
+it('i/update requires auth', async () => {
+const { status } = await callApi('i/update', {});
+expect(status).toBe(401);
+});
+
+it('notes/create requires auth', async () => {
+const { status } = await callApi('notes/create', { text: 'unauthorized note' });
+expect(status).toBe(401);
+});
+
+it('notes/delete requires auth', async () => {
+const { status } = await callApi('notes/delete', { noteId: 'fake' });
+expect(status).toBe(401);
+});
+
+it('i/notifications requires auth', async () => {
+const { status } = await callApi('i/notifications', {});
+expect(status).toBe(401);
+});
+
+it('following/create requires auth', async () => {
+const { status } = await callApi('following/create', { userId: 'fake' });
+expect(status).toBe(401);
+});
+
+it('blocking/create requires auth', async () => {
+const { status } = await callApi('blocking/create', { userId: 'fake' });
+expect(status).toBe(401);
+});
+
+it('mute/create requires auth', async () => {
+const { status } = await callApi('mute/create', { userId: 'fake' });
+expect(status).toBe(401);
+});
+
+it('clips/create requires auth', async () => {
+const { status } = await callApi('clips/create', { name: 'test' });
+expect(status).toBe(401);
+});
+
+it('i/registry/set requires auth', async () => {
+const { status } = await callApi('i/registry/set', { scope: [], key: 'k', value: 1 });
+expect(status).toBe(401);
+});
+
+it('export-custom-emojis requires auth', async () => {
+const { status } = await callApi('export-custom-emojis', {});
+expect(status).toBe(401);
+});
+
+it('i/export-following requires auth', async () => {
+const { status } = await callApi('i/export-following', {});
+expect(status).toBe(401);
+});
+
+it('i/import-following requires auth', async () => {
+const { status } = await callApi('i/import-following', {});
+expect(status).toBe(401);
+});
+
+// ---- Auth enforcement: normal user rejected for admin-only endpoints ----
+
+it('admin/update-meta rejected for normal user', async () => {
+const { status } = await callApi('admin/update-meta', { i: userToken, name: 'Hacked' });
+expect(status).toBe(403);
+});
+
+it('admin/show-users rejected for normal user', async () => {
+const { status } = await callApi('admin/show-users', { i: userToken });
+expect(status).toBe(403);
+});
+
+it('admin/suspend-user rejected for normal user', async () => {
+const { status } = await callApi('admin/suspend-user', { i: userToken, userId: adminId });
+expect(status).toBe(403);
+});
+
+it('admin/moderators/add rejected for normal user', async () => {
+const { status } = await callApi('admin/moderators/add', { i: userToken, userId: adminId });
+expect(status).toBe(403);
+});
+
+it('admin/reset-password rejected for normal user', async () => {
+const { status } = await callApi('admin/reset-password', { i: userToken, userId: adminId, newPassword: 'hack' });
+expect(status).toBe(403);
+});
+
+it('admin/delete-account rejected for normal user', async () => {
+const { status } = await callApi('admin/delete-account', { i: userToken, userId: adminId });
+expect(status).toBe(403);
+});
+
+it('admin/announcements/create rejected for normal user', async () => {
+const { status } = await callApi('admin/announcements/create', { i: userToken, title: 'Hack', text: 'You got hacked' });
+expect(status).toBe(403);
+});
+
+it('reset-db rejected for normal user', async () => {
+const { status } = await callApi('reset-db', { i: userToken });
+expect(status).toBe(403);
+});
+
+// ---- Auth enforcement: public endpoints work unauthenticated ----
+
+it('meta is public', async () => {
+const { status } = await callApi('meta');
+expect(status).toBe(200);
+});
+
+it('ping is public', async () => {
+const { status } = await callApi('ping');
+expect(status).toBe(200);
+});
+
+it('emojis is public', async () => {
+const { status } = await callApi('emojis');
+expect(status).toBe(200);
+});
+
+it('notes/global-timeline is public', async () => {
+const { status, data } = await callApi('notes/global-timeline', { limit: 5 });
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
+
+it('users/show is public', async () => {
+const { status } = await callApi('users/show', { userId: adminId });
+expect(status).toBe(200);
+});
+
+it('announcements is public', async () => {
+const { status, data } = await callApi('announcements');
+expect(status).toBe(200);
+expect(Array.isArray(data)).toBe(true);
+});
 });
