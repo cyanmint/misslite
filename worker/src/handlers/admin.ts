@@ -4,7 +4,7 @@
 
 import type { Handler } from '../types.js';
 import type { DbUser, DbAnnouncement } from '../types.js';
-import { json, err, generateId, packUser, requireUser, hashPassword, getMeta, setMeta, getMetaAll } from '../helpers.js';
+import { json, err, generateId, packUser, requireUser, hashPassword, getMeta, setMeta } from '../helpers.js';
 
 async function logAction(db: D1Database, actorId: string, type: string, targetId?: string, note?: string): Promise<void> {
 	await db.prepare('INSERT INTO moderation_logs (id, actor_id, type, target_id, note) VALUES (?, ?, ?, ?, ?)')
@@ -255,134 +255,6 @@ export const adminAnnouncementsUpdate: Handler = async (db, body) => {
 	return json({});
 };
 
-export const adminMeta: Handler = async (db, body) => {
-	const u = await requireUser(db, body);
-	if (u instanceof Response) return u;
-	if (!u.is_admin) return err('Forbidden', 403);
-
-	const m = await getMetaAll(db);
-	const name = m['name'] ?? 'MissLite';
-	const description = m['description'] ?? '';
-	const themeColor = m['themeColor'] ?? '#86b300';
-	const maxNoteLength = Number(m['maxNoteLength'] ?? 3000);
-	const registrationMode = m['registrationMode'] ?? 'invite';
-	const bannerUrl = m['bannerUrl'] ?? null;
-	const iconUrl = m['iconUrl'] ?? null;
-	const backgroundImageUrl = m['backgroundImageUrl'] ?? null;
-	const maintainerName = m['maintainerName'] ?? 'admin';
-	const maintainerEmail = m['maintainerEmail'] ?? '';
-	return json({
-		name, description, themeColor, maxNoteTextLength: maxNoteLength,
-		registrationMode, bannerUrl, iconUrl, backgroundImageUrl,
-		maintainerName, maintainerEmail,
-		emailRequiredForSignup: false,
-		enableHcaptcha: false, hcaptchaSiteKey: null,
-		enableMcaptcha: false, mcaptchaSiteKey: null, mcaptchaInstanceUrl: null,
-		enableRecaptcha: false, recaptchaSiteKey: null,
-		enableTurnstile: false, turnstileSiteKey: null,
-		enableTestcaptcha: false,
-		objectStorageBaseUrl: null,
-		objectStorageBucket: null,
-		objectStoragePrefix: null,
-		objectStorageEndpoint: null,
-		objectStorageRegion: null,
-		objectStoragePort: null,
-		objectStorageAccessKey: null,
-		objectStorageSecretKey: null,
-		objectStorageUseSSL: true,
-		objectStorageUseProxy: false,
-		objectStorageSetPublicRead: false,
-		objectStorageS3ForcePathStyle: true,
-		useObjectStorage: false,
-		sensitiveMediaDetection: 'none',
-		sensitiveMediaDetectionSensitivity: 'medium',
-		setSensitiveFlagAutomatically: false,
-		enableSensitiveMediaDetectionForVideos: false,
-		enableIpLogging: false,
-		enableActiveEmailValidation: false,
-		enableChartsForRemoteUser: false,
-		enableChartsForFederatedInstances: false,
-		enableServerMachineStats: false,
-		enableIdenticonGeneration: true,
-		cacheRemoteFiles: true,
-		cacheRemoteSensitiveFiles: true,
-		policies: {},
-		pinnedUsers: [],
-		hiddenTags: [],
-		blockedHosts: [],
-		silencedHosts: [],
-		mediaSilencedHosts: [],
-		sensitiveWords: [],
-		prohibitedWords: [],
-		preservedUsernames: [],
-		deeplAuthKey: null,
-		deeplIsPro: false,
-		enableEmail: false,
-		email: null,
-		smtpSecure: false,
-		smtpHost: null,
-		smtpPort: null,
-		smtpUser: null,
-		smtpPass: null,
-		swPublickey: null,
-		swPrivateKey: null,
-		enableServiceWorker: false,
-		translatorAvailable: false,
-		proxyAccountId: null,
-		googleAnalyticsId: null,
-		mascotImageUrl: null,
-		serverErrorImageUrl: null,
-		infoImageUrl: null,
-		notFoundImageUrl: null,
-		app192IconUrl: null,
-		app512IconUrl: null,
-		blockedRemoteCustomEmojis: [],
-		hcaptchaSecretKey: null,
-		mcaptchaSecretKey: null,
-		recaptchaSecretKey: null,
-		turnstileSecretKey: null,
-		enableVerifymailApi: false,
-		verifymailAuthKey: null,
-		enableTruemailApi: false,
-		truemailInstance: null,
-		truemailAuthKey: null,
-		manifestJsonOverride: null,
-		enableFanoutTimeline: true,
-		enableFanoutTimelineDbFallback: true,
-		perLocalUserUserTimelineCacheMax: 300,
-		perRemoteUserUserTimelineCacheMax: 100,
-		perUserHomeTimelineCacheMax: 100,
-		perUserListTimelineCacheMax: 100,
-		notesPerOneAd: 0,
-		wellKnownWebsites: [],
-		urlPreviewDenyList: [],
-		featuredGameChannels: [],
-		dimensions: null,
-		disableRegistration: false,
-		impressumUrl: null,
-		privacyPolicyUrl: null,
-		repositoryUrl: 'https://github.com/cyanmint/misslite-cf',
-		tosUrl: null,
-		donationUrl: null,
-		feedbackUrl: null,
-		shortName: null,
-		summalyProxy: null,
-		uri: '',
-		urlPreviewEnabled: true,
-		urlPreviewTimeout: 10000,
-		urlPreviewMaximumContentLength: 1048576,
-		urlPreviewRequireContentLength: true,
-		urlPreviewUserAgent: null,
-		urlPreviewSummaryProxyUrl: null,
-		federation: true,
-		federationHosts: [],
-		prohibitedWordsForNameOfUser: [],
-		inquiryUrl: null,
-		defaultDarkTheme: null,
-		defaultLightTheme: null,
-		version: '2026.3.0',
-	});
-};
 
 export const adminShowUser: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
