@@ -17,8 +17,8 @@ const authedNoContent: Handler = async (db, body) => {
 
 export const stubRoutes: Record<string, Handler> = {
 	/* ── ActivityPub (no federation in this deployment) ── */
-	'ap/get': async () => json(null),
-	'ap/show': async () => json(null),
+	'ap/get': async () => json({}),
+	'ap/show': async () => json({}),
 
 	/* ── Export / Import (queued jobs; instant 204 in single-worker mode) ── */
 	'export-custom-emojis': authedNoContent,

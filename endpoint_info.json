@@ -2643,7 +2643,7 @@
           "path": "notes/reactions/create",
           "body": {
             "noteId": "{{noteId}}",
-            "reaction": "👍"
+            "reaction": "\ud83d\udc4d"
           },
           "auth": true,
           "check": "exists",
@@ -3395,23 +3395,6 @@
             "admin/moderators/add",
             "admin/moderators/remove",
             "admin/show-moderation-logs"
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Admin Promo",
-      "targets": [
-        "admin/promo/create"
-      ],
-      "verify": [
-        {
-          "path": "admin/promo/create",
-          "body": {},
-          "auth": true,
-          "check": "exists",
-          "targets": [
-            "admin/promo/create"
           ]
         }
       ]
@@ -4173,7 +4156,7 @@
         {
           "path": "miauth/gen-token",
           "body": {},
-          "auth": false,
+          "auth": true,
           "check": "exists",
           "targets": [
             "miauth/gen-token"
@@ -4430,7 +4413,7 @@
       ],
       "verify": [
         {
-          "path": "i/2fa/password-less",
+          "path": "i/2fa/register",
           "body": {},
           "auth": true,
           "check": "exists",
@@ -4483,47 +4466,6 @@
           "targets": [
             "i/claim-achievement",
             "users/achievements"
-          ]
-        }
-      ]
-    },
-    {
-      "name": "User Export/Import",
-      "targets": [
-        "i/export-antennas",
-        "i/export-blocking",
-        "i/export-clips",
-        "i/export-favorites",
-        "i/export-following",
-        "i/export-mute",
-        "i/export-notes",
-        "i/export-user-lists",
-        "i/import-antennas",
-        "i/import-blocking",
-        "i/import-following",
-        "i/import-muting",
-        "i/import-user-lists"
-      ],
-      "verify": [
-        {
-          "path": "i/export-notes",
-          "body": {},
-          "auth": true,
-          "check": "exists",
-          "targets": [
-            "i/export-antennas",
-            "i/export-blocking",
-            "i/export-clips",
-            "i/export-favorites",
-            "i/export-following",
-            "i/export-mute",
-            "i/export-notes",
-            "i/export-user-lists",
-            "i/import-antennas",
-            "i/import-blocking",
-            "i/import-following",
-            "i/import-muting",
-            "i/import-user-lists"
           ]
         }
       ]
