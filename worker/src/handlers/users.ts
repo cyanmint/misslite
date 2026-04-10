@@ -193,3 +193,8 @@ const u = await requireUser(db, body);
 if (u instanceof Response) return u;
 return json([]);
 };
+
+export const usersGetSkebStatus: Handler = async () => json({
+	screenName: '', isCreator: false, isAcceptable: false,
+	creatorRequestCount: 0, clientRequestCount: 0, skills: [],
+});

@@ -207,7 +207,11 @@ export const adminIndieAuthList: Handler = async (db, body) => {
 export const adminIndieAuthUpdate = authedNoContent;
 
 /* ── Promo / Queue / Relays ── */
-export const adminPromoCreate = authedNoContent;
+export const adminPromoCreate: Handler = async (db, body) => {
+	const u = await requireUser(db, body); if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return new Response(JSON.stringify({ error: { message: 'Forbidden', code: 'FORBIDDEN' } }), { status: 403, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+	return noContent();
+};
 export const adminQueueClear = authedNoContent;
 export const adminQueueDeliverDelayed: Handler = async (db, body) => {
 	const u = await requireUser(db, body); if (u instanceof Response) return u;

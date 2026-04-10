@@ -16,6 +16,7 @@ import {
 	usersReportAbuse, usersUpdateMemo, usersGetSecurityInfo,
 	listUsers, usersReactions, usersGetFrequentlyRepliedUsers,
 	usersGetFollowingBirthdayUsers,
+	usersGetSkebStatus,
 } from './handlers/users.js';
 import {
 	createNote, showNote, showPartialBulk, deleteNote, timeline, userNotes, searchNotes,
@@ -24,6 +25,7 @@ import {
 	createFavorite, deleteFavorite, listFavorites,
 	notesChildren, notesReplies, notesRenotes, deleteRenote, searchByTag,
 	threadMuteCreate, threadMuteDelete,
+	notesList, notesScheduledList, notesScheduledCancel, notesTranslate,
 } from './handlers/notes.js';
 import {
 	suspendUser, unsuspendUser, addModerator, removeModerator, showUsers,
@@ -62,6 +64,12 @@ import {
 	pinnedUsers, retention,
 	pagesFeatured, promoRead, pagePush,
 	requestResetPassword, resetPasswordHandler, resetDb,
+	apGet, apShow,
+	notificationsTestNotification,
+	exportCustomEmojis,
+	iExportAntennas, iExportBlocking, iExportClips, iExportFavorites,
+	iExportFollowing, iExportMute, iExportNotes, iExportUserLists,
+	iImportAntennas, iImportBlocking, iImportFollowing, iImportMuting, iImportUserLists,
 } from './handlers/misc.js';
 import { registryGetAll, registryGet, registrySet, registryRemove, registryKeys } from './handlers/registry.js';
 import {
@@ -192,7 +200,6 @@ import {
 	iWebhooksTest, iWebhooksUpdate,
 	miauthGenToken, myApps, iUpdateEmail,
 } from './handlers/auth-ext.js';
-import { stubRoutes } from './handlers/stubs.js';
 
 const routes: Record<string, Handler> = {
 	// Instance
@@ -488,6 +495,7 @@ const routes: Record<string, Handler> = {
 	'users/reactions': usersReactions,
 	'users/get-frequently-replied-users': usersGetFrequentlyRepliedUsers,
 	'users/get-following-birthday-users': usersGetFollowingBirthdayUsers,
+	'users/get-skeb-status': usersGetSkebStatus,
 
 	// Hashtags
 	'hashtags/trend': hashtagsTrend,
@@ -650,7 +658,7 @@ const routes: Record<string, Handler> = {
 	'miauth/gen-token': miauthGenToken,
 	'my/apps': myApps,
 
-	// Previously missing – now wired from misc.ts
+	// Misc / misc.ts
 	'i/notifications-grouped': iNotificationsGrouped,
 	'i/signin-history': iSigninHistory,
 	'i/purge-timeline-cache': iPurgeTimelineCache,
@@ -670,8 +678,34 @@ const routes: Record<string, Handler> = {
 	'reset-password': resetPasswordHandler,
 	'reset-db': resetDb,
 
-	// Stub routes (remaining unimplemented endpoints)
-	...stubRoutes,
+	// ActivityPub (no remote federation; resolves local objects only)
+	'ap/get': apGet,
+	'ap/show': apShow,
+
+	// Notifications
+	'notifications/test-notification': notificationsTestNotification,
+
+	// Export / Import (fire-and-forget; 204 accepted)
+	'export-custom-emojis': exportCustomEmojis,
+	'i/export-antennas': iExportAntennas,
+	'i/export-blocking': iExportBlocking,
+	'i/export-clips': iExportClips,
+	'i/export-favorites': iExportFavorites,
+	'i/export-following': iExportFollowing,
+	'i/export-mute': iExportMute,
+	'i/export-notes': iExportNotes,
+	'i/export-user-lists': iExportUserLists,
+	'i/import-antennas': iImportAntennas,
+	'i/import-blocking': iImportBlocking,
+	'i/import-following': iImportFollowing,
+	'i/import-muting': iImportMuting,
+	'i/import-user-lists': iImportUserLists,
+
+	// Notes – public list + scheduled + translate
+	'notes': notesList,
+	'notes/scheduled/list': notesScheduledList,
+	'notes/scheduled/cancel': notesScheduledCancel,
+	'notes/translate': notesTranslate,
 };
 
 export default {

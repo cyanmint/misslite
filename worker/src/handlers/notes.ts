@@ -353,3 +353,64 @@ await db.prepare('DELETE FROM thread_muting WHERE user_id = ? AND thread_id = ?'
 .bind(u.id, noteId).run();
 return json({});
 };
+
+// ── Public notes list ─────────────────────────────────────────────────────────
+
+export const notesList: Handler = async (db, body) => {
+	const limit = Math.min(Number(body.limit) || 10, 100);
+	const sinceId = body.sinceId as string | undefined;
+	const untilId = body.untilId as string | undefined;
+	let sql = "SELECT * FROM notes WHERE visibility = 'public'";
+	const params: unknown[] = [];
+	if (untilId) {
+		const ref = await db.prepare('SELECT created_at FROM notes WHERE id = ?').bind(untilId).first<{ created_at: string }>();
+		if (ref) { sql += ' AND created_at < ?'; params.push(ref.created_at); }
+	}
+	if (sinceId) {
+		const ref = await db.prepare('SELECT created_at FROM notes WHERE id = ?').bind(sinceId).first<{ created_at: string }>();
+		if (ref) { sql += ' AND created_at > ?'; params.push(ref.created_at); }
+	}
+	sql += ' ORDER BY created_at DESC LIMIT ?';
+	params.push(limit);
+	const notes = await db.prepare(sql).bind(...params).all<DbNote>();
+	const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
+	return json(packed);
+};
+
+// ── Scheduled notes ───────────────────────────────────────────────────────────
+
+type DbScheduledNote = { id: string; text: string | null; cw: string | null; visibility: string; scheduled_at: string; created_at: string };
+
+export const notesScheduledList: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const rows = await db.prepare(
+		'SELECT * FROM scheduled_notes WHERE user_id = ? ORDER BY scheduled_at ASC'
+	).bind(u.id).all<DbScheduledNote>();
+	return json((rows.results ?? []).map(r => ({
+		id: r.id, text: r.text, cw: r.cw, visibility: r.visibility,
+		scheduledAt: r.scheduled_at, createdAt: r.created_at,
+	})));
+};
+
+export const notesScheduledCancel: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const noteId = (body.noteId ?? '') as string;
+	if (!noteId) return json({ error: { message: 'noteId required', code: 'MISSING_PARAM' } }, 400);
+	await db.prepare('DELETE FROM scheduled_notes WHERE id = ? AND user_id = ?').bind(noteId, u.id).run();
+	return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+};
+
+// ── Note translation ──────────────────────────────────────────────────────────
+
+export const notesTranslate: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const noteId = (body.noteId ?? '') as string;
+	if (!noteId) return json({ error: { message: 'noteId required', code: 'MISSING_PARAM' } }, 400);
+	const note = await db.prepare('SELECT text FROM notes WHERE id = ?').bind(noteId).first<{ text: string | null }>();
+	if (!note) return json({ error: { message: 'No such note', code: 'NO_SUCH_NOTE' } }, 404);
+	const targetLang = ((body.targetLang ?? 'en') as string).toLowerCase().slice(0, 5);
+	return json({ sourceLang: targetLang, text: note.text ?? '' });
+};

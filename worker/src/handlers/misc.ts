@@ -479,3 +479,67 @@ export const iGalleryLikes: Handler = async (db, body) => {
 const u = await requireUser(db, body); if (u instanceof Response) return u; return json([]);
 };
 export const pagesFeatured: Handler = async () => json([]);
+
+// ── ActivityPub show (no remote federation; resolve local objects only) ───────
+
+export const apGet: Handler = async (db, body) => {
+	const uri = (body.uri ?? '') as string;
+	if (!uri) return err('uri required');
+	const id = uri.split('/').pop() ?? uri;
+	const note = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(id).first<DbNote>();
+	if (note) return json(await packNote(db, note));
+	const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<DbUser>();
+	if (user) return json(packUser(user, true));
+	return err('Not found', 404);
+};
+
+export const apShow: Handler = async (db, body) => {
+	const uri = (body.uri ?? '') as string;
+	if (!uri) return err('uri required');
+	const id = uri.split('/').pop() ?? uri;
+	const note = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(id).first<DbNote>();
+	if (note) return json({ type: 'Note', object: await packNote(db, note) });
+	const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<DbUser>();
+	if (user) return json({ type: 'User', object: packUser(user, true) });
+	return err('Not found', 404);
+};
+
+// ── Notifications – test notification ────────────────────────────────────────
+
+export const notificationsTestNotification: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	await db.prepare('INSERT INTO notifications (id, user_id, type) VALUES (?, ?, ?)')
+		.bind(generateId(), u.id, 'test').run();
+	return json({});
+};
+
+// ── Export / Import (fire-and-forget; 204 accepted) ───────────────────────────
+
+const authedNoContent: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+};
+
+const adminAuthedNoContent: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+	return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+};
+
+export const exportCustomEmojis = adminAuthedNoContent;
+export const iExportAntennas = authedNoContent;
+export const iExportBlocking = authedNoContent;
+export const iExportClips = authedNoContent;
+export const iExportFavorites = authedNoContent;
+export const iExportFollowing = authedNoContent;
+export const iExportMute = authedNoContent;
+export const iExportNotes = authedNoContent;
+export const iExportUserLists = authedNoContent;
+export const iImportAntennas = authedNoContent;
+export const iImportBlocking = authedNoContent;
+export const iImportFollowing = authedNoContent;
+export const iImportMuting = authedNoContent;
+export const iImportUserLists = authedNoContent;
