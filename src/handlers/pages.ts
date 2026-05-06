@@ -87,15 +87,7 @@ export const pagesShow: Handler = async (db, body) => {
 		const name = body.name as string | undefined;
 		const username = body.username as string | undefined;
 		if (!name || !username) {
-			// Spec has no required params — return a stub page shape to satisfy Phase 1
-			const now = new Date().toISOString();
-			return json({
-				id: '', createdAt: now, updatedAt: now, userId: '', user: null,
-				name: '', title: '', summary: null, content: [], variables: [],
-				script: '', font: '', alignCenter: false, hideTitleWhenPinned: false,
-				visibility: 'public', eyeCatchingImageId: null, eyeCatchingImage: null,
-				attachedFiles: [], likedCount: 0, isLiked: false,
-			});
+			return err('pageId or (name + username) is required', 400);
 		}
 
 		owner = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first<DbUser>();
