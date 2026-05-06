@@ -27,8 +27,8 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = resolve(__dirname, '..');
-const API_JSON   = resolve(__dirname, '../../api.json');
-const ENDPOINT_INFO = resolve(__dirname, '../../endpoint_info.json');
+const API_JSON   = resolve(__dirname, '../api.json');
+const ENDPOINT_INFO = resolve(__dirname, '../endpoint_info.json');
 
 // ── Load spec ─────────────────────────────────────────────────────────────────
 const apiSpec  = JSON.parse(readFileSync(API_JSON, 'utf-8'));
@@ -138,7 +138,7 @@ if (diagnosticEndpoints.length > 0) {
 // ── Worker lifecycle helpers ──────────────────────────────────────────────────
 const wranglerCli = resolve(WORKER_DIR, 'node_modules/wrangler/wrangler-dist/cli.js');
 const workerEntry = resolve(WORKER_DIR, 'src/index.ts');
-const workerConfig = resolve(WORKER_DIR, 'wrangler.toml');
+const workerConfig = resolve(WORKER_DIR, 'wrangler.jsonc');
 const workerVars = { INITIAL_PASSWORD: 'testpass', INSTANCE_NAME: 'CoverageTest' };
 
 async function startWorker() {
