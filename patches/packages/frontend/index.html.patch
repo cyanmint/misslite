@@ -136,9 +136,16 @@ index 0000000..e18b145
 +}
 +</style>
 +<script>
-+// Apply default theme immediately
++// Apply default theme immediately, using domain-scoped localStorage keys when a
++// server domain is present in the query string (e.g. /?misskey.io).
 +(function() {
-+const colorScheme = localStorage.getItem('colorScheme') || 'light';
++var _qs = (window.location.search || '').slice(1).trim();
++var _dk = _qs ? _qs.replace(/[^a-zA-Z0-9.-]/g, '_') : '';
++var _get = function(k) {
++if (_dk) { var v = localStorage.getItem(_dk + '::' + k); if (v !== null) return v; }
++return localStorage.getItem(k);
++};
++const colorScheme = _get('colorScheme') || 'light';
 +document.documentElement.setAttribute('data-color-scheme', colorScheme);
 +document.documentElement.style.setProperty('color-scheme', colorScheme);
 +const defaultLightTheme = {
@@ -160,7 +167,7 @@ index 0000000..e18b145
 +const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 +if (themeColorMeta) themeColorMeta.setAttribute('content', defaultTheme.htmlThemeColor);
 +const loadCustomTheme = () => {
-+const theme = localStorage.getItem('theme');
++const theme = _get('theme');
 +if (theme) {
 +try {
 +const themeObj = JSON.parse(theme);

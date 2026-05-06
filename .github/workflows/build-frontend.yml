@@ -53,10 +53,21 @@ jobs:
           cd misskey-build
           corepack pnpm install
 
-      - name: Build
+      - name: Build frontend dependencies
         run: |
           cd misskey-build
-          corepack pnpm run build
+          node scripts/build-pre.mjs
+          corepack pnpm -F i18n build
+          corepack pnpm -F misskey-js build
+          corepack pnpm -F misskey-bubble-game build
+          corepack pnpm -F misskey-reversi build
+          corepack pnpm -F icons-subsetter build
+          corepack pnpm -F frontend build
+
+      - name: Copy to webroot
+        run: |
+          cd misskey-build
+          node scripts/copy-to-webroot.mjs
 
       - name: Prepare pages output
         run: |
