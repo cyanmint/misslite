@@ -1,5 +1,5 @@
 {
-  "name": "misslite-cf-worker",
+  "name": "misslite",
   "version": "0.1.0",
   "private": true,
   "license": "AGPL-3.0-only",
@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "setup": "npm i",
+    "frontend": "./build.sh",
     "test": "vitest run",
     "test:watch": "vitest"
   },

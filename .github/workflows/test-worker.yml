@@ -6,15 +6,10 @@ on:
     branches:
       - default
       - 'copilot/**'
-    paths:
-      - 'worker/**'
-      - 'api.json'
-      - '.github/workflows/test-worker.yml'
   pull_request:
-    paths:
-      - 'worker/**'
-      - 'api.json'
-      - '.github/workflows/test-worker.yml'
+    branches:
+      - default
+      - 'copilot/**'
   workflow_dispatch:
 
 jobs:
@@ -29,12 +24,12 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: cd worker && npm install
+        run: corepack npm install
 
       - name: Run unit tests
-        run: cd worker && npx vitest run
+        run: corepack npm exec vitest run
 
       - name: API coverage report
         # Always run — never fails the build; reports coverage vs api.json
         if: always()
-        run: node worker/scripts/api-coverage.mjs
+        run: node scripts/api-coverage.mjs

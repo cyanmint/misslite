@@ -1,0 +1,48 @@
+{
+  "name": "git-devel",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "NODE_ENV": "production",
+    "INITIAL_PASSWORD": "changeme",
+    "INSTANCE_NAME": "misslite",
+    "INSTANCE_DESCRIPTION": "A lightweight Misskey-compatible instance",
+    "REGISTRATION_MODE": "invite",
+    "MAX_NOTE_LENGTH": "3000",
+    "THEME_COLOR": "#86b300"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  },
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "misslite"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "misslite",
+      "database_id": "368cb394-fa20-4c6e-a60e-fdf8b176c996"
+    }
+  ],
+  "send_email": [
+    {
+      "name": "SEND_EMAIL"
+    }
+  ]
+}
