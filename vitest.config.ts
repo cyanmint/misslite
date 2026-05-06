@@ -5,7 +5,7 @@ export default defineWorkersConfig({
 		poolOptions: {
 			workers: {
 				isolatedStorage: false,
-				wrangler: { configPath: './wrangler.toml' },
+				wrangler: { configPath: './wrangler.jsonc' },
 				miniflare: {
 					d1Databases: { DB: 'test-db' },
 					bindings: { INITIAL_PASSWORD: 'testpass123' },
