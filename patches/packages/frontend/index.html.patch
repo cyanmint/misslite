@@ -3,7 +3,7 @@ new file mode 100644
 index 0000000..e18b145
 --- /dev/null
 +++ b/packages/frontend/index.html
-@@ -0,0 +1,264 @@
+@@ -0,0 +1,271 @@
 +<!DOCTYPE html>
 +<!--
 +SPDX-FileCopyrightText: syuilo and misskey-project
