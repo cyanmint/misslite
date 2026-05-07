@@ -510,7 +510,7 @@ export const requestResetPassword: Handler = async (db, body, env) => {
 						`<p>Use the following token to reset your password (valid for 24 hours):</p>`,
 						`<pre>${token}</pre>`,
 						`<p>If you did not request a password reset, you can ignore this email.</p>`,
-					].join('\n'),
+					].join('\r\n'),
 				});
 			} catch { /* email sending failed silently */ }
 		}

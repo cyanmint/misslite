@@ -392,13 +392,13 @@ CREATE TABLE IF NOT EXISTS chat_rooms (
   owner_id TEXT NOT NULL REFERENCES users(id),
   name TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 CREATE TABLE IF NOT EXISTS chat_room_members (
   room_id TEXT NOT NULL REFERENCES chat_rooms(id),
   user_id TEXT NOT NULL REFERENCES users(id),
   is_muted INTEGER NOT NULL DEFAULT 0,
-  joined_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  joined_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
   PRIMARY KEY(room_id, user_id)
 );
 
@@ -411,7 +411,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   text TEXT,
   file_id TEXT,
   is_read INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 CREATE INDEX IF NOT EXISTS idx_chat_messages_1on1 ON chat_messages(from_user_id, to_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_to_user ON chat_messages(to_user_id, created_at DESC);

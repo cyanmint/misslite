@@ -40,9 +40,9 @@ async function packChatMessage(db: D1Database, m: DbChatMessage, viewerId: strin
 			toRoom = { id: r.id, createdAt: r.created_at, ownerId: r.owner_id, owner: owner ? packUser(owner) : null, name: r.name, description: r.description, isMuted: false };
 		}
 	}
-	// isRead: for 1-on-1, the recipient is the viewer; for rooms, we track per-room
+	// isRead: for 1-on-1, only the recipient's perspective matters (sender always "read" their own message)
 	const isRead = m.to_user_id
-		? (m.from_user_id === viewerId || !!m.is_read)
+		? (m.from_user_id === viewerId || (m.to_user_id === viewerId && !!m.is_read))
 		: !!m.is_read;
 	return {
 		id: m.id,
