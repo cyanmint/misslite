@@ -72,6 +72,10 @@ async function getRefCreatedAt(db: D1Database, id: string): Promise<string | nul
 	return ref?.created_at ?? null;
 }
 
+function escapeLikePattern(value: string): string {
+	return value.replace(/[\\%_]/g, '\\$&');
+}
+
 async function listMessages(
 	db: D1Database,
 	viewerId: string,
@@ -100,7 +104,7 @@ async function listMessages(
 
 	if (options.query) {
 		sql += ' AND text LIKE ? ESCAPE \'\\\'';
-		params.push(`%${options.query.replace(/[%_]/g, '\\$&')}%`);
+		params.push(`%${escapeLikePattern(options.query)}%`);
 	}
 
 	const untilCreatedAt = await getRefCreatedAt(db, options.untilId ?? '');
@@ -215,7 +219,7 @@ export const chatMessagesSearch: Handler = async (db, body) => {
 			limit: Number(body.limit) || 20,
 		});
 	} else {
-		const escapedQuery = `%${query.replace(/[%_]/g, '\\$&')}%`;
+		const escapedQuery = `%${escapeLikePattern(query)}%`;
 		const limit = Math.min(Math.max(Number(body.limit) || 20, 1), 100);
 		const result = await db.prepare(`
 			SELECT *
