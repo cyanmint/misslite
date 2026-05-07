@@ -88,12 +88,47 @@ export const notesFeatured: Handler = async () => json([]);
 export const notesPollsVote: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
+	const noteId = (body.noteId ?? '') as string;
+	const choice = Number(body.choice);
+	if (!noteId) return err('noteId required');
+	if (!Number.isInteger(choice) || choice < 0) return err('choice required');
+	const poll = await db.prepare('SELECT multiple, expires_at FROM note_polls WHERE note_id = ?')
+		.bind(noteId).first<{ multiple: number; expires_at: string | null }>();
+	if (!poll) return err('No such poll', 404);
+	if (poll.expires_at && new Date(poll.expires_at).getTime() < Date.now()) return err('Poll expired', 400);
+	const target = await db.prepare(
+		'SELECT choice_index FROM note_poll_choices WHERE note_id = ? AND choice_index = ?'
+	).bind(noteId, choice).first<{ choice_index: number }>();
+	if (!target) return err('No such choice', 400);
+	if (!poll.multiple) {
+		const prev = await db.prepare(
+			'SELECT choice_index FROM note_poll_votes WHERE note_id = ? AND user_id = ?'
+		).bind(noteId, u.id).all<{ choice_index: number }>();
+		for (const p of prev.results ?? []) {
+			await db.prepare(
+				'UPDATE note_poll_choices SET votes_count = CASE WHEN votes_count > 0 THEN votes_count - 1 ELSE 0 END WHERE note_id = ? AND choice_index = ?'
+			).bind(noteId, p.choice_index).run();
+		}
+		await db.prepare('DELETE FROM note_poll_votes WHERE note_id = ? AND user_id = ?').bind(noteId, u.id).run();
+	}
+	try {
+		await db.prepare('INSERT INTO note_poll_votes (note_id, user_id, choice_index) VALUES (?, ?, ?)')
+			.bind(noteId, u.id, choice).run();
+		await db.prepare('UPDATE note_poll_choices SET votes_count = votes_count + 1 WHERE note_id = ? AND choice_index = ?')
+			.bind(noteId, choice).run();
+	} catch {
+		// already voted on this choice
+	}
 	return json({});
 };
 export const notesPollsRecommendation: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
-	return json([]);
+	const rows = await db.prepare(
+		'SELECT n.* FROM notes n JOIN note_polls p ON p.note_id = n.id WHERE p.expires_at IS NULL OR p.expires_at > ? ORDER BY n.created_at DESC LIMIT 20'
+	).bind(new Date().toISOString()).all<DbNote>();
+	const packed = await Promise.all((rows.results ?? []).map(n => packNote(db, n)));
+	return json(packed);
 };
 export const bubbleGameRanking: Handler = async (db, body) => {
 const limit = Math.min(Number(body.limit) || 10, 20);

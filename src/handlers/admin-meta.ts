@@ -11,20 +11,22 @@ export const adminMeta: Handler = async (db, body) => {
 	if (!u.is_admin) return err('Forbidden', 403);
 
 	const m = await getMetaAll(db);
-	const name = m['name'] ?? 'Misslite';
-	const description = m['description'] ?? '';
-	const themeColor = m['themeColor'] ?? '#86b300';
-	const maxNoteLength = Number(m['maxNoteLength'] ?? 3000);
-	const registrationMode = m['registrationMode'] ?? 'invite';
-	const bannerUrl = m['bannerUrl'] ?? null;
-	const iconUrl = m['iconUrl'] ?? null;
-	const backgroundImageUrl = m['backgroundImageUrl'] ?? null;
-	const maintainerName = m['maintainerName'] ?? 'admin';
-	const maintainerEmail = m['maintainerEmail'] ?? '';
-	return json({
-		name, description, themeColor, maxNoteTextLength: maxNoteLength,
-		registrationMode, bannerUrl, iconUrl, backgroundImageUrl,
-		maintainerName, maintainerEmail,
+	const parseMeta = (key: string): unknown => {
+		const raw = m[key];
+		if (raw == null) return undefined;
+		try { return JSON.parse(raw); } catch { return raw; }
+	};
+	const metaObj: Record<string, unknown> = {
+		name: parseMeta('name') ?? 'Misslite',
+		description: parseMeta('description') ?? '',
+		themeColor: parseMeta('themeColor') ?? '#86b300',
+		maxNoteTextLength: Number(parseMeta('maxNoteLength') ?? 3000),
+		registrationMode: parseMeta('registrationMode') ?? 'invite',
+		bannerUrl: parseMeta('bannerUrl') ?? null,
+		iconUrl: parseMeta('iconUrl') ?? null,
+		backgroundImageUrl: parseMeta('backgroundImageUrl') ?? null,
+		maintainerName: parseMeta('maintainerName') ?? 'admin',
+		maintainerEmail: parseMeta('maintainerEmail') ?? '',
 		emailRequiredForSignup: false,
 		enableHcaptcha: false, hcaptchaSiteKey: null,
 		enableMcaptcha: false, mcaptchaSiteKey: null, mcaptchaInstanceUrl: null,
@@ -131,5 +133,10 @@ export const adminMeta: Handler = async (db, body) => {
 		defaultDarkTheme: null,
 		defaultLightTheme: null,
 		version: '2026.3.0',
-	});
+	};
+	for (const key of Object.keys(metaObj)) {
+		const parsed = parseMeta(key);
+		if (parsed !== undefined) metaObj[key] = parsed;
+	}
+	return json(metaObj);
 };

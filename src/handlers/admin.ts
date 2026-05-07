@@ -154,12 +154,18 @@ export const updateMeta: Handler = async (db, body) => {
 	if (u instanceof Response) return u;
 	if (!u.is_admin) return err('Forbidden', 403);
 
-	const allowed = ['name', 'description', 'themeColor', 'maxNoteLength', 'registrationMode',
-		'bannerUrl', 'iconUrl', 'backgroundImageUrl', 'maintainerName', 'maintainerEmail'];
-	for (const key of allowed) {
-		if (key in body && body[key] !== undefined) {
-			await setMeta(db, key, String(body[key]));
+	for (const [key, value] of Object.entries(body)) {
+		if (key === 'i' || key === 'token' || value === undefined) continue;
+		if (key === 'disableRegistration') {
+			await setMeta(db, 'registrationMode', value ? 'invite' : 'open');
+			await setMeta(db, key, typeof value === 'string' ? value : JSON.stringify(value));
+			continue;
 		}
+		if (key === 'maxNoteTextLength') {
+			await setMeta(db, 'maxNoteLength', typeof value === 'string' ? value : JSON.stringify(value));
+			continue;
+		}
+		await setMeta(db, key, typeof value === 'string' ? value : JSON.stringify(value));
 	}
 	await logAction(db, u.id, 'updateMeta');
 	return json({});

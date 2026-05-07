@@ -167,6 +167,26 @@ expect(data.name).toBe('Admin User');
 expect(data.description).toBe('The boss');
 });
 
+it('i/update persists extended profile settings', async () => {
+	await callApi('i/update', {
+		i: adminToken,
+		isBot: true,
+		isCat: true,
+		birthday: '2000-01-01',
+		lang: 'ja-JP',
+		location: 'Tokyo',
+		chatScope: 'local',
+	});
+	const { data } = await callApi('i', { i: adminToken });
+	expect(data.isBot).toBe(true);
+	expect(data.isCat).toBe(true);
+	expect(data.birthday).toBe('2000-01-01');
+	expect(data.lang).toBe('ja-JP');
+	expect(data.location).toBe('Tokyo');
+	expect(data.chatScope).toBe('local');
+	expect(data.canChat).toBe(true);
+});
+
 it('users/show by userId', async () => {
 const { data } = await callApi('users/show', { userId: adminId });
 expect(data.username).toBe('admin');
@@ -243,6 +263,21 @@ expect(status).toBe(200);
 expect(data.text).toBe('Hello world!');
 });
 
+it('specified-visibility notes are accessible to recipient (chat-style note)', async () => {
+	const created = await callApi('notes/create', {
+		i: adminToken,
+		text: 'private message',
+		visibility: 'specified',
+		visibleUserIds: [userId],
+	});
+	expect(created.status).toBe(200);
+	const privateNoteId = created.data.createdNote.id;
+	const asRecipient = await callApi('notes/show', { i: userToken, noteId: privateNoteId });
+	expect(asRecipient.status).toBe(200);
+	const asAnon = await callApi('notes/show', { noteId: privateNoteId });
+	expect(asAnon.status).toBe(404);
+});
+
 it('renote includes original note payload', async () => {
 const { data: originalData } = await callApi('notes/create', { i: userToken, text: 'Original renote target' });
 const originalId = originalData.createdNote.id;
@@ -301,9 +336,19 @@ i: userToken, noteId, reaction: '👍',
 expect(status).toBe(200);
 });
 
+it('notes/reactions/create updates existing reaction', async () => {
+	const { status } = await callApi('notes/reactions/create', {
+		i: userToken, noteId, reaction: '❤️',
+	});
+	expect(status).toBe(200);
+	const { data } = await callApi('notes/show', { noteId });
+	expect(data.reactions['👍']).toBeUndefined();
+	expect(data.reactions['❤️']).toBe(1);
+});
+
 it('reaction appears in notes/show', async () => {
 const { data } = await callApi('notes/show', { noteId });
-expect(data.reactions['👍']).toBe(1);
+expect(Object.values(data.reactions).reduce((a: number, b: unknown) => a + Number(b), 0)).toBe(1);
 });
 
 it('notes/reactions/delete removes reaction', async () => {
@@ -408,6 +453,19 @@ expect(status).toBe(200);
 const { data } = await callApi('meta');
 expect(data.name).toBe('MyInstance');
 expect(data.description).toBe('A test');
+});
+
+it('admin/update-meta persists additional settings fields', async () => {
+	const { status } = await callApi('admin/update-meta', {
+		i: adminToken,
+		disableRegistration: true,
+		shortName: 'Miss',
+	});
+	expect(status).toBe(200);
+	const metaRes = await callApi('admin/meta', { i: adminToken });
+	expect(metaRes.status).toBe(200);
+	expect(metaRes.data.disableRegistration).toBe(true);
+	expect(metaRes.data.shortName).toBe('Miss');
 });
 
 it('admin/update-meta forbidden for regular user', async () => {
@@ -816,6 +874,22 @@ it('notes/polls/recommendation returns array', async () => {
 const { status, data } = await callApi('notes/polls/recommendation', { i: userToken });
 expect(status).toBe(200);
 expect(Array.isArray(data)).toBe(true);
+});
+
+it('notes/create with poll and notes/polls/vote work', async () => {
+	const created = await callApi('notes/create', {
+		i: userToken,
+		text: 'poll test',
+		poll: { choices: ['A', 'B'], multiple: false },
+	});
+	expect(created.status).toBe(200);
+	const pollNoteId = created.data.createdNote.id;
+	const voted = await callApi('notes/polls/vote', { i: adminToken, noteId: pollNoteId, choice: 1 });
+	expect(voted.status).toBe(200);
+	const shown = await callApi('notes/show', { noteId: pollNoteId });
+	expect(shown.status).toBe(200);
+	expect(shown.data.poll).not.toBeNull();
+	expect(shown.data.poll.choices[1].votes).toBe(1);
 });
 
 it('fetch-rss returns items array', async () => {

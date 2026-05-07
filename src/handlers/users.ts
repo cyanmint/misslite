@@ -6,11 +6,55 @@ import type { Handler } from '../types.js';
 import type { DbUser, DbDriveFile } from '../types.js';
 import { json, err, packUser, packSelf, requireUser } from '../helpers.js';
 
+type UserProfileData = Record<string, unknown>;
+
+async function getUserProfile(db: D1Database, userId: string): Promise<UserProfileData> {
+	const row = await db.prepare('SELECT data FROM user_profiles WHERE user_id = ?').bind(userId).first<{ data: string }>();
+	if (!row?.data) return {};
+	try {
+		const parsed = JSON.parse(row.data);
+		return parsed && typeof parsed === 'object' ? parsed as UserProfileData : {};
+	} catch {
+		return {};
+	}
+}
+
+async function saveUserProfile(db: D1Database, userId: string, patch: UserProfileData): Promise<void> {
+	const current = await getUserProfile(db, userId);
+	const next = { ...current, ...patch };
+	await db.prepare(
+		'INSERT INTO user_profiles (user_id, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at'
+	).bind(userId, JSON.stringify(next), new Date().toISOString()).run();
+}
+
+function applyProfileToPacked(packed: Record<string, unknown>, profile: UserProfileData, isSelf = false): Record<string, unknown> {
+	const mappedKeys = [
+		'followedMessage', 'location', 'birthday', 'lang', 'postingLang', 'viewingLangs',
+		'showMediaInAllLanguages', 'showHashtagsInAllLanguages', 'fields', 'isLocked', 'isExplorable',
+		'hideOnlineStatus', 'publicReactions', 'carefulBot', 'autoAcceptFollowed', 'noCrawle',
+		'preventAiLearning', 'injectFeaturedNote', 'receiveAnnouncementEmail', 'alwaysMarkNsfw',
+		'autoSensitive', 'followingVisibility', 'followersVisibility', 'chatScope', 'pinnedPageId',
+		'mutedWords', 'mutedInstances', 'notificationRecieveConfig', 'emailNotificationTypes', 'alsoKnownAs',
+	];
+	for (const key of mappedKeys) {
+		if (key in profile) packed[key] = profile[key];
+	}
+	packed.canChat = (packed.chatScope ?? 'none') !== 'none';
+	if (!isSelf) {
+		delete packed.hideOnlineStatus;
+		delete packed.notificationRecieveConfig;
+		delete packed.emailNotificationTypes;
+	}
+	return packed;
+}
+
 export const currentUser: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
 	const token = (body.i ?? body.token ?? '') as string;
-	return json(packSelf(u, token));
+	const packed = packSelf(u, token);
+	const profile = await getUserProfile(db, u.id);
+	return json(applyProfileToPacked(packed, profile, true));
 };
 
 export const updateUser: Handler = async (db, body) => {
@@ -21,6 +65,8 @@ export const updateUser: Handler = async (db, body) => {
 	const vals: unknown[] = [];
 	if (typeof body.name === 'string') { sets.push('name = ?'); vals.push(body.name); }
 	if (typeof body.description === 'string') { sets.push('description = ?'); vals.push(body.description); }
+	if (typeof body.isBot === 'boolean') { sets.push('is_bot = ?'); vals.push(body.isBot ? 1 : 0); }
+	if (typeof body.isCat === 'boolean') { sets.push('is_cat = ?'); vals.push(body.isCat ? 1 : 0); }
 	if (typeof body.avatarUrl === 'string') { sets.push('avatar_url = ?'); vals.push(body.avatarUrl); }
 	if (typeof body.avatarId === 'string' && body.avatarId) {
 		const file = await db.prepare('SELECT * FROM drive_files WHERE id = ? AND user_id = ?').bind(body.avatarId, u.id).first<DbDriveFile>();
@@ -32,10 +78,27 @@ export const updateUser: Handler = async (db, body) => {
 		vals.push(u.id);
 		await db.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...vals).run();
 	}
+	const profileKeys = [
+		'followedMessage', 'location', 'birthday', 'lang', 'postingLang', 'viewingLangs',
+		'showMediaInAllLanguages', 'showHashtagsInAllLanguages', 'fields', 'isLocked', 'isExplorable',
+		'hideOnlineStatus', 'publicReactions', 'carefulBot', 'autoAcceptFollowed', 'noCrawle',
+		'preventAiLearning', 'injectFeaturedNote', 'receiveAnnouncementEmail', 'alwaysMarkNsfw',
+		'autoSensitive', 'followingVisibility', 'followersVisibility', 'chatScope', 'pinnedPageId',
+		'mutedWords', 'mutedInstances', 'notificationRecieveConfig', 'emailNotificationTypes', 'alsoKnownAs',
+	];
+	const profilePatch: UserProfileData = {};
+	for (const key of profileKeys) {
+		if (key in body) profilePatch[key] = body[key] as unknown;
+	}
+	if (Object.keys(profilePatch).length > 0) {
+		await saveUserProfile(db, u.id, profilePatch);
+	}
 
 	const updated = await db.prepare('SELECT * FROM users WHERE id = ?').bind(u.id).first<DbUser>();
 	const token = (body.i ?? body.token ?? '') as string;
-	return json(packSelf(updated!, token));
+	const packed = packSelf(updated!, token);
+	const profile = await getUserProfile(db, u.id);
+	return json(applyProfileToPacked(packed, profile, true));
 };
 
 export const showUser: Handler = async (db, body) => {
@@ -57,7 +120,9 @@ export const showUser: Handler = async (db, body) => {
 		user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first<DbUser>();
 	}
 	if (!user) return err('No such user', 404);
-	return json(packUser(user, true));
+	const packed = packUser(user, true);
+	const profile = await getUserProfile(db, user.id);
+	return json(applyProfileToPacked(packed, profile, false));
 };
 
 export const searchUsers: Handler = async (db, body) => {

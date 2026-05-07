@@ -124,8 +124,8 @@ export function packUser(u: DbUser, detail = false): Record<string, unknown> {
 		emojis: {},
 		url: null,
 		uri: null,
-		isBot: false,
-		isCat: false,
+		isBot: !!u.is_bot,
+		isCat: !!u.is_cat,
 		onlineStatus: 'unknown',
 		isAdmin: !!u.is_admin,
 		isModerator: !!u.is_moderator,
@@ -160,8 +160,8 @@ export function packUser(u: DbUser, detail = false): Record<string, unknown> {
 		packed.mutualLinkSections = [];
 		packed.followingVisibility = 'public';
 		packed.followersVisibility = 'public';
-		packed.chatScope = 'none';
-		packed.canChat = false;
+		packed.chatScope = 'local';
+		packed.canChat = true;
 		packed.publicReactions = true;
 		packed.pinnedPage = null;
 		packed.pinnedPageId = null;
@@ -275,6 +275,26 @@ export async function packNote(
 		const renoteNote = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(n.renote_id).first<DbNote>();
 		renote = renoteNote ? await packNote(db, renoteNote, { includeRenote: false }) : null;
 	}
+	const pollBase = await db.prepare(
+		'SELECT multiple, expires_at FROM note_polls WHERE note_id = ?'
+	).bind(n.id).first<{ multiple: number; expires_at: string | null }>();
+	let poll: Record<string, unknown> | null = null;
+	if (pollBase) {
+		const choices = await db.prepare(
+			'SELECT choice_index, text, votes_count FROM note_poll_choices WHERE note_id = ? ORDER BY choice_index ASC'
+		).bind(n.id).all<{ choice_index: number; text: string; votes_count: number }>();
+		poll = {
+			multiple: !!pollBase.multiple,
+			expiresAt: pollBase.expires_at,
+			expired: !!pollBase.expires_at && new Date(pollBase.expires_at).getTime() < Date.now(),
+			choices: (choices.results ?? []).map(c => ({
+				text: c.text,
+				votes: c.votes_count,
+				isVoted: false,
+			})),
+			totalVotes: (choices.results ?? []).reduce((a, c) => a + Number(c.votes_count || 0), 0),
+		};
+	}
 	return {
 		id: n.id,
 		createdAt: n.created_at,
@@ -292,6 +312,7 @@ export async function packNote(
 		emojis: {},
 		fileIds: [],
 		files: [],
+		poll,
 		localOnly: false,
 	};
 }

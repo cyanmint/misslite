@@ -37,6 +37,8 @@ export interface DbUser {
 	avatar_url: string | null;
 	banner_url: string | null;
 	email: string | null;
+	is_bot?: number;
+	is_cat?: number;
 	is_admin: number;
 	is_moderator: number;
 	is_suspended: number;

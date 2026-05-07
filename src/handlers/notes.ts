@@ -6,6 +6,15 @@ import type { Handler } from '../types.js';
 import type { DbNote } from '../types.js';
 import { json, err, generateId, packNote, requireUser, getUser } from '../helpers.js';
 
+async function canAccessNote(db: D1Database, note: DbNote, userId?: string): Promise<boolean> {
+	if (note.visibility !== 'specified') return true;
+	if (!userId) return false;
+	if (note.user_id === userId) return true;
+	const row = await db.prepare('SELECT 1 as ok FROM note_visible_users WHERE note_id = ? AND user_id = ?')
+		.bind(note.id, userId).first<{ ok: number }>();
+	return !!row?.ok;
+}
+
 export const createNote: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
@@ -13,8 +22,15 @@ export const createNote: Handler = async (db, body) => {
 	const text = (body.text ?? '') as string;
 	const cw = (body.cw ?? null) as string | null;
 	const visibility = (body.visibility ?? 'public') as string;
+	const visibleUserIds = Array.isArray(body.visibleUserIds) ? body.visibleUserIds.filter(v => typeof v === 'string') as string[] : [];
 	const replyId = (body.replyId ?? null) as string | null;
 	const renoteId = (body.renoteId ?? null) as string | null;
+	const poll = (body.poll ?? null) as {
+		choices?: string[];
+		multiple?: boolean;
+		expiresAt?: string;
+		expiredAfter?: number;
+	} | null;
 
 	if (!text && !renoteId) {
 		// Allow empty note creation; text will be stored as null
@@ -24,6 +40,31 @@ export const createNote: Handler = async (db, body) => {
 	await db.prepare(
 		'INSERT INTO notes (id, user_id, text, cw, visibility, reply_id, renote_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
 	).bind(id, u.id, text || null, cw, visibility, replyId, renoteId).run();
+	if (visibility === 'specified') {
+		const recipients = [...new Set(visibleUserIds.filter(uid => uid && uid !== u.id))];
+		for (const recipientId of recipients) {
+			await db.prepare('INSERT OR IGNORE INTO note_visible_users (note_id, user_id) VALUES (?, ?)')
+				.bind(id, recipientId).run();
+		}
+	}
+	if (poll && Array.isArray(poll.choices) && poll.choices.length >= 2) {
+		const choices = poll.choices.map(c => String(c ?? '').trim()).filter(Boolean).slice(0, 10);
+		if (choices.length >= 2) {
+			let expiresAt: string | null = null;
+			if (typeof poll.expiresAt === 'string' && poll.expiresAt) {
+				expiresAt = poll.expiresAt;
+			} else if (typeof poll.expiredAfter === 'number' && poll.expiredAfter > 0) {
+				expiresAt = new Date(Date.now() + poll.expiredAfter).toISOString();
+			}
+			await db.prepare('INSERT OR REPLACE INTO note_polls (note_id, multiple, expires_at) VALUES (?, ?, ?)')
+				.bind(id, poll.multiple ? 1 : 0, expiresAt).run();
+			for (let i = 0; i < choices.length; i++) {
+				await db.prepare(
+					'INSERT INTO note_poll_choices (note_id, choice_index, text, votes_count) VALUES (?, ?, ?, 0)'
+				).bind(id, i, choices[i]).run();
+			}
+		}
+	}
 
 	// Notify mentioned users (@username)
 	if (text) {
@@ -58,17 +99,20 @@ export const showNote: Handler = async (db, body) => {
 	if (!noteId) return err('noteId required');
 	const note = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(noteId).first<DbNote>();
 	if (!note) return err('No such note', 404);
+	const viewer = await getUser(db, body);
+	if (!(await canAccessNote(db, note, viewer?.id))) return err('No such note', 404);
 	return json(await packNote(db, note));
 };
 
 export const showPartialBulk: Handler = async (db, body) => {
 	const noteIds = body.noteIds as string[] | undefined;
 	if (!Array.isArray(noteIds) || noteIds.length === 0) return json({});
+	const viewer = await getUser(db, body);
 	// Return a map of noteId → packed note (only for notes that exist)
 	const result: Record<string, unknown> = {};
 	for (const id of noteIds.slice(0, 100)) {
 		const note = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(id).first<DbNote>();
-		if (note) result[id] = await packNote(db, note);
+		if (note && await canAccessNote(db, note, viewer?.id)) result[id] = await packNote(db, note);
 	}
 	return json(result);
 };
@@ -87,6 +131,10 @@ export const deleteNote: Handler = async (db, body) => {
 	await db.prepare('DELETE FROM reactions WHERE note_id = ?').bind(noteId).run();
 	await db.prepare('DELETE FROM favorites WHERE note_id = ?').bind(noteId).run();
 	await db.prepare('DELETE FROM notifications WHERE note_id = ?').bind(noteId).run();
+	await db.prepare('DELETE FROM note_poll_votes WHERE note_id = ?').bind(noteId).run();
+	await db.prepare('DELETE FROM note_poll_choices WHERE note_id = ?').bind(noteId).run();
+	await db.prepare('DELETE FROM note_polls WHERE note_id = ?').bind(noteId).run();
+	await db.prepare('DELETE FROM note_visible_users WHERE note_id = ?').bind(noteId).run();
 	await db.prepare('DELETE FROM notes WHERE id = ?').bind(noteId).run();
 	return json({});
 };
@@ -95,9 +143,17 @@ export const timeline: Handler = async (db, body) => {
 	const limit = Math.min(Number(body.limit) || 10, 100);
 	const untilId = body.untilId as string | undefined;
 	const sinceId = body.sinceId as string | undefined;
+	const viewer = await getUser(db, body);
 
-	let sql = 'SELECT * FROM notes WHERE visibility = \'public\'';
+	let sql = 'SELECT DISTINCT n.* FROM notes n';
 	const params: unknown[] = [];
+	if (viewer) {
+		sql += ' LEFT JOIN note_visible_users nv ON nv.note_id = n.id';
+		sql += ' WHERE (n.visibility = \'public\' OR n.user_id = ? OR (n.visibility = \'specified\' AND nv.user_id = ?))';
+		params.push(viewer.id, viewer.id);
+	} else {
+		sql += ' WHERE n.visibility = \'public\'';
+	}
 
 	if (untilId) {
 		const ref = await db.prepare('SELECT created_at FROM notes WHERE id = ?').bind(untilId).first<{ created_at: string }>();
@@ -120,9 +176,16 @@ export const userNotes: Handler = async (db, body) => {
 	const userId = body.userId as string;
 	if (!userId) return err('userId required');
 	const limit = Math.min(Number(body.limit) || 10, 100);
-
-	const notes = await db.prepare('SELECT * FROM notes WHERE user_id = ? ORDER BY created_at DESC LIMIT ?')
-		.bind(userId, limit).all<DbNote>();
+	const viewer = await getUser(db, body);
+	let notes;
+	if (viewer?.id === userId) {
+		notes = await db.prepare('SELECT * FROM notes WHERE user_id = ? ORDER BY created_at DESC LIMIT ?')
+			.bind(userId, limit).all<DbNote>();
+	} else {
+		notes = await db.prepare(
+			'SELECT * FROM notes WHERE user_id = ? AND visibility = \'public\' ORDER BY created_at DESC LIMIT ?'
+		).bind(userId, limit).all<DbNote>();
+	}
 	const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
 	return json(packed);
 };
@@ -196,11 +259,14 @@ export const createReaction: Handler = async (db, body) => {
 	if (!note) return err('No such note', 404);
 
 	const id = generateId();
-	try {
+	const prev = await db.prepare('SELECT id, reaction FROM reactions WHERE note_id = ? AND user_id = ?')
+		.bind(noteId, u.id).first<{ id: string; reaction: string }>();
+	if (!prev) {
 		await db.prepare('INSERT INTO reactions (id, note_id, user_id, reaction) VALUES (?, ?, ?, ?)')
 			.bind(id, noteId, u.id, reaction).run();
-	} catch {
-		return err('Already reacted');
+	} else if (prev.reaction !== reaction) {
+		await db.prepare('UPDATE reactions SET reaction = ?, created_at = ? WHERE id = ?')
+			.bind(reaction, new Date().toISOString(), prev.id).run();
 	}
 
 	// Notify note author
@@ -360,8 +426,16 @@ export const notesList: Handler = async (db, body) => {
 	const limit = Math.min(Number(body.limit) || 10, 100);
 	const sinceId = body.sinceId as string | undefined;
 	const untilId = body.untilId as string | undefined;
-	let sql = "SELECT * FROM notes WHERE visibility = 'public'";
+	const viewer = await getUser(db, body);
+	let sql = 'SELECT DISTINCT n.* FROM notes n';
 	const params: unknown[] = [];
+	if (viewer) {
+		sql += ' LEFT JOIN note_visible_users nv ON nv.note_id = n.id';
+		sql += ' WHERE (n.visibility = \'public\' OR n.user_id = ? OR (n.visibility = \'specified\' AND nv.user_id = ?))';
+		params.push(viewer.id, viewer.id);
+	} else {
+		sql += " WHERE n.visibility = 'public'";
+	}
 	if (untilId) {
 		const ref = await db.prepare('SELECT created_at FROM notes WHERE id = ?').bind(untilId).first<{ created_at: string }>();
 		if (ref) { sql += ' AND created_at < ?'; params.push(ref.created_at); }
