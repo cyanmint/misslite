@@ -460,12 +460,19 @@ it('admin/update-meta persists additional settings fields', async () => {
 		i: adminToken,
 		disableRegistration: true,
 		shortName: 'Miss',
+		serverRules: ['Be nice', 'No spam'],
+		enableEmail: true,
 	});
 	expect(status).toBe(200);
 	const metaRes = await callApi('admin/meta', { i: adminToken });
 	expect(metaRes.status).toBe(200);
 	expect(metaRes.data.disableRegistration).toBe(true);
 	expect(metaRes.data.shortName).toBe('Miss');
+	expect(metaRes.data.serverRules).toEqual(['Be nice', 'No spam']);
+	expect(metaRes.data.enableEmail).toBe(true);
+	const publicMeta = await callApi('meta');
+	expect(publicMeta.data.serverRules).toEqual(['Be nice', 'No spam']);
+	expect(publicMeta.data.enableEmail).toBe(true);
 });
 
 it('admin/update-meta forbidden for regular user', async () => {
@@ -629,6 +636,78 @@ const { status, data } = await callApi('admin/show-moderation-logs', { i: adminT
 expect(status).toBe(200);
 expect(Array.isArray(data)).toBe(true);
 expect(data.length).toBeGreaterThan(0);
+});
+
+it('admin abuse report resolver CRUD persists', async () => {
+	const create = await callApi('admin/abuse-report-resolver/create', {
+		i: adminToken,
+		name: 'Default Resolver',
+		targetUserPattern: '.*',
+		reportContentPattern: 'spam',
+		forward: true,
+	});
+	expect(create.status).toBe(200);
+	const resolverId = create.data.id as string;
+	const list = await callApi('admin/abuse-report-resolver/list', { i: adminToken });
+	expect(list.status).toBe(200);
+	expect(Array.isArray(list.data)).toBe(true);
+	expect(list.data.some((r: any) => r.id === resolverId)).toBe(true);
+	const updateReq = new Request(`${BASE_URL}/api/admin/abuse-report-resolver/update`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ i: adminToken, id: resolverId, name: 'Updated Resolver' }),
+	});
+	const updateCtx = createExecutionContext();
+	const updateRes = await worker.fetch(updateReq, env as unknown as WorkerEnv, updateCtx);
+	await waitOnExecutionContext(updateCtx);
+	expect(updateRes.status).toBe(204);
+	const list2 = await callApi('admin/abuse-report-resolver/list', { i: adminToken });
+	expect(list2.data.find((r: any) => r.id === resolverId).name).toBe('Updated Resolver');
+	const delReq = new Request(`${BASE_URL}/api/admin/abuse-report-resolver/delete`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ i: adminToken, id: resolverId }),
+	});
+	const delCtx = createExecutionContext();
+	const delRes = await worker.fetch(delReq, env as unknown as WorkerEnv, delCtx);
+	await waitOnExecutionContext(delCtx);
+	expect(delRes.status).toBe(204);
+});
+
+it('admin abuse report notification recipient CRUD persists', async () => {
+	const create = await callApi('admin/abuse-report/notification-recipient/create', {
+		i: adminToken,
+		name: 'Moderation Mailbox',
+		method: 'email',
+		emailAddress: 'mod@example.com',
+		isActive: true,
+	});
+	expect(create.status).toBe(200);
+	const recipientId = create.data.id as string;
+	const list = await callApi('admin/abuse-report/notification-recipient/list', { i: adminToken });
+	expect(list.status).toBe(200);
+	expect(Array.isArray(list.data)).toBe(true);
+	expect(list.data.some((r: any) => r.id === recipientId)).toBe(true);
+	const show = await callApi('admin/abuse-report/notification-recipient/show', { i: adminToken, id: recipientId });
+	expect(show.status).toBe(200);
+	expect(show.data.emailAddress).toBe('mod@example.com');
+	const update = await callApi('admin/abuse-report/notification-recipient/update', {
+		i: adminToken,
+		id: recipientId,
+		name: 'Updated Mailbox',
+		isActive: false,
+	});
+	expect(update.status).toBe(200);
+	expect(update.data.name).toBe('Updated Mailbox');
+	const delReq = new Request(`${BASE_URL}/api/admin/abuse-report/notification-recipient/delete`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ i: adminToken, id: recipientId }),
+	});
+	const delCtx = createExecutionContext();
+	const delRes = await worker.fetch(delReq, env as unknown as WorkerEnv, delCtx);
+	await waitOnExecutionContext(delCtx);
+	expect(delRes.status).toBe(204);
 });
 
 it('admin/reset-password resets user password', async () => {
@@ -960,6 +1039,48 @@ const ctx = createExecutionContext();
 const response = await worker.fetch(request, env as unknown as WorkerEnv, ctx);
 await waitOnExecutionContext(ctx);
 expect(response.status).toBe(204);
+});
+
+it('reset-password token flow updates password', async () => {
+	const setEmail = await callApi('i/update-email', { i: userToken, email: 'test@example.com' });
+	expect(setEmail.status).toBe(200);
+	const token = 'tokentest1234567890';
+	await env.DB.prepare('INSERT OR REPLACE INTO password_reset_tokens (token, user_id, created_at) VALUES (?, ?, ?)')
+		.bind(token, userId, new Date().toISOString()).run();
+	const resetReq = new Request(`${BASE_URL}/api/reset-password`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ token, password: 'after-reset-1' }),
+	});
+	const resetCtx = createExecutionContext();
+	const resetRes = await worker.fetch(resetReq, env as unknown as WorkerEnv, resetCtx);
+	await waitOnExecutionContext(resetCtx);
+	expect(resetRes.status).toBe(204);
+	const signin = await callApi('signin', { username: 'testuser', password: 'after-reset-1' });
+	expect(signin.status).toBe(200);
+	userToken = signin.data.i;
+});
+
+it('security settings endpoints persist 2fa/passwordless data', async () => {
+	const key = await callApi('i/2fa/key-done', { i: userToken, name: 'YubiKey' });
+	expect(key.status).toBe(200);
+	const toggleReq = new Request(`${BASE_URL}/api/i/2fa/password-less`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ i: userToken, enabled: true }),
+	});
+	const toggleCtx = createExecutionContext();
+	const toggleRes = await worker.fetch(toggleReq, env as unknown as WorkerEnv, toggleCtx);
+	await waitOnExecutionContext(toggleCtx);
+	expect(toggleRes.status).toBe(204);
+	const done = await callApi('i/2fa/done', { i: userToken });
+	expect(done.status).toBe(200);
+	const info = await callApi('users/get-security-info', { i: userToken });
+	expect(info.status).toBe(200);
+	expect(info.data.twoFactorEnabled).toBe(true);
+	expect(info.data.usePasswordLessLogin).toBe(true);
+	expect(Array.isArray(info.data.securityKeys)).toBe(true);
+	expect(info.data.securityKeys.length).toBeGreaterThan(0);
 });
 
 it('reset-db requires admin', async () => {

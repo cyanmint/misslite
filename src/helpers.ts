@@ -223,7 +223,7 @@ export function packSelf(u: DbUser, token: string): Record<string, unknown> {
 		twoFactorEnabled: false,
 		twoFactorBackupCodesStock: 'none',
 		usePasswordLessLogin: false,
-		securityKeys: false,
+		securityKeys: [],
 		mutedWords: [],
 		hardMutedWords: [],
 		mutedInstances: [],

@@ -237,6 +237,27 @@ CREATE TABLE IF NOT EXISTS abuse_reports (
   assigned_moderator_id TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
+CREATE TABLE IF NOT EXISTS abuse_report_resolvers (
+  id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  name TEXT NOT NULL DEFAULT '',
+  target_user_pattern TEXT,
+  reporter_pattern TEXT,
+  report_content_pattern TEXT,
+  expires_at TEXT,
+  forward INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS abuse_report_notification_recipients (
+  id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  is_active INTEGER NOT NULL DEFAULT 1,
+  name TEXT NOT NULL DEFAULT '',
+  method TEXT NOT NULL DEFAULT 'email',
+  webhook_url TEXT,
+  email_address TEXT
+);
 
 -- Pinned notes
 CREATE TABLE IF NOT EXISTS pinned_notes (

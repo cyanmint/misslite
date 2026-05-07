@@ -241,7 +241,12 @@ return json({});
 export const usersGetSecurityInfo: Handler = async (db, body) => {
 const u = await requireUser(db, body);
 if (u instanceof Response) return u;
-return json({ twoFactorEnabled: false, usePasswordLessLogin: false, securityKeys: [] });
+const profile = await getUserProfile(db, u.id);
+return json({
+	twoFactorEnabled: !!profile.twoFactorEnabled,
+	usePasswordLessLogin: !!profile.usePasswordLessLogin,
+	securityKeys: Array.isArray(profile.securityKeys) ? profile.securityKeys : [],
+});
 };
 
 export const listUsers: Handler = async (db, body) => {

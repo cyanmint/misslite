@@ -14,22 +14,73 @@ const authedNoContent: Handler = async (db, body) => {
 	return noContent();
 };
 
+async function requireModeratorUser(db: D1Database, body: Record<string, unknown>): Promise<DbUser | Response> {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	if (!u.is_admin && !u.is_moderator) return err('Forbidden', 403);
+	return u;
+}
+
+function toIsoNow(): string {
+	return new Date().toISOString();
+}
+
 /* ── Abuse Report Resolvers ── */
 export const adminAbuseReportResolverCreate: Handler = async (db, body) => {
-	const u = await requireUser(db, body); if (u instanceof Response) return u;
-	return json({
-		id: generateId(), createdAt: new Date().toISOString(),
-		name: (body.name as string) ?? '', targetUserPattern: null,
-		reporterPattern: null, reportContentPattern: null, expiresAt: null,
-		forward: false,
-	});
+	const u = await requireModeratorUser(db, body); if (u instanceof Response) return u;
+	const id = generateId();
+	const now = toIsoNow();
+	const name = ((body.name ?? '') as string).trim();
+	const targetUserPattern = ((body.targetUserPattern ?? null) as string | null);
+	const reporterPattern = ((body.reporterPattern ?? null) as string | null);
+	const reportContentPattern = ((body.reportContentPattern ?? null) as string | null);
+	const expiresAt = ((body.expiresAt ?? null) as string | null);
+	const forward = body.forward ? 1 : 0;
+	await db.prepare(
+		'INSERT INTO abuse_report_resolvers (id, created_at, updated_at, name, target_user_pattern, reporter_pattern, report_content_pattern, expires_at, forward) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+	).bind(id, now, now, name, targetUserPattern, reporterPattern, reportContentPattern, expiresAt, forward).run();
+	return json({ id, createdAt: now, updatedAt: now, name, targetUserPattern, reporterPattern, reportContentPattern, expiresAt, forward: !!forward });
 };
-export const adminAbuseReportResolverDelete = authedNoContent;
+export const adminAbuseReportResolverDelete: Handler = async (db, body) => {
+	const u = await requireModeratorUser(db, body); if (u instanceof Response) return u;
+	const id = ((body.id ?? body.resolverId ?? '') as string).trim();
+	if (!id) return err('id required');
+	await db.prepare('DELETE FROM abuse_report_resolvers WHERE id = ?').bind(id).run();
+	return noContent();
+};
 export const adminAbuseReportResolverList: Handler = async (db, body) => {
-	const u = await requireUser(db, body); if (u instanceof Response) return u;
-	return json([]);
+	const u = await requireModeratorUser(db, body); if (u instanceof Response) return u;
+	const rows = await db.prepare('SELECT * FROM abuse_report_resolvers ORDER BY created_at DESC').all<Record<string, unknown>>();
+	return json((rows.results ?? []).map((r) => ({
+		id: r.id,
+		createdAt: r.created_at,
+		updatedAt: r.updated_at,
+		name: r.name,
+		targetUserPattern: r.target_user_pattern,
+		reporterPattern: r.reporter_pattern,
+		reportContentPattern: r.report_content_pattern,
+		expiresAt: r.expires_at,
+		forward: !!r.forward,
+	})));
 };
-export const adminAbuseReportResolverUpdate = authedNoContent;
+export const adminAbuseReportResolverUpdate: Handler = async (db, body) => {
+	const u = await requireModeratorUser(db, body); if (u instanceof Response) return u;
+	const id = ((body.id ?? body.resolverId ?? '') as string).trim();
+	if (!id) return err('id required');
+	const row = await db.prepare('SELECT * FROM abuse_report_resolvers WHERE id = ?').bind(id).first<Record<string, unknown>>();
+	if (!row) return err('No such resolver', 404);
+	const now = toIsoNow();
+	const name = (body.name ?? row.name) as string;
+	const targetUserPattern = (body.targetUserPattern ?? row.target_user_pattern ?? null) as string | null;
+	const reporterPattern = (body.reporterPattern ?? row.reporter_pattern ?? null) as string | null;
+	const reportContentPattern = (body.reportContentPattern ?? row.report_content_pattern ?? null) as string | null;
+	const expiresAt = (body.expiresAt ?? row.expires_at ?? null) as string | null;
+	const forward = body.forward === undefined ? (row.forward ? 1 : 0) : (body.forward ? 1 : 0);
+	await db.prepare(
+		'UPDATE abuse_report_resolvers SET updated_at = ?, name = ?, target_user_pattern = ?, reporter_pattern = ?, report_content_pattern = ?, expires_at = ?, forward = ? WHERE id = ?'
+	).bind(now, name, targetUserPattern, reporterPattern, reportContentPattern, expiresAt, forward, id).run();
+	return noContent();
+};
 
 /* ── Abuse Report Notification Recipients ── */
 function makeNotificationRecipient(): Record<string, unknown> {
@@ -39,21 +90,81 @@ function makeNotificationRecipient(): Record<string, unknown> {
 	};
 }
 export const adminAbuseReportNotificationRecipientCreate: Handler = async (db, body) => {
-	const u = await requireUser(db, body); if (u instanceof Response) return u;
-	return json(makeNotificationRecipient());
+	const u = await requireModeratorUser(db, body); if (u instanceof Response) return u;
+	const id = generateId();
+	const now = toIsoNow();
+	const name = ((body.name ?? '') as string).trim();
+	const method = (((body.method ?? 'email') as string) || 'email').trim();
+	const isActive = body.isActive === undefined ? 1 : (body.isActive ? 1 : 0);
+	const webhookUrl = ((body.webhookUrl ?? null) as string | null);
+	const emailAddress = ((body.emailAddress ?? body.email ?? null) as string | null);
+	await db.prepare(
+		'INSERT INTO abuse_report_notification_recipients (id, created_at, updated_at, is_active, name, method, webhook_url, email_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+	).bind(id, now, now, isActive, name, method, webhookUrl, emailAddress).run();
+	return json({ id, createdAt: now, updatedAt: now, isActive: !!isActive, name, method, webhookUrl, emailAddress });
 };
-export const adminAbuseReportNotificationRecipientDelete = authedNoContent;
+export const adminAbuseReportNotificationRecipientDelete: Handler = async (db, body) => {
+	const u = await requireModeratorUser(db, body); if (u instanceof Response) return u;
+	const id = ((body.id ?? body.recipientId ?? '') as string).trim();
+	if (!id) return err('id required');
+	await db.prepare('DELETE FROM abuse_report_notification_recipients WHERE id = ?').bind(id).run();
+	return noContent();
+};
 export const adminAbuseReportNotificationRecipientList: Handler = async (db, body) => {
-	const u = await requireUser(db, body); if (u instanceof Response) return u;
-	return json([]);
+	const u = await requireModeratorUser(db, body); if (u instanceof Response) return u;
+	const rows = await db.prepare('SELECT * FROM abuse_report_notification_recipients ORDER BY created_at DESC').all<Record<string, unknown>>();
+	return json((rows.results ?? []).map((r) => ({
+		id: r.id,
+		createdAt: r.created_at,
+		updatedAt: r.updated_at,
+		isActive: !!r.is_active,
+		name: r.name,
+		method: r.method,
+		webhookUrl: r.webhook_url,
+		emailAddress: r.email_address,
+	})));
 };
 export const adminAbuseReportNotificationRecipientShow: Handler = async (db, body) => {
-	const u = await requireUser(db, body); if (u instanceof Response) return u;
-	return json(makeNotificationRecipient());
+	const u = await requireModeratorUser(db, body); if (u instanceof Response) return u;
+	const id = ((body.id ?? body.recipientId ?? '') as string).trim();
+	if (!id) return err('id required');
+	const row = await db.prepare('SELECT * FROM abuse_report_notification_recipients WHERE id = ?').bind(id).first<Record<string, unknown>>();
+	if (!row) return err('No such recipient', 404);
+	return json({
+		id: row.id,
+		createdAt: row.created_at,
+		updatedAt: row.updated_at,
+		isActive: !!row.is_active,
+		name: row.name,
+		method: row.method,
+		webhookUrl: row.webhook_url,
+		emailAddress: row.email_address,
+	});
 };
 export const adminAbuseReportNotificationRecipientUpdate: Handler = async (db, body) => {
-	const u = await requireUser(db, body); if (u instanceof Response) return u;
-	return json(makeNotificationRecipient());
+	const u = await requireModeratorUser(db, body); if (u instanceof Response) return u;
+	const id = ((body.id ?? body.recipientId ?? '') as string).trim();
+	if (!id) return err('id required');
+	const row = await db.prepare('SELECT * FROM abuse_report_notification_recipients WHERE id = ?').bind(id).first<Record<string, unknown>>();
+	if (!row) return err('No such recipient', 404);
+	const now = toIsoNow();
+	const isActive = body.isActive === undefined ? (row.is_active ? 1 : 0) : (body.isActive ? 1 : 0);
+	const name = (body.name ?? row.name) as string;
+	const method = (body.method ?? row.method) as string;
+	const webhookUrl = (body.webhookUrl ?? row.webhook_url ?? null) as string | null;
+	const emailAddress = (body.emailAddress ?? body.email ?? row.email_address ?? null) as string | null;
+	await db.prepare(
+		'UPDATE abuse_report_notification_recipients SET updated_at = ?, is_active = ?, name = ?, method = ?, webhook_url = ?, email_address = ? WHERE id = ?'
+	).bind(now, isActive, name, method, webhookUrl, emailAddress, id).run();
+	return json({
+		id,
+		updatedAt: now,
+		isActive: !!isActive,
+		name,
+		method,
+		webhookUrl,
+		emailAddress,
+	});
 };
 
 /* ── Admin Accounts Extended ── */
@@ -242,23 +353,24 @@ export const adminSendEmail: Handler = async (db, body, env) => {
 	if (!env.SEND_EMAIL) return err('Email service not configured', 503);
 	const to = ((body.to ?? body.email ?? '') as string).trim();
 	const subject = ((body.subject ?? '') as string).trim();
-	const text = ((body.text ?? body.body ?? '') as string);
+	const text = ((body.text ?? body.body ?? body.message ?? '') as string);
 	const html = ((body.html ?? '') as string).trim();
+	const replyTo = ((body.replyTo ?? '') as string).trim();
 	if (!to) return err('to required');
 	if (!subject) return err('subject required');
 	if (!text && !html) return err('text or html required');
 	const fromEmail = env.SEND_EMAIL_FROM ?? 'noreply@misslite.example';
 	const instanceName = (await getMeta(db, 'name')) ?? env.INSTANCE_NAME ?? 'Misslite';
 	const contentType = html ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8';
-	const payload = [
+	const headers = [
 		`From: ${instanceName} <${fromEmail}>`,
 		`To: ${to}`,
 		`Subject: ${subject}`,
 		`MIME-Version: 1.0`,
 		`Content-Type: ${contentType}`,
-		``,
-		html || text,
-	].join('\r\n');
+	];
+	if (replyTo) headers.push(`Reply-To: ${replyTo}`);
+	const payload = [...headers, ``, html || text].join('\r\n');
 	try {
 		const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
 		const writer = writable.getWriter();

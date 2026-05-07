@@ -21,6 +21,28 @@ function makeWebhook(userId: string): Record<string, unknown> {
 	};
 }
 
+type UserProfileData = Record<string, unknown>;
+
+async function getUserProfile(db: D1Database, userId: string): Promise<UserProfileData> {
+	const row = await db.prepare('SELECT data FROM user_profiles WHERE user_id = ?').bind(userId).first<{ data: string }>();
+	if (!row?.data) return {};
+	try {
+		const parsed = JSON.parse(row.data);
+		return parsed && typeof parsed === 'object' ? parsed as UserProfileData : {};
+	} catch {
+		return {};
+	}
+}
+
+async function patchUserProfile(db: D1Database, userId: string, patch: UserProfileData): Promise<UserProfileData> {
+	const current = await getUserProfile(db, userId);
+	const next = { ...current, ...patch };
+	await db.prepare(
+		'INSERT INTO user_profiles (user_id, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at'
+	).bind(userId, JSON.stringify(next), new Date().toISOString()).run();
+	return next;
+}
+
 /* ── App ── */
 
 export const appCreate: Handler = async () => json(makeApp());
@@ -51,18 +73,25 @@ export const authSessionUserkey: Handler = async (db, body) => {
 export const i2faDone: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
+	await patchUserProfile(db, u.id, { twoFactorEnabled: true });
 	return json({ backupCodes: [] });
 };
 
 export const i2faKeyDone: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
-	return json({ id: generateId(), name: 'Security Key' });
+	const key = { id: generateId(), name: ((body.name ?? 'Security Key') as string) };
+	const current = await getUserProfile(db, u.id);
+	const keys = Array.isArray(current.securityKeys) ? current.securityKeys as Array<Record<string, unknown>> : [];
+	await patchUserProfile(db, u.id, { securityKeys: [...keys, key], twoFactorEnabled: true });
+	return json(key);
 };
 
 export const i2faPasswordLess: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
+	const enabled = Boolean(body.enabled ?? body.usePasswordLessLogin ?? true);
+	await patchUserProfile(db, u.id, { usePasswordLessLogin: enabled });
 	return noContent();
 };
 
@@ -86,18 +115,34 @@ export const i2faRegisterKey: Handler = async (db, body) => {
 export const i2faRemoveKey: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
+	const keyId = ((body.keyId ?? body.id ?? '') as string).trim();
+	if (!keyId) return err('keyId required');
+	const current = await getUserProfile(db, u.id);
+	const keys = Array.isArray(current.securityKeys) ? current.securityKeys as Array<Record<string, unknown>> : [];
+	await patchUserProfile(db, u.id, {
+		securityKeys: keys.filter((k) => String(k.id ?? '') !== keyId),
+	});
 	return noContent();
 };
 
 export const i2faUnregister: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
+	await patchUserProfile(db, u.id, { twoFactorEnabled: false, securityKeys: [] });
 	return noContent();
 };
 
 export const i2faUpdateKey: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
+	const keyId = ((body.keyId ?? body.id ?? '') as string).trim();
+	if (!keyId) return err('keyId required');
+	const nextName = ((body.name ?? '') as string).trim();
+	const current = await getUserProfile(db, u.id);
+	const keys = Array.isArray(current.securityKeys) ? current.securityKeys as Array<Record<string, unknown>> : [];
+	await patchUserProfile(db, u.id, {
+		securityKeys: keys.map((k) => String(k.id ?? '') === keyId ? { ...k, name: nextName || String(k.name ?? 'Security Key') } : k),
+	});
 	return noContent();
 };
 

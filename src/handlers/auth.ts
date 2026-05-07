@@ -47,6 +47,10 @@ export const meta: Handler = async (db, _body, env) => {
 	const notesPerOneAd = Number(await parseMeta('notesPerOneAd') ?? 0);
 	const policies = (await parseMeta('policies') ?? DEFAULT_POLICIES) as Record<string, unknown>;
 	const maxFileSizeMb = Number(await parseMeta('maxFileSizeMb') ?? 0);
+	const enableEmail = Boolean(await parseMeta('enableEmail') ?? false);
+	const enableServiceWorker = Boolean(await parseMeta('enableServiceWorker') ?? false);
+	const swPublickey = (await parseMeta('swPublickey') ?? null) as string | null;
+	const enableUrlPreview = Boolean(await parseMeta('urlPreviewEnabled') ?? false);
 	return json({
 		maintainerName,
 		maintainerEmail,
@@ -78,9 +82,9 @@ export const meta: Handler = async (db, _body, env) => {
 		turnstileSiteKey: null,
 		enableTestcaptcha: false,
 		maxNoteTextLength: maxNoteLength,
-		enableEmail: false,
-		enableServiceWorker: false,
-		swPublickey: null,
+		enableEmail,
+		enableServiceWorker,
+		swPublickey,
 		proxyAccountName: null,
 		themeColor,
 		mascotImageUrl: null,
@@ -113,7 +117,7 @@ export const meta: Handler = async (db, _body, env) => {
 		cacheRemoteSensitiveFiles,
 		mediaProxy: '',
 		translatorAvailable: false,
-		enableUrlPreview: false,
+		enableUrlPreview,
 		noteSearchableScope: 'local',
 		maxFileSize: maxFileSizeMb * 1024 * 1024,
 		dimensions: null,

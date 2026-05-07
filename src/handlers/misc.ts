@@ -483,8 +483,8 @@ export const requestResetPassword: Handler = async (db, body, env) => {
 				].join('\r\n');
 				const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
 				const writer = writable.getWriter();
-				writer.write(new TextEncoder().encode(raw));
-				writer.close();
+				await writer.write(new TextEncoder().encode(raw));
+				await writer.close();
 				// @ts-ignore — EmailMessage from cloudflare:email
 				const { EmailMessage } = await import('cloudflare:email');
 				const message = new EmailMessage(fromEmail, email, readable);
@@ -505,8 +505,11 @@ export const resetPasswordHandler: Handler = async (db, body) => {
 	if (row) {
 		const tokenAge = Date.now() - new Date(row.created_at).getTime();
 		if (tokenAge <= TOKEN_EXPIRY_MS) {
-			const newHash = await hashPassword(password);
-			await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(newHash, row.user_id).run();
+			const user = await db.prepare('SELECT username FROM users WHERE id = ?').bind(row.user_id).first<{ username: string }>();
+			if (user?.username) {
+				const newHash = await hashPassword(user.username + password);
+				await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(newHash, row.user_id).run();
+			}
 		}
 		await db.prepare('DELETE FROM password_reset_tokens WHERE token = ?').bind(token).run();
 	}
