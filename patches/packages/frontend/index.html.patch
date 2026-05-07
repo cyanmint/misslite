@@ -3,7 +3,7 @@ new file mode 100644
 index 0000000..e18b145
 --- /dev/null
 +++ b/packages/frontend/index.html
-@@ -0,0 +1,267 @@
+@@ -0,0 +1,284 @@
 +<!DOCTYPE html>
 +<!--
 +SPDX-FileCopyrightText: syuilo and misskey-project
@@ -145,6 +145,10 @@ index 0000000..e18b145
 +if (_dk) { var v = localStorage.getItem(_dk + '::' + k); if (v !== null) return v; }
 +return localStorage.getItem(k);
 +};
++var _removeCacheMarker = function(k) {
++if (_dk) localStorage.removeItem(_dk + '::' + k);
++else localStorage.removeItem(k);
++};
 +const colorScheme = _get('colorScheme') || 'light';
 +document.documentElement.setAttribute('data-color-scheme', colorScheme);
 +document.documentElement.style.setProperty('color-scheme', colorScheme);
@@ -171,13 +175,26 @@ index 0000000..e18b145
 +if (theme) {
 +try {
 +const themeObj = JSON.parse(theme);
++if (themeObj && typeof themeObj === 'object' && !Array.isArray(themeObj)) {
 +for (const [k, v] of Object.entries(themeObj)) {
 +document.documentElement.style.setProperty('--MI_THEME-' + k, v);
 +}
 +if (themeColorMeta && themeObj.htmlThemeColor) {
 +themeColorMeta.setAttribute('content', themeObj.htmlThemeColor);
 +}
-+} catch (e) { console.warn('Failed to apply cached theme:', e); }
++} else {
++_removeCacheMarker('themeId');
++_removeCacheMarker('themeCachedVersion');
++}
++} catch (e) {
++console.warn('Failed to apply cached theme:', e);
++_removeCacheMarker('themeId');
++_removeCacheMarker('themeCachedVersion');
++}
++} else {
++// Force runtime theme initialization when cache payload is missing.
++_removeCacheMarker('themeId');
++_removeCacheMarker('themeCachedVersion');
 +}
 +};
 +loadCustomTheme();
