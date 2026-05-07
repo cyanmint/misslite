@@ -3,7 +3,7 @@ new file mode 100644
 index 0000000..e18b145
 --- /dev/null
 +++ b/packages/frontend/index.html
-@@ -0,0 +1,271 @@
+@@ -0,0 +1,267 @@
 +<!DOCTYPE html>
 +<!--
 +SPDX-FileCopyrightText: syuilo and misskey-project
@@ -180,11 +180,7 @@ index 0000000..e18b145
 +} catch (e) { console.warn('Failed to apply cached theme:', e); }
 +}
 +};
-+if (typeof requestIdleCallback !== 'undefined') {
-+requestIdleCallback(loadCustomTheme, { timeout: 100 });
-+} else {
-+setTimeout(loadCustomTheme, 0);
-+}
++loadCustomTheme();
 +})();
 +</script>
 +</head>

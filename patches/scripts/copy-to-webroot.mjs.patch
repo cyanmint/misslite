@@ -3,7 +3,7 @@ new file mode 100644
 index 0000000..0eedabd
 --- /dev/null
 +++ b/scripts/copy-to-webroot.mjs
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,87 @@
 +// SPDX-License-Identifier: CC0-1.0
 +// Copy built assets to webroot for standalone deployment
 +
@@ -69,6 +69,13 @@ index 0000000..0eedabd
 +if (existsSync(emojiDir)) {
 +cpSync(emojiDir, resolve(webroot, 'fluent-emoji'), { recursive: true });
 +console.log('[copy] fluent emoji assets');
++}
++
++// Frontend client-assets (bubble game images, etc.) — served at /client-assets/
++const clientAssetsDir = resolve(root, 'packages/frontend/assets');
++if (existsSync(clientAssetsDir)) {
++cpSync(clientAssetsDir, resolve(webroot, 'client-assets'), { recursive: true });
++console.log('[copy] client-assets (frontend static assets)');
 +}
 +
 +// Backend static assets (favicon, icons, etc.)
