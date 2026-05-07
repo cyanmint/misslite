@@ -3,7 +3,7 @@ new file mode 100644
 index 0000000..e18b145
 --- /dev/null
 +++ b/packages/frontend/index.html
-@@ -0,0 +1,284 @@
+@@ -0,0 +1,288 @@
 +<!DOCTYPE html>
 +<!--
 +SPDX-FileCopyrightText: syuilo and misskey-project
@@ -149,6 +149,9 @@ index 0000000..e18b145
 +if (_dk) localStorage.removeItem(_dk + '::' + k);
 +else localStorage.removeItem(k);
 +};
++// Always force runtime theme regeneration to avoid stale/incomplete cached
++// variable sets from older sessions that can leave menus partially unstyled.
++_removeCacheMarker('themeCachedVersion');
 +const colorScheme = _get('colorScheme') || 'light';
 +document.documentElement.setAttribute('data-color-scheme', colorScheme);
 +document.documentElement.style.setProperty('color-scheme', colorScheme);
