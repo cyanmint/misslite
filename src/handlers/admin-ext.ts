@@ -353,7 +353,7 @@ export const adminSendEmail: Handler = async (db, body, env) => {
 	if (!env.SEND_EMAIL) return err('Email service not configured', 503);
 	const to = ((body.to ?? body.email ?? '') as string).trim();
 	const subject = ((body.subject ?? '') as string).trim();
-	const text = ((body.text ?? body.body ?? body.message ?? '') as string);
+	const text = ((body.text ?? body.body ?? '') as string);
 	const html = ((body.html ?? '') as string).trim();
 	const replyTo = ((body.replyTo ?? '') as string).trim();
 	if (!to) return err('to required');
@@ -362,15 +362,15 @@ export const adminSendEmail: Handler = async (db, body, env) => {
 	const fromEmail = env.SEND_EMAIL_FROM ?? 'noreply@misslite.example';
 	const instanceName = (await getMeta(db, 'name')) ?? env.INSTANCE_NAME ?? 'Misslite';
 	const contentType = html ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8';
-	const headers = [
+	const headerLines = [
 		`From: ${instanceName} <${fromEmail}>`,
 		`To: ${to}`,
 		`Subject: ${subject}`,
 		`MIME-Version: 1.0`,
 		`Content-Type: ${contentType}`,
 	];
-	if (replyTo) headers.push(`Reply-To: ${replyTo}`);
-	const payload = [...headers, ``, html || text].join('\r\n');
+	if (replyTo) headerLines.push(`Reply-To: ${replyTo}`);
+	const payload = [...headerLines, ``, html || text].join('\r\n');
 	try {
 		const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
 		const writer = writable.getWriter();
