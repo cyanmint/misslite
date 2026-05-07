@@ -24,6 +24,8 @@ export interface Env {
 	R2?: R2Bucket;
 	/** Cloudflare Email send binding. */
 	SEND_EMAIL?: SendEmail;
+	/** Sender email address for outgoing emails. Defaults to 'noreply@misslite.example'. */
+	SEND_EMAIL_FROM?: string;
 }
 
 export interface DbUser {

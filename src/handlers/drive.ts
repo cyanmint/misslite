@@ -105,7 +105,8 @@ export const driveFilesCreate: Handler = async (db, body, env, request) => {
 		await db.prepare('INSERT OR IGNORE INTO drive_files (id, user_id, name, type, size, folder_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
 			.bind(fileId, u.id, name, 'application/octet-stream', 0, folderId, now).run();
 		const row = await db.prepare('SELECT * FROM drive_files WHERE id = ?').bind(fileId).first<DbDriveFile>();
-		return json(packDriveFile(row ?? { id: fileId, user_id: u.id, name, type: 'application/octet-stream', size: 0, md5: null, is_sensitive: 0, folder_id: folderId, r2_key: null, url: null, created_at: now }, packUser(u)));
+		const fallback: DbDriveFile = { id: fileId, user_id: u.id, name, type: 'application/octet-stream', size: 0, md5: null, is_sensitive: 0, folder_id: folderId, r2_key: null, url: null, created_at: now };
+		return json(packDriveFile(row ?? fallback, packUser(u)));
 	}
 
 	const fileId = generateId();
@@ -123,14 +124,15 @@ export const driveFilesCreate: Handler = async (db, body, env, request) => {
 	}
 
 	const origin = request ? new URL(request.url).origin : '';
-	const fileUrl = origin ? `${origin}/files/${r2Key}` : null;
+	const fileUrl = origin && env.R2 ? `${origin}/files/${r2Key}` : null;
 	const now = new Date().toISOString();
 
 	await db.prepare('INSERT INTO drive_files (id, user_id, name, type, size, is_sensitive, folder_id, r2_key, url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
 		.bind(fileId, u.id, name, fileType, fileSize, isSensitive ? 1 : 0, folderId, env.R2 ? r2Key : null, fileUrl, now).run();
 
 	const row = await db.prepare('SELECT * FROM drive_files WHERE id = ?').bind(fileId).first<DbDriveFile>();
-	return json(packDriveFile(row ?? { id: fileId, user_id: u.id, name, type: fileType, size: fileSize, md5: null, is_sensitive: isSensitive ? 1 : 0, folder_id: folderId, r2_key: env.R2 ? r2Key : null, url: fileUrl, created_at: now }, packUser(u)));
+	const fallback: DbDriveFile = { id: fileId, user_id: u.id, name, type: fileType, size: fileSize, md5: null, is_sensitive: isSensitive ? 1 : 0, folder_id: folderId, r2_key: env.R2 ? r2Key : null, url: fileUrl, created_at: now };
+	return json(packDriveFile(row ?? fallback, packUser(u)));
 };
 
 export const driveFilesDelete: Handler = async (db, body, env) => {
@@ -142,7 +144,7 @@ export const driveFilesDelete: Handler = async (db, body, env) => {
 	if (!row) return err('No such file', 404);
 	if (row.user_id !== u.id && !u.is_admin) return err('Forbidden', 403);
 	if (env.R2 && row.r2_key) {
-		await env.R2.delete(row.r2_key).catch(() => { /* ignore */ });
+		await env.R2.delete(row.r2_key).catch(e => { console.error('R2 delete failed:', e); });
 	}
 	await db.prepare('DELETE FROM drive_files WHERE id = ?').bind(fileId).run();
 	return noContent();

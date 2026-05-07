@@ -433,15 +433,16 @@ export const requestResetPassword: Handler = async (db, body, env) => {
 		if (env.SEND_EMAIL) {
 			try {
 				const instanceName = await getMeta(db, 'name') ?? env.INSTANCE_NAME ?? 'Misslite';
+				const fromEmail = env.SEND_EMAIL_FROM ?? 'noreply@misslite.example';
 				const raw = [
-					`From: noreply@misslite.example`,
+					`From: ${fromEmail}`,
 					`To: ${email}`,
 					`Subject: ${instanceName} Password Reset`,
 					`MIME-Version: 1.0`,
 					`Content-Type: text/html; charset=utf-8`,
 					``,
 					`<p>Hello ${user.username},</p>`,
-					`<p>Use the following token to reset your password:</p>`,
+					`<p>Use the following token to reset your password (valid for 24 hours):</p>`,
 					`<pre>${token}</pre>`,
 					`<p>If you did not request a password reset, you can ignore this email.</p>`,
 				].join('\r\n');
@@ -451,7 +452,7 @@ export const requestResetPassword: Handler = async (db, body, env) => {
 				writer.close();
 				// @ts-ignore — EmailMessage from cloudflare:email
 				const { EmailMessage } = await import('cloudflare:email');
-				const message = new EmailMessage('noreply@misslite.example', email, readable);
+				const message = new EmailMessage(fromEmail, email, readable);
 				await env.SEND_EMAIL.send(message);
 			} catch { /* email sending failed silently */ }
 		}
@@ -459,14 +460,19 @@ export const requestResetPassword: Handler = async (db, body, env) => {
 	return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
 };
 
+const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 export const resetPasswordHandler: Handler = async (db, body) => {
 	const token = ((body.token ?? '') as string).trim();
 	const password = ((body.password ?? '') as string);
 	if (!token || !password) return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
 	const row = await db.prepare('SELECT * FROM password_reset_tokens WHERE token = ?').bind(token).first<DbPasswordResetToken>();
 	if (row) {
-		const newHash = await hashPassword(password);
-		await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(newHash, row.user_id).run();
+		const tokenAge = Date.now() - new Date(row.created_at).getTime();
+		if (tokenAge <= TOKEN_EXPIRY_MS) {
+			const newHash = await hashPassword(password);
+			await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(newHash, row.user_id).run();
+		}
 		await db.prepare('DELETE FROM password_reset_tokens WHERE token = ?').bind(token).run();
 	}
 	return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
