@@ -243,6 +243,19 @@ expect(status).toBe(200);
 expect(data.text).toBe('Hello world!');
 });
 
+it('renote includes original note payload', async () => {
+const { data: originalData } = await callApi('notes/create', { i: userToken, text: 'Original renote target' });
+const originalId = originalData.createdNote.id;
+const { data: renoteData } = await callApi('notes/create', { i: userToken, renoteId: originalId });
+const renoteId = renoteData.createdNote.id;
+const { status, data } = await callApi('notes/show', { noteId: renoteId });
+expect(status).toBe(200);
+expect(data.renoteId).toBe(originalId);
+expect(data.renote).toBeTruthy();
+expect(data.renote.id).toBe(originalId);
+expect(data.renote.text).toBe('Original renote target');
+});
+
 it('notes/show-partial-bulk returns map of notes', async () => {
 const { status, data } = await callApi('notes/show-partial-bulk', { noteIds: [noteId] });
 expect(status).toBe(200);

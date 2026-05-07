@@ -258,12 +258,22 @@ export function packSelf(u: DbUser, token: string): Record<string, unknown> {
 	};
 }
 
-export async function packNote(db: D1Database, n: DbNote): Promise<Record<string, unknown>> {
+export async function packNote(
+	db: D1Database,
+	n: DbNote,
+	options: { includeRenote?: boolean } = {},
+): Promise<Record<string, unknown>> {
+	const includeRenote = options.includeRenote !== false;
 	const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(n.user_id).first<DbUser>();
 	const reactions = await db.prepare('SELECT reaction, COUNT(*) as count FROM reactions WHERE note_id = ? GROUP BY reaction').bind(n.id).all();
 	const reactionMap: Record<string, number> = {};
 	for (const r of reactions.results ?? []) {
 		reactionMap[r.reaction as string] = r.count as number;
+	}
+	let renote: Record<string, unknown> | null = null;
+	if (includeRenote && n.renote_id) {
+		const renoteNote = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(n.renote_id).first<DbNote>();
+		renote = renoteNote ? await packNote(db, renoteNote, { includeRenote: false }) : null;
 	}
 	return {
 		id: n.id,
@@ -275,6 +285,7 @@ export async function packNote(db: D1Database, n: DbNote): Promise<Record<string
 		visibility: n.visibility,
 		replyId: n.reply_id,
 		renoteId: n.renote_id,
+		renote,
 		reactions: reactionMap,
 		repliesCount: 0,
 		renoteCount: 0,
