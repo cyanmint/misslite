@@ -68,14 +68,14 @@ export const i2faPasswordLess: Handler = async (db, body) => {
 export const i2faRegister: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
-	return json({ qr: '', url: '', secret: '', label: u.username, issuer: 'MissLite' });
+	return json({ qr: '', url: '', secret: '', label: u.username, issuer: 'Misslite' });
 };
 
 export const i2faRegisterKey: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
 	return json({
-		rp: { id: 'misslite.example', name: 'MissLite' },
+		rp: { id: 'misslite.example', name: 'Misslite' },
 		user: { id: u.id, name: u.username },
 		challenge: generateId(), pubKeyCredParams: [], timeout: 60000,
 		excludeCredentials: [], authenticatorSelection: {}, attestation: 'none', extensions: {},

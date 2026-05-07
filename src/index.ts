@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: AGPL-3.0-only
  *
- * MissLite CF Worker — minimal Misskey-compatible backend
+ * Misslite CF Worker — minimal Misskey-compatible backend
  * running on Cloudflare Workers with D1 as the database.
  */
 
@@ -735,10 +735,25 @@ export default {
 			});
 		}
 
+		// R2 file serving — GET /files/*
+		if (url.pathname.startsWith('/files/') && request.method === 'GET') {
+			const r2Key = url.pathname.slice('/files/'.length);
+			if (!r2Key) return err('Not found', 404);
+			if (!env.R2) return err('File storage not configured', 503);
+			await ensureSchema(env.DB);
+			const obj = await env.R2.get(r2Key);
+			if (!obj) return err('Not found', 404);
+			const headers = new Headers({ 'Access-Control-Allow-Origin': '*' });
+			const contentType = obj.httpMetadata?.contentType ?? 'application/octet-stream';
+			headers.set('Content-Type', contentType);
+			headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+			return new Response(obj.body, { headers });
+		}
+
 		const path = url.pathname.replace(/^\/api\//, '').replace(/\/$/, '');
 
 		if (!path || path === '') {
-			return json({ name: 'MissLite CF', version: '0.1.0' });
+			return json({ name: 'Misslite CF', version: '0.1.0' });
 		}
 
 		const handler = routes[path];
@@ -748,16 +763,19 @@ export default {
 
 		let body: Record<string, unknown> = {};
 		if (request.method === 'POST') {
-			try {
-				body = await request.json() as Record<string, unknown>;
-			} catch {
-				body = {};
+			const ct = request.headers.get('content-type') ?? '';
+			if (!ct.includes('multipart/form-data') && !ct.includes('application/x-www-form-urlencoded')) {
+				try {
+					body = await request.json() as Record<string, unknown>;
+				} catch {
+					body = {};
+				}
 			}
 		}
 
 		try {
 			await ensureSchema(env.DB);
-			return await handler(env.DB, body, env);
+			return await handler(env.DB, body, env, request);
 		} catch (e) {
 			console.error('Handler error:', e);
 			return err('Internal server error', 500);

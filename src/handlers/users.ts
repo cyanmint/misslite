@@ -3,7 +3,7 @@
  */
 
 import type { Handler } from '../types.js';
-import type { DbUser } from '../types.js';
+import type { DbUser, DbDriveFile } from '../types.js';
 import { json, err, packUser, packSelf, requireUser } from '../helpers.js';
 
 export const currentUser: Handler = async (db, body) => {
@@ -22,6 +22,11 @@ export const updateUser: Handler = async (db, body) => {
 	if (typeof body.name === 'string') { sets.push('name = ?'); vals.push(body.name); }
 	if (typeof body.description === 'string') { sets.push('description = ?'); vals.push(body.description); }
 	if (typeof body.avatarUrl === 'string') { sets.push('avatar_url = ?'); vals.push(body.avatarUrl); }
+	if (typeof body.avatarId === 'string' && body.avatarId) {
+		const file = await db.prepare('SELECT * FROM drive_files WHERE id = ? AND user_id = ?').bind(body.avatarId, u.id).first<DbDriveFile>();
+		if (file?.url) { sets.push('avatar_url = ?'); vals.push(file.url); }
+	}
+	if (body.avatarId === null) { sets.push('avatar_url = ?'); vals.push(null); }
 
 	if (sets.length > 0) {
 		vals.push(u.id);

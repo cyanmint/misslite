@@ -8,7 +8,7 @@ import type { DbUser } from '../types.js';
 
 export const meta: Handler = async (db, _body, env) => {
 	const initialized = await db.prepare("SELECT value FROM meta WHERE key = 'initialized'").first<{ value: string }>();
-	const name = await getMeta(db, 'name') ?? env.INSTANCE_NAME ?? 'MissLite';
+	const name = await getMeta(db, 'name') ?? env.INSTANCE_NAME ?? 'Misslite';
 	const desc = await getMeta(db, 'description') ?? env.INSTANCE_DESCRIPTION ?? 'A lightweight Misskey-compatible instance';
 	const themeColor = await getMeta(db, 'themeColor') ?? env.THEME_COLOR ?? '#86b300';
 	const maxNoteLength = Number(await getMeta(db, 'maxNoteLength') ?? env.MAX_NOTE_LENGTH ?? 3000);

@@ -20,7 +20,7 @@ return { status: response.status, data };
 }
 
 // All tests run sequentially in a single describe block sharing state
-describe('MissLite Worker API', () => {
+describe('Misslite Worker API', () => {
 // ---- Instance ----
 
 it('GET / returns server info', async () => {
@@ -29,13 +29,13 @@ const ctx = createExecutionContext();
 const response = await worker.fetch(request, env as unknown as WorkerEnv, ctx);
 await waitOnExecutionContext(ctx);
 const data = await response.json() as any;
-expect(data.name).toBe('MissLite CF');
+expect(data.name).toBe('Misslite CF');
 });
 
 it('meta returns instance metadata with requireSetup=true', async () => {
 const { status, data } = await callApi('meta');
 expect(status).toBe(200);
-expect(data.name).toBe('MissLite');
+expect(data.name).toBe('Misslite');
 expect(data.requireSetup).toBe(true);
 expect(data.clientOptions).toBeTruthy();
 expect(data.clientOptions.entrancePageStyle).toBeNull();

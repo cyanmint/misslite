@@ -2,11 +2,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+export interface SendEmail {
+	send(message: unknown): Promise<void>;
+}
+
 export interface Env {
 	DB: D1Database;
 	/** Password required for the initial admin account setup. Defaults to 'changeme'. */
 	INITIAL_PASSWORD: string;
-	/** Instance display name. Defaults to 'MissLite'. */
+	/** Instance display name. Defaults to 'Misslite'. */
 	INSTANCE_NAME?: string;
 	/** Instance description shown in meta. */
 	INSTANCE_DESCRIPTION?: string;
@@ -16,6 +20,10 @@ export interface Env {
 	MAX_NOTE_LENGTH?: string;
 	/** Theme colour for the instance. Defaults to '#86b300'. */
 	THEME_COLOR?: string;
+	/** Cloudflare R2 bucket for file storage. */
+	R2?: R2Bucket;
+	/** Cloudflare Email send binding. */
+	SEND_EMAIL?: SendEmail;
 }
 
 export interface DbUser {
@@ -250,4 +258,24 @@ export interface DbSwSubscription {
 	created_at: string;
 }
 
-export type Handler = (db: D1Database, body: Record<string, unknown>, env: Env) => Promise<Response>;
+export interface DbDriveFile {
+	id: string;
+	user_id: string;
+	name: string;
+	type: string;
+	size: number;
+	md5: string | null;
+	is_sensitive: number;
+	folder_id: string | null;
+	r2_key: string | null;
+	url: string | null;
+	created_at: string;
+}
+
+export interface DbPasswordResetToken {
+	token: string;
+	user_id: string;
+	created_at: string;
+}
+
+export type Handler = (db: D1Database, body: Record<string, unknown>, env: Env, request?: Request) => Promise<Response>;

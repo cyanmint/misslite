@@ -11,7 +11,7 @@ export const adminMeta: Handler = async (db, body) => {
 	if (!u.is_admin) return err('Forbidden', 403);
 
 	const m = await getMetaAll(db);
-	const name = m['name'] ?? 'MissLite';
+	const name = m['name'] ?? 'Misslite';
 	const description = m['description'] ?? '';
 	const themeColor = m['themeColor'] ?? '#86b300';
 	const maxNoteLength = Number(m['maxNoteLength'] ?? 3000);
@@ -111,7 +111,7 @@ export const adminMeta: Handler = async (db, body) => {
 		disableRegistration: false,
 		impressumUrl: null,
 		privacyPolicyUrl: null,
-		repositoryUrl: 'https://github.com/cyanmint/misslite-cf',
+		repositoryUrl: 'https://github.com/cyanmint/misslite',
 		tosUrl: null,
 		donationUrl: null,
 		feedbackUrl: null,

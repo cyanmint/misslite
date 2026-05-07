@@ -6,7 +6,7 @@
   "vars": {
     "NODE_ENV": "production",
     "INITIAL_PASSWORD": "changeme",
-    "INSTANCE_NAME": "MissLite",
+    "INSTANCE_NAME": "Misslite",
     "INSTANCE_DESCRIPTION": "A lightweight Misskey-compatible instance",
     "REGISTRATION_MODE": "invite",
     "MAX_NOTE_LENGTH": "3000",

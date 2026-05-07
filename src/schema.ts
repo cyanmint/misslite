@@ -315,8 +315,23 @@ CREATE TABLE IF NOT EXISTS scheduled_notes (
   reply_id TEXT, scheduled_at TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
-`;
+-- Drive files
+CREATE TABLE IF NOT EXISTS drive_files (
+  id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+  name TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'application/octet-stream',
+  size INTEGER NOT NULL DEFAULT 0, md5 TEXT,
+  is_sensitive INTEGER NOT NULL DEFAULT 0,
+  folder_id TEXT, r2_key TEXT, url TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_drive_files_user ON drive_files(user_id, created_at DESC);
 
+-- Password reset tokens
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  token TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+);
+`;
 export async function ensureSchema(db: D1Database): Promise<void> {
 	const statements = SCHEMA.split(';').map(s => s.trim()).filter(Boolean);
 	for (const sql of statements) {

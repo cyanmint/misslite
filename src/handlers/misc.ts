@@ -3,7 +3,7 @@
  */
 
 import type { Handler } from '../types.js';
-import type { DbNotification, DbUser, DbNote, DbAnnouncement, DbSwSubscription } from '../types.js';
+import type { DbNotification, DbUser, DbNote, DbAnnouncement, DbSwSubscription, DbPasswordResetToken } from '../types.js';
 import { json, err, generateId, requireUser, getUser, packUser, packNote, getMeta, setMeta, hashPassword, DEFAULT_POLICIES } from '../helpers.js';
 
 export const emojis: Handler = async () => json({ emojis: [] });
@@ -423,11 +423,54 @@ if (u instanceof Response) return u;
 return json({});
 };
 
-export const requestResetPassword: Handler = async () =>
-new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+export const requestResetPassword: Handler = async (db, body, env) => {
+	const email = ((body.email ?? '') as string).trim();
+	if (!email) return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+	const user = await db.prepare('SELECT * FROM users WHERE email = ?').bind(email).first<DbUser>();
+	if (user) {
+		const token = generateId();
+		await db.prepare('INSERT OR REPLACE INTO password_reset_tokens (token, user_id, created_at) VALUES (?, ?, ?)').bind(token, user.id, new Date().toISOString()).run();
+		if (env.SEND_EMAIL) {
+			try {
+				const instanceName = await getMeta(db, 'name') ?? env.INSTANCE_NAME ?? 'Misslite';
+				const raw = [
+					`From: noreply@misslite.example`,
+					`To: ${email}`,
+					`Subject: ${instanceName} Password Reset`,
+					`MIME-Version: 1.0`,
+					`Content-Type: text/html; charset=utf-8`,
+					``,
+					`<p>Hello ${user.username},</p>`,
+					`<p>Use the following token to reset your password:</p>`,
+					`<pre>${token}</pre>`,
+					`<p>If you did not request a password reset, you can ignore this email.</p>`,
+				].join('\r\n');
+				const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+				const writer = writable.getWriter();
+				writer.write(new TextEncoder().encode(raw));
+				writer.close();
+				// @ts-ignore — EmailMessage from cloudflare:email
+				const { EmailMessage } = await import('cloudflare:email');
+				const message = new EmailMessage('noreply@misslite.example', email, readable);
+				await env.SEND_EMAIL.send(message);
+			} catch { /* email sending failed silently */ }
+		}
+	}
+	return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+};
 
-export const resetPasswordHandler: Handler = async () =>
-new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+export const resetPasswordHandler: Handler = async (db, body) => {
+	const token = ((body.token ?? '') as string).trim();
+	const password = ((body.password ?? '') as string);
+	if (!token || !password) return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+	const row = await db.prepare('SELECT * FROM password_reset_tokens WHERE token = ?').bind(token).first<DbPasswordResetToken>();
+	if (row) {
+		const newHash = await hashPassword(password);
+		await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(newHash, row.user_id).run();
+		await db.prepare('DELETE FROM password_reset_tokens WHERE token = ?').bind(token).run();
+	}
+	return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+};
 
 export const iRevokeToken: Handler = async (db, body) => {
 const u = await requireUser(db, body);

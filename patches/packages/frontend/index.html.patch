@@ -34,7 +34,7 @@ index 0000000..e18b145
 +})();
 +</script>
 +<script src="/config.js"></script>
-+<title>MissLite</title>
++<title>Misslite</title>
 +<style id="splash-style">
 +#splash {
 +background: #86b300;
@@ -157,15 +157,41 @@ index 0000000..e18b145
 +document.documentElement.style.setProperty('color-scheme', colorScheme);
 +const defaultLightTheme = {
 +accent: '#86b300', bg: '#fff', fg: '#5f5f5f', panel: '#f3f5f7',
-+divider: 'rgba(0, 0, 0, 0.1)', modalBg: 'rgba(0, 0, 0, 0.3)',
-+link: '#44a4c1', htmlThemeColor: '#fff', shadow: 'rgba(0, 0, 0, 0.1)',
-+buttonBg: '#e8eaec', buttonHoverBg: '#dfe1e3',
++acrylicBg: 'rgba(255, 255, 255, 0.5)',
++fgTransparent: 'rgba(95, 95, 95, 0.5)', fgTransparentWeak: 'rgba(95, 95, 95, 0.75)',
++fgHighlighted: '#333', fgOnAccent: '#fff', fgOnWhite: '#5f5f5f',
++divider: 'rgba(0, 0, 0, 0.1)', indicator: '#86b300',
++popup: '#fff', modalBg: 'rgba(0, 0, 0, 0.3)',
++shadow: 'rgba(0, 0, 0, 0.16)', link: '#44a4c1', hashtag: '#86b300',
++header: 'rgba(255, 255, 255, 0.85)', navBg: '#f3f5f7', navFg: '#5f5f5f',
++navHoverFg: '#333', navActive: '#86b300', navIndicator: '#86b300',
++mention: '#86b300', mentionMe: '#86b300', renote: '#89DC6F',
++infoFg: '#5f5f5f', infoWarnFg: '#ab5706', infoWarnBg: 'rgba(255, 161, 0, 0.1)',
++buttonBg: 'rgba(0, 0, 0, 0.05)', buttonHoverBg: 'rgba(0, 0, 0, 0.1)',
++inputBorder: 'rgba(0, 0, 0, 0.1)', inputBorderHover: 'rgba(0, 0, 0, 0.2)',
++listItemHoverBg: 'rgba(0, 0, 0, 0.03)',
++wallpaperOverlay: 'rgba(255, 255, 255, 0.5)', windowHeader: 'rgba(243, 245, 247, 0.85)',
++dateLabelFg: '#86b300', scrollbarHandle: 'rgba(0, 0, 0, 0.2)', scrollbarHandleHover: 'rgba(0, 0, 0, 0.4)',
++htmlThemeColor: '#fff',
 +};
 +const defaultDarkTheme = {
-+accent: '#86b300', bg: '#000', fg: '#dadada', panel: '#0f0f0f',
-+divider: 'rgba(255, 255, 255, 0.1)', modalBg: 'rgba(0, 0, 0, 0.7)',
-+link: '#44a4c1', htmlThemeColor: '#000', shadow: 'rgba(0, 0, 0, 0.3)',
-+buttonBg: '#1e1e1e', buttonHoverBg: '#2d2d2d',
++accent: '#86b300', bg: '#181818', fg: '#dadada', panel: '#222',
++acrylicBg: 'rgba(24, 24, 24, 0.5)',
++fgTransparent: 'rgba(218, 218, 218, 0.5)', fgTransparentWeak: 'rgba(218, 218, 218, 0.75)',
++fgHighlighted: '#fff', fgOnAccent: '#fff', fgOnWhite: '#5f5f5f',
++divider: 'rgba(255, 255, 255, 0.1)', indicator: '#86b300',
++popup: '#252525', modalBg: 'rgba(0, 0, 0, 0.7)',
++shadow: 'rgba(0, 0, 0, 0.3)', link: '#44a4c1', hashtag: '#86b300',
++header: 'rgba(24, 24, 24, 0.85)', navBg: '#222', navFg: '#dadada',
++navHoverFg: '#fff', navActive: '#86b300', navIndicator: '#86b300',
++mention: '#86b300', mentionMe: '#86b300', renote: '#89DC6F',
++infoFg: '#dadada', infoWarnFg: '#e6b869', infoWarnBg: 'rgba(230, 184, 105, 0.1)',
++buttonBg: 'rgba(255, 255, 255, 0.05)', buttonHoverBg: 'rgba(255, 255, 255, 0.1)',
++inputBorder: 'rgba(255, 255, 255, 0.1)', inputBorderHover: 'rgba(255, 255, 255, 0.2)',
++listItemHoverBg: 'rgba(255, 255, 255, 0.03)',
++wallpaperOverlay: 'rgba(0, 0, 0, 0.5)', windowHeader: 'rgba(34, 34, 34, 0.85)',
++dateLabelFg: '#86b300', scrollbarHandle: 'rgba(255, 255, 255, 0.2)', scrollbarHandleHover: 'rgba(255, 255, 255, 0.4)',
++htmlThemeColor: '#000',
 +};
 +const defaultTheme = colorScheme === 'dark' ? defaultDarkTheme : defaultLightTheme;
 +for (const [k, v] of Object.entries(defaultTheme)) {
@@ -217,7 +243,7 @@ index 0000000..e18b145
 +</div>
 +<div id="server-select-landing">
 +<div class="misslite-card">
-+<p class="misslite-title">🌿 MissLite</p>
++<p class="misslite-title">🌿 Misslite</p>
 +<p class="misslite-subtitle">A lightweight Misskey frontend.<br>Enter your server's domain to get started.</p>
 +<p id="misslite-server-error" class="misslite-error"></p>
 +<div class="misslite-input-row">
@@ -229,7 +255,7 @@ index 0000000..e18b145
 +</div>
 +<div id="misskey_app"></div>
 +<script type="module">
-+// MissLite boot: show server-selection landing page when no server is configured,
++// Misslite boot: show server-selection landing page when no server is configured,
 +// or when the configured server fails to respond within the timeout.
 +const _qd = (window.location.search || '').slice(1).trim();
 +const _cfg = window.MISSKEY_CONFIG || {};
