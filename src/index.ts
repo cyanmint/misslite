@@ -192,6 +192,7 @@ import {
 import { adminMeta as adminMetaFromMeta } from './handlers/admin-meta.js';
 import {
 	chatMessages, chatMessagesCreate, chatMessagesDelete, chatMessagesRead,
+	chatMessagesRoomTimeline, chatMessagesSearch, chatMessagesShow, chatMessagesUserTimeline,
 	chatHistory,
 	chatRooms, chatRoomsCreate, chatRoomsShow, chatRoomsUpdate, chatRoomsDelete,
 	chatRoomsInvite, chatRoomsKick, chatRoomsLeave, chatRoomsMembers,
@@ -719,6 +720,10 @@ const routes: Record<string, Handler> = {
 	'chat/messages/create': chatMessagesCreate,
 	'chat/messages/delete': chatMessagesDelete,
 	'chat/messages/read': chatMessagesRead,
+	'chat/messages/room-timeline': chatMessagesRoomTimeline,
+	'chat/messages/search': chatMessagesSearch,
+	'chat/messages/show': chatMessagesShow,
+	'chat/messages/user-timeline': chatMessagesUserTimeline,
 	'chat/history': chatHistory,
 	'chat/rooms': chatRooms,
 	'chat/rooms/create': chatRoomsCreate,

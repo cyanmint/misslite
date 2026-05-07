@@ -46,7 +46,7 @@ export const meta: Handler = async (db, _body, env) => {
 	const wellKnownWebsites = (await parseMeta('wellKnownWebsites') ?? []) as unknown[];
 	const notesPerOneAd = Number(await parseMeta('notesPerOneAd') ?? 0);
 	const policies = (await parseMeta('policies') ?? DEFAULT_POLICIES) as Record<string, unknown>;
-	const maxFileSizeMb = Number(await parseMeta('maxFileSizeMb') ?? 0);
+	const maxFileSizeMb = Number(await parseMeta('maxFileSizeMb') ?? policies.maxFileSizeMb ?? DEFAULT_POLICIES.maxFileSizeMb);
 	const enableEmail = Boolean(await parseMeta('enableEmail') ?? false);
 	const enableServiceWorker = Boolean(await parseMeta('enableServiceWorker') ?? false);
 	const swPublickey = (await parseMeta('swPublickey') ?? null) as string | null;

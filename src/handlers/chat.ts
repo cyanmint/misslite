@@ -61,6 +61,67 @@ async function packChatMessage(db: D1Database, m: DbChatMessage, viewerId: strin
 	};
 }
 
+async function ensureRoomMember(db: D1Database, roomId: string, userId: string): Promise<Response | null> {
+	const member = await db.prepare('SELECT 1 FROM chat_room_members WHERE room_id = ? AND user_id = ?').bind(roomId, userId).first();
+	return member ? null : err('Not a member of this room', 403);
+}
+
+async function getRefCreatedAt(db: D1Database, id: string): Promise<string | null> {
+	if (!id) return null;
+	const ref = await db.prepare('SELECT created_at FROM chat_messages WHERE id = ?').bind(id).first<{ created_at: string }>();
+	return ref?.created_at ?? null;
+}
+
+async function listMessages(
+	db: D1Database,
+	viewerId: string,
+	options: {
+		userId?: string;
+		roomId?: string;
+		limit?: number;
+		untilId?: string;
+		sinceId?: string;
+		query?: string;
+	},
+): Promise<DbChatMessage[]> {
+	const limit = Math.min(Math.max(Number(options.limit) || 30, 1), 100);
+	let sql: string;
+	const params: unknown[] = [];
+
+	if (options.userId) {
+		sql = 'SELECT * FROM chat_messages WHERE ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?))';
+		params.push(viewerId, options.userId, options.userId, viewerId);
+	} else if (options.roomId) {
+		sql = 'SELECT * FROM chat_messages WHERE to_room_id = ?';
+		params.push(options.roomId);
+	} else {
+		return [];
+	}
+
+	if (options.query) {
+		sql += ' AND text LIKE ? ESCAPE \'\\\'';
+		params.push(`%${options.query.replace(/[%_]/g, '\\$&')}%`);
+	}
+
+	const untilCreatedAt = await getRefCreatedAt(db, options.untilId ?? '');
+	if (untilCreatedAt) {
+		sql += ' AND created_at < ?';
+		params.push(untilCreatedAt);
+	}
+
+	const sinceCreatedAt = await getRefCreatedAt(db, options.sinceId ?? '');
+	if (sinceCreatedAt) {
+		sql += ' AND created_at > ?';
+		params.push(sinceCreatedAt);
+	}
+
+	sql += ' ORDER BY created_at DESC LIMIT ?';
+	params.push(limit);
+
+	const rows = await db.prepare(sql).bind(...params).all<DbChatMessage>();
+	return rows.results ?? [];
+}
+
 // ── 1-on-1 messages ───────────────────────────────────────────────────────────
 
 /**
@@ -78,36 +139,101 @@ export const chatMessages: Handler = async (db, body) => {
 
 	if (!userId && !roomId) return err('userId or roomId required');
 
-	let sql: string;
-	const params: unknown[] = [];
-
-	if (userId) {
-		// 1-on-1 conversation between the current user and the target user
-		sql = 'SELECT * FROM chat_messages WHERE ((from_user_id = ? AND to_user_id = ?) OR (from_user_id = ? AND to_user_id = ?))';
-		params.push(u.id, userId, userId, u.id);
-	} else {
-		// Room messages
-		// Check membership
-		const member = await db.prepare('SELECT 1 FROM chat_room_members WHERE room_id = ? AND user_id = ?').bind(roomId, u.id).first();
-		if (!member) return err('Not a member of this room', 403);
-		sql = 'SELECT * FROM chat_messages WHERE to_room_id = ?';
-		params.push(roomId);
+	if (roomId) {
+		const membershipError = await ensureRoomMember(db, roomId, u.id);
+		if (membershipError) return membershipError;
 	}
 
-	if (untilId) {
-		const ref = await db.prepare('SELECT created_at FROM chat_messages WHERE id = ?').bind(untilId).first<{ created_at: string }>();
-		if (ref) { sql += ' AND created_at < ?'; params.push(ref.created_at); }
-	}
-	if (sinceId) {
-		const ref = await db.prepare('SELECT created_at FROM chat_messages WHERE id = ?').bind(sinceId).first<{ created_at: string }>();
-		if (ref) { sql += ' AND created_at > ?'; params.push(ref.created_at); }
-	}
-	sql += ' ORDER BY created_at DESC LIMIT ?';
-	params.push(limit);
-
-	const rows = await db.prepare(sql).bind(...params).all<DbChatMessage>();
-	const packed = await Promise.all((rows.results ?? []).map(m => packChatMessage(db, m, u.id)));
+	const rows = await listMessages(db, u.id, { userId, roomId, limit, untilId, sinceId });
+	const packed = await Promise.all(rows.map(m => packChatMessage(db, m, u.id)));
 	return json(packed);
+};
+
+export const chatMessagesUserTimeline: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const userId = (body.userId ?? '') as string;
+	if (!userId) return err('userId required');
+	const rows = await listMessages(db, u.id, {
+		userId,
+		limit: Number(body.limit) || 20,
+		untilId: (body.untilId ?? '') as string,
+		sinceId: (body.sinceId ?? '') as string,
+	});
+	return json(await Promise.all(rows.map(m => packChatMessage(db, m, u.id))));
+};
+
+export const chatMessagesRoomTimeline: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const roomId = (body.roomId ?? '') as string;
+	if (!roomId) return err('roomId required');
+	const membershipError = await ensureRoomMember(db, roomId, u.id);
+	if (membershipError) return membershipError;
+	const rows = await listMessages(db, u.id, {
+		roomId,
+		limit: Number(body.limit) || 20,
+		untilId: (body.untilId ?? '') as string,
+		sinceId: (body.sinceId ?? '') as string,
+	});
+	return json(await Promise.all(rows.map(m => packChatMessage(db, m, u.id))));
+};
+
+export const chatMessagesShow: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const messageId = (body.messageId ?? '') as string;
+	if (!messageId) return err('messageId required');
+	const message = await db.prepare('SELECT * FROM chat_messages WHERE id = ?').bind(messageId).first<DbChatMessage>();
+	if (!message) return err('No such message', 404);
+	if (message.to_room_id) {
+		const membershipError = await ensureRoomMember(db, message.to_room_id, u.id);
+		if (membershipError) return membershipError;
+	} else if (message.from_user_id !== u.id && message.to_user_id !== u.id) {
+		return err('Forbidden', 403);
+	}
+	return json(await packChatMessage(db, message, u.id));
+};
+
+export const chatMessagesSearch: Handler = async (db, body) => {
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const query = ((body.query ?? '') as string).trim();
+	if (!query) return json([]);
+	const userId = (body.userId ?? '') as string;
+	const roomId = (body.roomId ?? '') as string;
+	if (roomId) {
+		const membershipError = await ensureRoomMember(db, roomId, u.id);
+		if (membershipError) return membershipError;
+	}
+	let rows: DbChatMessage[];
+	if (userId || roomId) {
+		rows = await listMessages(db, u.id, {
+			userId,
+			roomId,
+			query,
+			limit: Number(body.limit) || 20,
+		});
+	} else {
+		const escapedQuery = `%${query.replace(/[%_]/g, '\\$&')}%`;
+		const limit = Math.min(Math.max(Number(body.limit) || 20, 1), 100);
+		const result = await db.prepare(`
+			SELECT *
+			FROM chat_messages
+			WHERE text LIKE ? ESCAPE '\\'
+				AND (
+					from_user_id = ?
+					OR to_user_id = ?
+					OR to_room_id IN (
+						SELECT room_id FROM chat_room_members WHERE user_id = ?
+					)
+				)
+			ORDER BY created_at DESC
+			LIMIT ?
+		`).bind(escapedQuery, u.id, u.id, u.id, limit).all<DbChatMessage>();
+		rows = result.results ?? [];
+	}
+	return json(await Promise.all(rows.map(m => packChatMessage(db, m, u.id))));
 };
 
 /**

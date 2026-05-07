@@ -846,6 +846,7 @@ expect(data.policies.canSearchUsers).toBe(true);
 expect(data.policies.gtlAvailable).toBe(true);
 expect(data.policies.chatAvailability).toBe('available');
 expect(data.policies.maxFileSizeMb).toBeGreaterThan(0);
+expect(data.maxFileSize).toBeGreaterThan(0);
 });
 
 // ---- Newly wired endpoints ----
@@ -1263,6 +1264,21 @@ it('chat/messages lists 1-on-1 conversation', async () => {
 	expect(data[0].text).toBe('Hello admin!');
 });
 
+it('chat/messages/user-timeline lists 1-on-1 conversation for the frontend chat page', async () => {
+	const { status, data } = await callApi('chat/messages/user-timeline', { i: adminToken, userId, limit: 20 });
+	expect(status).toBe(200);
+	expect(Array.isArray(data)).toBe(true);
+	expect(data.length).toBeGreaterThan(0);
+	expect(data[0].text).toBe('Hello admin!');
+});
+
+it('chat/messages/show returns a single message', async () => {
+	const { status, data } = await callApi('chat/messages/show', { i: adminToken, messageId: chatMsgId });
+	expect(status).toBe(200);
+	expect(data.id).toBe(chatMsgId);
+	expect(data.text).toBe('Hello admin!');
+});
+
 it('chat/history returns recent conversations', async () => {
 	const { status, data } = await callApi('chat/history', { i: adminToken });
 	expect(status).toBe(200);
@@ -1313,6 +1329,20 @@ it('chat/messages lists room messages', async () => {
 	expect(status).toBe(200);
 	expect(Array.isArray(data)).toBe(true);
 	expect(data.length).toBeGreaterThan(0);
+});
+
+it('chat/messages/room-timeline lists room messages for the frontend chat page', async () => {
+	const { status, data } = await callApi('chat/messages/room-timeline', { i: adminToken, roomId: chatRoomId, limit: 20 });
+	expect(status).toBe(200);
+	expect(Array.isArray(data)).toBe(true);
+	expect(data.length).toBeGreaterThan(0);
+});
+
+it('chat/messages/search finds chat messages', async () => {
+	const { status, data } = await callApi('chat/messages/search', { i: adminToken, userId, query: 'Hello' });
+	expect(status).toBe(200);
+	expect(Array.isArray(data)).toBe(true);
+	expect(data.some((message: any) => message.id === chatMsgId)).toBe(true);
 });
 
 it('chat/rooms/members lists room members', async () => {
@@ -1374,4 +1404,3 @@ it('notes/global-timeline includes myReaction for viewer', async () => {
 });
 
 });
-
