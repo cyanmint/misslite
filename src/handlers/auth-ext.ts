@@ -8,6 +8,7 @@ import { json, err, requireUser, getUser, packUser, packSelf, generateId } from 
 
 const noContent = (): Response =>
 	new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+const SECURITY_KEY_DEFAULT_NAME = 'Security Key';
 
 function makeApp(): Record<string, unknown> {
 	return { id: generateId(), name: 'app', callbackUrl: null, permission: [], isAuthorized: false };
@@ -80,7 +81,7 @@ export const i2faDone: Handler = async (db, body) => {
 export const i2faKeyDone: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
-	const key = { id: generateId(), name: ((body.name ?? 'Security Key') as string) };
+	const key = { id: generateId(), name: ((body.name ?? SECURITY_KEY_DEFAULT_NAME) as string) };
 	const current = await getUserProfile(db, u.id);
 	const keys = Array.isArray(current.securityKeys) ? current.securityKeys as Array<Record<string, unknown>> : [];
 	await patchUserProfile(db, u.id, { securityKeys: [...keys, key], twoFactorEnabled: true });
@@ -141,7 +142,7 @@ export const i2faUpdateKey: Handler = async (db, body) => {
 	const current = await getUserProfile(db, u.id);
 	const keys = Array.isArray(current.securityKeys) ? current.securityKeys as Array<Record<string, unknown>> : [];
 	await patchUserProfile(db, u.id, {
-		securityKeys: keys.map((k) => String(k.id ?? '') === keyId ? { ...k, name: nextName || String(k.name ?? 'Security Key') } : k),
+		securityKeys: keys.map((k) => String(k.id ?? '') === keyId ? { ...k, name: nextName || String(k.name ?? SECURITY_KEY_DEFAULT_NAME) } : k),
 	});
 	return noContent();
 };

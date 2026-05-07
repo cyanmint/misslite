@@ -359,6 +359,7 @@ export const adminSendEmail: Handler = async (db, body, env) => {
 	if (!to) return err('to required');
 	if (!subject) return err('subject required');
 	if (!text && !html) return err('text or html required');
+	if (replyTo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(replyTo)) return err('Invalid replyTo');
 	const fromEmail = env.SEND_EMAIL_FROM ?? 'noreply@misslite.example';
 	const instanceName = (await getMeta(db, 'name')) ?? env.INSTANCE_NAME ?? 'Misslite';
 	const contentType = html ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8';
