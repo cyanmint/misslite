@@ -261,7 +261,7 @@ export function packSelf(u: DbUser, token: string): Record<string, unknown> {
 export async function packNote(
 	db: D1Database,
 	n: DbNote,
-	options: { includeRenote?: boolean } = {},
+	options: { includeRenote?: boolean; viewerId?: string } = {},
 ): Promise<Record<string, unknown>> {
 	const includeRenote = options.includeRenote !== false;
 	const user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(n.user_id).first<DbUser>();
@@ -270,10 +270,16 @@ export async function packNote(
 	for (const r of reactions.results ?? []) {
 		reactionMap[r.reaction as string] = r.count as number;
 	}
+	let myReaction: string | null = null;
+	if (options.viewerId) {
+		const mine = await db.prepare('SELECT reaction FROM reactions WHERE note_id = ? AND user_id = ?')
+			.bind(n.id, options.viewerId).first<{ reaction: string }>();
+		myReaction = mine?.reaction ?? null;
+	}
 	let renote: Record<string, unknown> | null = null;
 	if (includeRenote && n.renote_id) {
 		const renoteNote = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(n.renote_id).first<DbNote>();
-		renote = renoteNote ? await packNote(db, renoteNote, { includeRenote: false }) : null;
+		renote = renoteNote ? await packNote(db, renoteNote, { includeRenote: false, viewerId: options.viewerId }) : null;
 	}
 	const pollBase = await db.prepare(
 		'SELECT multiple, expires_at FROM note_polls WHERE note_id = ?'
@@ -307,6 +313,7 @@ export async function packNote(
 		renoteId: n.renote_id,
 		renote,
 		reactions: reactionMap,
+		myReaction,
 		repliesCount: 0,
 		renoteCount: 0,
 		emojis: {},
@@ -349,3 +356,49 @@ export async function requireUser(db: D1Database, body: Record<string, unknown>)
 	if (u.is_suspended) return err('Account is suspended', 403);
 	return u;
 }
+
+interface SendEmailBinding {
+	send(message: unknown): Promise<void>;
+}
+
+export interface WorkerEmailOptions {
+	to: string;
+	from: string;
+	fromName?: string;
+	subject: string;
+	text?: string;
+	html?: string;
+	replyTo?: string;
+}
+
+/**
+ * Send an email via Cloudflare Workers Email (Send Email binding).
+ * Constructs a valid RFC 2822 message and delivers it via the
+ * cloudflare:email runtime module's EmailMessage API.
+ */
+export async function sendWorkerEmail(binding: SendEmailBinding, opts: WorkerEmailOptions): Promise<void> {
+	const { to, from, fromName, subject, text, html, replyTo } = opts;
+	const contentType = html ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8';
+	const fromHeader = fromName ? `${fromName} <${from}>` : from;
+	const headerLines = [
+		`From: ${fromHeader}`,
+		`To: ${to}`,
+		`Subject: ${subject}`,
+		`MIME-Version: 1.0`,
+		`Content-Type: ${contentType}`,
+	];
+	if (replyTo) headerLines.push(`Reply-To: ${replyTo}`);
+	const payload = html ?? text ?? '';
+	const raw = `${headerLines.join('\r\n')}\r\n\r\n${payload}`;
+
+	const { readable, writable } = new TransformStream();
+	const writer = writable.getWriter();
+	await writer.write(new TextEncoder().encode(raw));
+	await writer.close();
+
+	// @ts-ignore — cloudflare:email is a Cloudflare Workers runtime module
+	const { EmailMessage } = await import('cloudflare:email');
+	const message = new EmailMessage(from, to, readable);
+	await binding.send(message);
+}
+

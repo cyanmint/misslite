@@ -385,6 +385,37 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   token TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id),
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
+
+-- Chat rooms (group chats)
+CREATE TABLE IF NOT EXISTS chat_rooms (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL REFERENCES users(id),
+  name TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+);
+CREATE TABLE IF NOT EXISTS chat_room_members (
+  room_id TEXT NOT NULL REFERENCES chat_rooms(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  is_muted INTEGER NOT NULL DEFAULT 0,
+  joined_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+  PRIMARY KEY(room_id, user_id)
+);
+
+-- Chat messages (1-on-1 and room-based)
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id TEXT PRIMARY KEY,
+  from_user_id TEXT NOT NULL REFERENCES users(id),
+  to_user_id TEXT REFERENCES users(id),
+  to_room_id TEXT REFERENCES chat_rooms(id),
+  text TEXT,
+  file_id TEXT,
+  is_read INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_1on1 ON chat_messages(from_user_id, to_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_to_user ON chat_messages(to_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_room ON chat_messages(to_room_id, created_at DESC);
 `;
 export async function ensureSchema(db: D1Database): Promise<void> {
 	const statements = SCHEMA.split(';').map(s => s.trim()).filter(Boolean);

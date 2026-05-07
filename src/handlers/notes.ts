@@ -101,7 +101,7 @@ export const showNote: Handler = async (db, body) => {
 	if (!note) return err('No such note', 404);
 	const viewer = await getUser(db, body);
 	if (!(await canAccessNote(db, note, viewer?.id))) return err('No such note', 404);
-	return json(await packNote(db, note));
+	return json(await packNote(db, note, { viewerId: viewer?.id }));
 };
 
 export const showPartialBulk: Handler = async (db, body) => {
@@ -112,7 +112,7 @@ export const showPartialBulk: Handler = async (db, body) => {
 	const result: Record<string, unknown> = {};
 	for (const id of noteIds.slice(0, 100)) {
 		const note = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(id).first<DbNote>();
-		if (note && await canAccessNote(db, note, viewer?.id)) result[id] = await packNote(db, note);
+		if (note && await canAccessNote(db, note, viewer?.id)) result[id] = await packNote(db, note, { viewerId: viewer?.id });
 	}
 	return json(result);
 };
@@ -168,7 +168,7 @@ export const timeline: Handler = async (db, body) => {
 	params.push(limit);
 
 	const notes = await db.prepare(sql).bind(...params).all<DbNote>();
-	const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
+	const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n, { viewerId: viewer?.id })));
 	return json(packed);
 };
 
@@ -186,7 +186,7 @@ export const userNotes: Handler = async (db, body) => {
 			'SELECT * FROM notes WHERE user_id = ? AND visibility = \'public\' ORDER BY created_at DESC LIMIT ?'
 		).bind(userId, limit).all<DbNote>();
 	}
-	const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
+	const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n, { viewerId: viewer?.id })));
 	return json(packed);
 };
 
@@ -447,7 +447,7 @@ export const notesList: Handler = async (db, body) => {
 	sql += ' ORDER BY created_at DESC LIMIT ?';
 	params.push(limit);
 	const notes = await db.prepare(sql).bind(...params).all<DbNote>();
-	const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n)));
+	const packed = await Promise.all((notes.results ?? []).map(n => packNote(db, n, { viewerId: viewer?.id })));
 	return json(packed);
 };
 

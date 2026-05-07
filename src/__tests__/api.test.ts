@@ -1240,4 +1240,138 @@ const { status, data } = await callApi('announcements');
 expect(status).toBe(200);
 expect(Array.isArray(data)).toBe(true);
 });
+
+// ---- Chat messaging ----
+
+let chatMsgId = '';
+it('chat/messages/create sends a 1-on-1 message', async () => {
+	const { status, data } = await callApi('chat/messages/create', {
+		i: userToken, userId: adminId, text: 'Hello admin!',
+	});
+	expect(status).toBe(200);
+	expect(data.text).toBe('Hello admin!');
+	expect(data.fromUserId).toBeDefined();
+	expect(data.toUserId).toBe(adminId);
+	chatMsgId = data.id;
 });
+
+it('chat/messages lists 1-on-1 conversation', async () => {
+	const { status, data } = await callApi('chat/messages', { i: adminToken, userId });
+	expect(status).toBe(200);
+	expect(Array.isArray(data)).toBe(true);
+	expect(data.length).toBeGreaterThan(0);
+	expect(data[0].text).toBe('Hello admin!');
+});
+
+it('chat/history returns recent conversations', async () => {
+	const { status, data } = await callApi('chat/history', { i: adminToken });
+	expect(status).toBe(200);
+	expect(Array.isArray(data)).toBe(true);
+	expect(data.length).toBeGreaterThan(0);
+});
+
+it('chat/messages/read marks messages read', async () => {
+	const { status } = await callApi('chat/messages/read', { i: adminToken, userId });
+	expect(status).toBe(200);
+});
+
+let chatRoomId = '';
+it('chat/rooms/create creates a chat room', async () => {
+	const { status, data } = await callApi('chat/rooms/create', { i: adminToken, name: 'Test Room', description: 'A test room' });
+	expect(status).toBe(200);
+	expect(data.name).toBe('Test Room');
+	chatRoomId = data.id;
+});
+
+it('chat/rooms lists rooms for the user', async () => {
+	const { status, data } = await callApi('chat/rooms', { i: adminToken });
+	expect(status).toBe(200);
+	expect(Array.isArray(data)).toBe(true);
+	expect(data.length).toBeGreaterThan(0);
+});
+
+it('chat/rooms/show shows room details', async () => {
+	const { status, data } = await callApi('chat/rooms/show', { i: adminToken, roomId: chatRoomId });
+	expect(status).toBe(200);
+	expect(data.name).toBe('Test Room');
+});
+
+it('chat/rooms/invite adds a user to the room', async () => {
+	const { status } = await callApi('chat/rooms/invite', { i: adminToken, roomId: chatRoomId, userId });
+	expect(status).toBe(200);
+});
+
+it('chat/messages/create sends a room message', async () => {
+	const { status, data } = await callApi('chat/messages/create', { i: userToken, roomId: chatRoomId, text: 'Hello room!' });
+	expect(status).toBe(200);
+	expect(data.text).toBe('Hello room!');
+	expect(data.toRoomId).toBe(chatRoomId);
+});
+
+it('chat/messages lists room messages', async () => {
+	const { status, data } = await callApi('chat/messages', { i: adminToken, roomId: chatRoomId });
+	expect(status).toBe(200);
+	expect(Array.isArray(data)).toBe(true);
+	expect(data.length).toBeGreaterThan(0);
+});
+
+it('chat/rooms/members lists room members', async () => {
+	const { status, data } = await callApi('chat/rooms/members', { i: adminToken, roomId: chatRoomId });
+	expect(status).toBe(200);
+	expect(Array.isArray(data)).toBe(true);
+	expect(data.length).toBeGreaterThanOrEqual(2);
+});
+
+it('chat/rooms/leave leaves a room', async () => {
+	const { status } = await callApi('chat/rooms/leave', { i: userToken, roomId: chatRoomId });
+	expect(status).toBe(200);
+});
+
+it('chat/messages/delete deletes a message', async () => {
+	const { status } = await callApi('chat/messages/delete', { i: userToken, messageId: chatMsgId });
+	expect(status).toBe(200);
+});
+
+it('chat requires auth', async () => {
+	const { status } = await callApi('chat/messages/create', {});
+	expect(status).toBe(401);
+});
+
+it('i/notifications-grouped returns real notifications', async () => {
+	// There should be notifications from previous reactions/mentions
+	const { status, data } = await callApi('i/notifications-grouped', { i: adminToken });
+	expect(status).toBe(200);
+	expect(Array.isArray(data)).toBe(true);
+});
+
+// ---- myReaction in packNote ----
+it('notes/show includes myReaction for authenticated viewer', async () => {
+	// Create a fresh note for myReaction testing
+	const { data: noteData } = await callApi('notes/create', { i: userToken, text: 'reaction test note' });
+	const rNoteId = noteData.createdNote.id;
+	await callApi('notes/reactions/create', { i: adminToken, noteId: rNoteId, reaction: '🎉' });
+	const { status, data } = await callApi('notes/show', { i: adminToken, noteId: rNoteId });
+	expect(status).toBe(200);
+	expect(data.myReaction).toBe('🎉');
+	await callApi('notes/reactions/delete', { i: adminToken, noteId: rNoteId });
+	// myReaction is null after delete
+	const { data: d2 } = await callApi('notes/show', { i: adminToken, noteId: rNoteId });
+	expect(d2.myReaction).toBeNull();
+	// viewer who hasn't reacted sees null
+	const { data: d3 } = await callApi('notes/show', { i: userToken, noteId: rNoteId });
+	expect(d3.myReaction).toBeNull();
+});
+
+it('notes/global-timeline includes myReaction for viewer', async () => {
+	const { data: noteData } = await callApi('notes/create', { i: userToken, text: 'timeline reaction test' });
+	const rNoteId = noteData.createdNote.id;
+	await callApi('notes/reactions/create', { i: userToken, noteId: rNoteId, reaction: '👋' });
+	const { status, data } = await callApi('notes/global-timeline', { i: userToken });
+	expect(status).toBe(200);
+	const target = data.find((n: any) => n.id === rNoteId);
+	expect(target?.myReaction).toBe('👋');
+	await callApi('notes/reactions/delete', { i: userToken, noteId: rNoteId });
+});
+
+});
+

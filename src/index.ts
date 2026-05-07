@@ -191,6 +191,13 @@ import {
 } from './handlers/admin-ext.js';
 import { adminMeta as adminMetaFromMeta } from './handlers/admin-meta.js';
 import {
+	chatMessages, chatMessagesCreate, chatMessagesDelete, chatMessagesRead,
+	chatHistory,
+	chatRooms, chatRoomsCreate, chatRoomsShow, chatRoomsUpdate, chatRoomsDelete,
+	chatRoomsInvite, chatRoomsKick, chatRoomsLeave, chatRoomsMembers,
+	chatRoomsMute, chatRoomsUnmute, chatRoomsInvitations,
+} from './handlers/chat.js';
+import {
 	appCreate, appShow,
 	authAccept, authSessionGenerate, authSessionShow, authSessionUserkey,
 	i2faDone, i2faKeyDone, i2faPasswordLess, i2faRegister, i2faRegisterKey,
@@ -706,6 +713,25 @@ const routes: Record<string, Handler> = {
 	'notes/scheduled/list': notesScheduledList,
 	'notes/scheduled/cancel': notesScheduledCancel,
 	'notes/translate': notesTranslate,
+
+	// Chat (1-on-1 and rooms)
+	'chat/messages': chatMessages,
+	'chat/messages/create': chatMessagesCreate,
+	'chat/messages/delete': chatMessagesDelete,
+	'chat/messages/read': chatMessagesRead,
+	'chat/history': chatHistory,
+	'chat/rooms': chatRooms,
+	'chat/rooms/create': chatRoomsCreate,
+	'chat/rooms/show': chatRoomsShow,
+	'chat/rooms/update': chatRoomsUpdate,
+	'chat/rooms/delete': chatRoomsDelete,
+	'chat/rooms/invite': chatRoomsInvite,
+	'chat/rooms/kick': chatRoomsKick,
+	'chat/rooms/leave': chatRoomsLeave,
+	'chat/rooms/members': chatRoomsMembers,
+	'chat/rooms/mute': chatRoomsMute,
+	'chat/rooms/unmute': chatRoomsUnmute,
+	'chat/rooms/invitations': chatRoomsInvitations,
 };
 
 export default {

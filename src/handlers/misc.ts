@@ -4,7 +4,7 @@
 
 import type { Handler } from '../types.js';
 import type { DbNotification, DbUser, DbNote, DbAnnouncement, DbSwSubscription, DbPasswordResetToken } from '../types.js';
-import { json, err, generateId, requireUser, getUser, packUser, packNote, getMeta, setMeta, hashPassword, DEFAULT_POLICIES } from '../helpers.js';
+import { json, err, generateId, requireUser, getUser, packUser, packNote, getMeta, setMeta, hashPassword, DEFAULT_POLICIES, sendWorkerEmail } from '../helpers.js';
 
 export const emojis: Handler = async () => json({ emojis: [] });
 
@@ -55,7 +55,7 @@ if (notifierUser) notifier = packUser(notifierUser);
 }
 if (n.note_id) {
 const noteRow = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(n.note_id).first<DbNote>();
-if (noteRow) note = await packNote(db, noteRow);
+if (noteRow) note = await packNote(db, noteRow, { viewerId: u.id });
 }
 return {
 id: n.id,
@@ -78,9 +78,40 @@ return json({});
 };
 
 export const iNotificationsGrouped: Handler = async (db, body) => {
-const u = await requireUser(db, body);
-if (u instanceof Response) return u;
-return json([]);
+	const u = await requireUser(db, body);
+	if (u instanceof Response) return u;
+	const limit = Math.min(Number(body.limit) || 10, 100);
+	const unreadOnly = body.unreadOnly === true;
+
+	let sql = 'SELECT * FROM notifications WHERE user_id = ?';
+	const params: unknown[] = [u.id];
+	if (unreadOnly) { sql += ' AND is_read = 0'; }
+	sql += ' ORDER BY created_at DESC LIMIT ?';
+	params.push(limit);
+
+	const rows = await db.prepare(sql).bind(...params).all<DbNotification>();
+	const results = await Promise.all((rows.results ?? []).map(async n => {
+		let notifier: Record<string, unknown> | null = null;
+		let note: Record<string, unknown> | null = null;
+		if (n.notifier_id) {
+			const notifierUser = await db.prepare('SELECT * FROM users WHERE id = ?').bind(n.notifier_id).first<DbUser>();
+			if (notifierUser) notifier = packUser(notifierUser);
+		}
+		if (n.note_id) {
+			const noteRow = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(n.note_id).first<DbNote>();
+			if (noteRow) note = await packNote(db, noteRow, { viewerId: u.id });
+		}
+		return {
+			id: n.id,
+			createdAt: n.created_at,
+			type: n.type,
+			isRead: !!n.is_read,
+			user: notifier,
+			note,
+			reaction: n.reaction,
+		};
+	}));
+	return json(results);
 };
 
 export const notesFeatured: Handler = async () => json([]);
@@ -468,27 +499,19 @@ export const requestResetPassword: Handler = async (db, body, env) => {
 		if (env.SEND_EMAIL) {
 			try {
 				const instanceName = await getMeta(db, 'name') ?? env.INSTANCE_NAME ?? 'Misslite';
-				const fromEmail = env.SEND_EMAIL_FROM ?? 'noreply@misslite.example';
-				const raw = [
-					`From: ${fromEmail}`,
-					`To: ${email}`,
-					`Subject: ${instanceName} Password Reset`,
-					`MIME-Version: 1.0`,
-					`Content-Type: text/html; charset=utf-8`,
-					``,
-					`<p>Hello ${user.username},</p>`,
-					`<p>Use the following token to reset your password (valid for 24 hours):</p>`,
-					`<pre>${token}</pre>`,
-					`<p>If you did not request a password reset, you can ignore this email.</p>`,
-				].join('\r\n');
-				const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
-				const writer = writable.getWriter();
-				await writer.write(new TextEncoder().encode(raw));
-				await writer.close();
-				// @ts-ignore — EmailMessage from cloudflare:email
-				const { EmailMessage } = await import('cloudflare:email');
-				const message = new EmailMessage(fromEmail, email, readable);
-				await env.SEND_EMAIL.send(message);
+				const from = env.SEND_EMAIL_FROM ?? 'noreply@misslite.example';
+				await sendWorkerEmail(env.SEND_EMAIL, {
+					to: email,
+					from,
+					fromName: instanceName,
+					subject: `${instanceName} Password Reset`,
+					html: [
+						`<p>Hello ${user.username},</p>`,
+						`<p>Use the following token to reset your password (valid for 24 hours):</p>`,
+						`<pre>${token}</pre>`,
+						`<p>If you did not request a password reset, you can ignore this email.</p>`,
+					].join('\n'),
+				});
 			} catch { /* email sending failed silently */ }
 		}
 	}
