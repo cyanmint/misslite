@@ -3,7 +3,8 @@
  */
 
 import type { Handler } from '../types.js';
-import { json, requireUser, getUser, packUser, packSelf, generateId } from '../helpers.js';
+import type { DbUser } from '../types.js';
+import { json, err, requireUser, getUser, packUser, packSelf, generateId } from '../helpers.js';
 
 const noContent = (): Response =>
 	new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
@@ -175,6 +176,14 @@ export const myApps: Handler = async (db, body) => {
 export const iUpdateEmail: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
+	const email = ((body.email ?? '') as string).trim();
+	if (!email) return err('email required');
+	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('Invalid email');
+	const existing = await db.prepare('SELECT id FROM users WHERE email = ? AND id != ?')
+		.bind(email, u.id).first<{ id: string }>();
+	if (existing) return err('Email already used');
+	await db.prepare('UPDATE users SET email = ? WHERE id = ?').bind(email, u.id).run();
+	const updated = await db.prepare('SELECT * FROM users WHERE id = ?').bind(u.id).first<DbUser>();
 	const token = (body.i ?? body.token ?? '') as string;
-	return json(packSelf(u, token));
+	return json(packSelf(updated ?? u, token));
 };

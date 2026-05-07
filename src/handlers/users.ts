@@ -34,7 +34,9 @@ function applyProfileToPacked(packed: Record<string, unknown>, profile: UserProf
 		'hideOnlineStatus', 'publicReactions', 'carefulBot', 'autoAcceptFollowed', 'noCrawle',
 		'preventAiLearning', 'injectFeaturedNote', 'receiveAnnouncementEmail', 'alwaysMarkNsfw',
 		'autoSensitive', 'followingVisibility', 'followersVisibility', 'chatScope', 'pinnedPageId',
-		'mutedWords', 'mutedInstances', 'notificationRecieveConfig', 'emailNotificationTypes', 'alsoKnownAs',
+		'mutedWords', 'mutedInstances', 'notificationRecieveConfig', 'notificationReceiveConfig',
+		'emailNotificationTypes', 'alsoKnownAs', 'requireSigninToViewContents',
+		'makeNotesFollowersOnlyBefore', 'makeNotesHiddenBefore', 'avatarDecorations',
 	];
 	for (const key of mappedKeys) {
 		if (key in profile) packed[key] = profile[key];
@@ -84,7 +86,9 @@ export const updateUser: Handler = async (db, body) => {
 		'hideOnlineStatus', 'publicReactions', 'carefulBot', 'autoAcceptFollowed', 'noCrawle',
 		'preventAiLearning', 'injectFeaturedNote', 'receiveAnnouncementEmail', 'alwaysMarkNsfw',
 		'autoSensitive', 'followingVisibility', 'followersVisibility', 'chatScope', 'pinnedPageId',
-		'mutedWords', 'mutedInstances', 'notificationRecieveConfig', 'emailNotificationTypes', 'alsoKnownAs',
+		'mutedWords', 'mutedInstances', 'notificationRecieveConfig', 'notificationReceiveConfig',
+		'emailNotificationTypes', 'alsoKnownAs', 'requireSigninToViewContents',
+		'makeNotesFollowersOnlyBefore', 'makeNotesHiddenBefore', 'avatarDecorations',
 	];
 	const profilePatch: UserProfileData = {};
 	for (const key of profileKeys) {

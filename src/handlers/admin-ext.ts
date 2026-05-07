@@ -4,7 +4,7 @@
 
 import type { Handler } from '../types.js';
 import type { DbUser } from '../types.js';
-import { json, err, requireUser, packUser, packSelf, generateId, getUser } from '../helpers.js';
+import { json, err, requireUser, packUser, packSelf, generateId, getUser, getMeta } from '../helpers.js';
 
 const noContent = (): Response =>
 	new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
@@ -236,7 +236,43 @@ export const adminRelaysList: Handler = async (db, body) => {
 	return json([]);
 };
 export const adminRelaysRemove = authedNoContent;
-export const adminSendEmail = authedNoContent;
+export const adminSendEmail: Handler = async (db, body, env) => {
+	const u = await requireUser(db, body); if (u instanceof Response) return u;
+	if (!u.is_admin) return err('Forbidden', 403);
+	if (!env.SEND_EMAIL) return err('Email service not configured', 503);
+	const to = ((body.to ?? body.email ?? '') as string).trim();
+	const subject = ((body.subject ?? '') as string).trim();
+	const text = ((body.text ?? body.body ?? '') as string);
+	const html = ((body.html ?? '') as string).trim();
+	if (!to) return err('to required');
+	if (!subject) return err('subject required');
+	if (!text && !html) return err('text or html required');
+	const fromEmail = env.SEND_EMAIL_FROM ?? 'noreply@misslite.example';
+	const instanceName = (await getMeta(db, 'name')) ?? env.INSTANCE_NAME ?? 'Misslite';
+	const contentType = html ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8';
+	const payload = [
+		`From: ${instanceName} <${fromEmail}>`,
+		`To: ${to}`,
+		`Subject: ${subject}`,
+		`MIME-Version: 1.0`,
+		`Content-Type: ${contentType}`,
+		``,
+		html || text,
+	].join('\r\n');
+	try {
+		const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+		const writer = writable.getWriter();
+		await writer.write(new TextEncoder().encode(payload));
+		await writer.close();
+		// @ts-ignore cloudflare email runtime module
+		const { EmailMessage } = await import('cloudflare:email');
+		const message = new EmailMessage(fromEmail, to, readable);
+		await env.SEND_EMAIL.send(message);
+		return json({});
+	} catch {
+		return err('Failed to send email', 502);
+	}
+};
 
 /* ── SSO ── */
 export const adminSsoCreate: Handler = async (db, body) => {

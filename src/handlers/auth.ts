@@ -7,35 +7,64 @@ import { json, err, generateId, hashPassword, verifyPassword, packSelf, requireU
 import type { DbUser } from '../types.js';
 
 export const meta: Handler = async (db, _body, env) => {
+	const parseMeta = async (key: string): Promise<unknown> => {
+		const raw = await getMeta(db, key);
+		if (raw == null) return undefined;
+		try { return JSON.parse(raw); } catch { return raw; }
+	};
 	const initialized = await db.prepare("SELECT value FROM meta WHERE key = 'initialized'").first<{ value: string }>();
-	const name = await getMeta(db, 'name') ?? env.INSTANCE_NAME ?? 'Misslite';
-	const desc = await getMeta(db, 'description') ?? env.INSTANCE_DESCRIPTION ?? 'A lightweight Misskey-compatible instance';
-	const themeColor = await getMeta(db, 'themeColor') ?? env.THEME_COLOR ?? '#86b300';
-	const maxNoteLength = Number(await getMeta(db, 'maxNoteLength') ?? env.MAX_NOTE_LENGTH ?? 3000);
-	const registrationMode = await getMeta(db, 'registrationMode') ?? env.REGISTRATION_MODE ?? 'invite';
-	const bannerUrl = await getMeta(db, 'bannerUrl') ?? null;
-	const iconUrl = await getMeta(db, 'iconUrl') ?? null;
-	const backgroundImageUrl = await getMeta(db, 'backgroundImageUrl') ?? null;
-	const maintainerName = await getMeta(db, 'maintainerName') ?? 'admin';
-	const maintainerEmail = await getMeta(db, 'maintainerEmail') ?? '';
+	const name = (await parseMeta('name') ?? env.INSTANCE_NAME ?? 'Misslite') as string;
+	const desc = (await parseMeta('description') ?? env.INSTANCE_DESCRIPTION ?? 'A lightweight Misskey-compatible instance') as string;
+	const themeColor = (await parseMeta('themeColor') ?? env.THEME_COLOR ?? '#86b300') as string;
+	const maxNoteLength = Number(await parseMeta('maxNoteLength') ?? env.MAX_NOTE_LENGTH ?? 3000);
+	const registrationMode = String(await parseMeta('registrationMode') ?? env.REGISTRATION_MODE ?? 'invite');
+	const bannerUrl = (await parseMeta('bannerUrl') ?? null) as string | null;
+	const iconUrl = (await parseMeta('iconUrl') ?? null) as string | null;
+	const backgroundImageUrl = (await parseMeta('backgroundImageUrl') ?? null) as string | null;
+	const maintainerName = (await parseMeta('maintainerName') ?? 'admin') as string;
+	const maintainerEmail = (await parseMeta('maintainerEmail') ?? '') as string;
+	const disableRegistration = (await parseMeta('disableRegistration') ?? (registrationMode !== 'open')) as boolean;
+	const serverRules = (await parseMeta('serverRules') ?? []) as unknown[];
+	const shortName = (await parseMeta('shortName') ?? null) as string | null;
+	const uri = (await parseMeta('uri') ?? 'https://misslite.example') as string;
+	const tosUrl = (await parseMeta('tosUrl') ?? null) as string | null;
+	const privacyPolicyUrl = (await parseMeta('privacyPolicyUrl') ?? null) as string | null;
+	const inquiryUrl = (await parseMeta('inquiryUrl') ?? null) as string | null;
+	const impressumUrl = (await parseMeta('impressumUrl') ?? null) as string | null;
+	const donationUrl = (await parseMeta('donationUrl') ?? null) as string | null;
+	const repositoryUrl = (await parseMeta('repositoryUrl') ?? null) as string | null;
+	const feedbackUrl = (await parseMeta('feedbackUrl') ?? null) as string | null;
+	const logoImageUrl = (await parseMeta('logoImageUrl') ?? null) as string | null;
+	const infoImageUrl = (await parseMeta('infoImageUrl') ?? null) as string | null;
+	const serverErrorImageUrl = (await parseMeta('serverErrorImageUrl') ?? null) as string | null;
+	const notFoundImageUrl = (await parseMeta('notFoundImageUrl') ?? null) as string | null;
+	const defaultLightTheme = (await parseMeta('defaultLightTheme') ?? null) as unknown;
+	const defaultDarkTheme = (await parseMeta('defaultDarkTheme') ?? null) as unknown;
+	const cacheRemoteFiles = (await parseMeta('cacheRemoteFiles') ?? false) as boolean;
+	const cacheRemoteSensitiveFiles = (await parseMeta('cacheRemoteSensitiveFiles') ?? false) as boolean;
+	const googleAnalyticsId = (await parseMeta('googleAnalyticsId') ?? null) as string | null;
+	const wellKnownWebsites = (await parseMeta('wellKnownWebsites') ?? []) as unknown[];
+	const notesPerOneAd = Number(await parseMeta('notesPerOneAd') ?? 0);
+	const policies = (await parseMeta('policies') ?? DEFAULT_POLICIES) as Record<string, unknown>;
+	const maxFileSizeMb = Number(await parseMeta('maxFileSizeMb') ?? 0);
 	return json({
 		maintainerName,
 		maintainerEmail,
 		version: '2026.3.0',
 		name,
-		shortName: null,
-		uri: 'https://misslite.example',
+		shortName,
+		uri,
 		description: desc,
 		langs: ['en-US'],
-		tosUrl: null,
+		tosUrl,
 		tosTextUrl: null,
-		privacyPolicyUrl: null,
-		inquiryUrl: null,
-		impressumUrl: null,
-		donationUrl: null,
-		repositoryUrl: null,
-		feedbackUrl: null,
-		disableRegistration: registrationMode !== 'open',
+		privacyPolicyUrl,
+		inquiryUrl,
+		impressumUrl,
+		donationUrl,
+		repositoryUrl,
+		feedbackUrl,
+		disableRegistration,
 		approvalRequiredForSignup: false,
 		emailRequiredForSignup: false,
 		enableHcaptcha: false,
@@ -57,18 +86,18 @@ export const meta: Handler = async (db, _body, env) => {
 		mascotImageUrl: null,
 		bannerUrl,
 		backgroundImageUrl,
-		logoImageUrl: null,
-		infoImageUrl: null,
-		serverErrorImageUrl: null,
-		notFoundImageUrl: null,
+		logoImageUrl,
+		infoImageUrl,
+		serverErrorImageUrl,
+		notFoundImageUrl,
 		iconUrl,
-		defaultLightTheme: null,
-		defaultDarkTheme: null,
+		defaultLightTheme,
+		defaultDarkTheme,
 		features: {},
 		requireSetup: !initialized,
-		policies: DEFAULT_POLICIES,
+		policies,
 		entrancePageStyle: null,
-		serverRules: [],
+		serverRules,
 		pinnedUsers: [],
 		ads: [],
 		notesCount: 0,
@@ -80,17 +109,17 @@ export const meta: Handler = async (db, _body, env) => {
 		driveCapacityPerLocalUserMb: 0,
 		driveCapacityPerRemoteUserMb: 0,
 		federation: 'none',
-		cacheRemoteFiles: false,
-		cacheRemoteSensitiveFiles: false,
+		cacheRemoteFiles,
+		cacheRemoteSensitiveFiles,
 		mediaProxy: '',
 		translatorAvailable: false,
 		enableUrlPreview: false,
 		noteSearchableScope: 'local',
-		maxFileSize: 0,
+		maxFileSize: maxFileSizeMb * 1024 * 1024,
 		dimensions: null,
-		googleAnalyticsId: null,
-		wellKnownWebsites: [],
-		notesPerOneAd: 0,
+		googleAnalyticsId,
+		wellKnownWebsites,
+		notesPerOneAd,
 		sentryForFrontend: null,
 		enableSkebStatus: false,
 		clientOptions: {
