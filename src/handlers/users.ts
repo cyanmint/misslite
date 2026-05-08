@@ -139,7 +139,44 @@ export const showUser: Handler = async (db, body) => {
 		const results = await Promise.all(userIds.map(id =>
 			db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<DbUser>()
 		));
-		return json(await Promise.all(results.filter(Boolean).map(u => applyViewerRelation(u!))));
+		const users = results.filter(Boolean) as DbUser[];
+		if (!viewer || users.length === 0) {
+			return json(users.map(u => packUser(u, true)));
+		}
+
+		const targetIds = users.map(u => u.id).filter(id => id !== viewer.id);
+		if (targetIds.length === 0) {
+			return json(users.map(u => packUser(u, true)));
+		}
+
+		const placeholders = targetIds.map(() => '?').join(', ');
+		const fetchSet = async (sql: string, binds: unknown[]): Promise<Set<string>> => {
+			const rows = await db.prepare(sql).bind(...binds).all<{ id: string }>();
+			return new Set((rows.results ?? []).map(r => r.id));
+		};
+
+		const [followingSet, followedBySet, blockingSet, blockedSet, mutingSet, renoteMutingSet] = await Promise.all([
+			fetchSet(`SELECT followee_id AS id FROM following WHERE follower_id = ? AND followee_id IN (${placeholders})`, [viewer.id, ...targetIds]),
+			fetchSet(`SELECT follower_id AS id FROM following WHERE followee_id = ? AND follower_id IN (${placeholders})`, [viewer.id, ...targetIds]),
+			fetchSet(`SELECT blockee_id AS id FROM blocking WHERE blocker_id = ? AND blockee_id IN (${placeholders})`, [viewer.id, ...targetIds]),
+			fetchSet(`SELECT blocker_id AS id FROM blocking WHERE blockee_id = ? AND blocker_id IN (${placeholders})`, [viewer.id, ...targetIds]),
+			fetchSet(`SELECT mutee_id AS id FROM muting WHERE muter_id = ? AND mutee_id IN (${placeholders})`, [viewer.id, ...targetIds]),
+			fetchSet(`SELECT mutee_id AS id FROM renote_muting WHERE muter_id = ? AND mutee_id IN (${placeholders})`, [viewer.id, ...targetIds]),
+		]);
+
+		return json(users.map(u => {
+			const packed = packUser(u, true);
+			if (u.id === viewer.id) return packed;
+			packed.isFollowing = followingSet.has(u.id);
+			packed.isFollowed = followedBySet.has(u.id);
+			packed.hasPendingFollowRequestFromYou = false;
+			packed.hasPendingFollowRequestToYou = false;
+			packed.isBlocking = blockingSet.has(u.id);
+			packed.isBlocked = blockedSet.has(u.id);
+			packed.isMuted = mutingSet.has(u.id);
+			packed.isRenoteMuted = renoteMutingSet.has(u.id);
+			return packed;
+		}));
 	}
 	if (!userId && !username) return json([]);
 	let user: DbUser | null = null;
