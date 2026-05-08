@@ -774,7 +774,13 @@ export default {
 			const resource = url.searchParams.get('resource') ?? '';
 			const match = resource.match(/^acct:([^@]+)@(.+)$/);
 			if (!match) return new Response('Bad Request', { status: 400, headers: cors() });
-			const [, username] = match;
+			const [, username, domain] = match;
+			// Only respond for users on this instance
+			if (domain !== url.hostname) return new Response('Not Found', { status: 404, headers: cors() });
+			// Validate username length and characters before querying DB
+			if (!username || username.length > 128 || !/^[a-zA-Z0-9_.-]+$/.test(username)) {
+				return new Response('Not Found', { status: 404, headers: cors() });
+			}
 			const user = await env.DB.prepare('SELECT id, username FROM users WHERE username = ? AND is_suspended = 0').bind(username).first<{ id: string; username: string }>().catch(() => null);
 			if (!user) return new Response('Not Found', { status: 404, headers: cors() });
 			return new Response(JSON.stringify({
@@ -817,7 +823,8 @@ export default {
 			const accept = request.headers.get('Accept') ?? '';
 			if (accept.includes('application/activity+json') || accept.includes('application/ld+json')) {
 				const userId = url.pathname.split('/')[2];
-				if (userId) {
+				// Validate that userId is a simple alphanumeric identifier with bounded length
+				if (userId && /^[0-9a-z]{1,64}$/i.test(userId)) {
 					const user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<DbUser>().catch(() => null);
 					if (user) {
 						return new Response(JSON.stringify({

@@ -14,7 +14,9 @@ export function generateId(): string {
 }
 
 export function generateRandomPassword(length = 8): string {
-	const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+	// Uses full alphanumeric set to maximise entropy within the 8-char constraint
+	// imposed by the Misskey API spec (minLength: 8, maxLength: 8).
+	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 	const arr = new Uint8Array(length);
 	crypto.getRandomValues(arr);
 	return Array.from(arr, b => chars[b % chars.length]).join('');

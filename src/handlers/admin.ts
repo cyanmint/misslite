@@ -140,7 +140,9 @@ export const resetPassword: Handler = async (db, body) => {
 	const target = await db.prepare('SELECT * FROM users WHERE id = ?').bind(targetId).first<DbUser>();
 	if (!target) return err('No such user', 404);
 
-	// Accept an explicit newPassword for programmatic use, otherwise generate a random one
+	// Accept an explicit newPassword for programmatic use (e.g. tests); otherwise the
+	// server generates a random password and returns it to the admin — matching the
+	// real Misskey API behaviour (body only needs userId, response includes { password }).
 	const newPassword = ((body.newPassword ?? '') as string) || generateRandomPassword();
 	const pwHash = await hashPassword(target.username + newPassword);
 	await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(pwHash, targetId).run();
