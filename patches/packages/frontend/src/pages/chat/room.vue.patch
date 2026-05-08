@@ -1,0 +1,24 @@
+diff --git a/packages/frontend/src/pages/chat/room.vue b/packages/frontend/src/pages/chat/room.vue
+index a420443..2fd85ea 100644
+--- a/packages/frontend/src/pages/chat/room.vue
++++ b/packages/frontend/src/pages/chat/room.vue
+@@ -80,7 +80,7 @@ SPDX-License-Identifier: AGPL-3.0-only
+ 						</button>
+ 					</div>
+ 				</Transition>
+-				<XForm v-if="initialized" :user="user" :room="room" :class="$style.form"/>
++				<XForm v-if="initialized" :user="user" :room="room" :class="$style.form" @messageSent="onMessageSent"/>
+ 			</div>
+ 		</div>
+ 	</template>
+@@ -287,6 +287,10 @@ async function fetchMore() {
+ 	moreFetching.value = false;
+ }
+ 
++function onMessageSent(message: Misskey.entities.ChatMessage) {
++	messages.value.unshift(normalizeMessage(message));
++}
++
+ function onMessage(message: Misskey.entities.ChatMessageLite) {
+ 	sound.playMisskeySfx('chatMessage');
+ 

@@ -1,0 +1,33 @@
+diff --git a/packages/frontend/src/components/MkFollowButton.vue b/packages/frontend/src/components/MkFollowButton.vue
+index 72a2441..464ebed 100644
+--- a/packages/frontend/src/components/MkFollowButton.vue
++++ b/packages/frontend/src/components/MkFollowButton.vue
+@@ -108,6 +108,8 @@ async function onClick() {
+ 			await misskeyApi('following/delete', {
+ 				userId: props.user.id,
+ 			});
++			isFollowing.value = false;
++			hasPendingFollowRequestFromYou.value = false;
+ 		} else if (hasPendingFollowRequestFromYou.value) {
+ 			const { canceled } = await os.confirm({
+ 				type: 'question',
+@@ -140,11 +142,18 @@ async function onClick() {
+ 				userId: props.user.id,
+ 				withReplies: prefer.s.defaultFollowWithReplies,
+ 			});
++			if (!props.user.isLocked) {
++				isFollowing.value = true;
++				hasPendingFollowRequestFromYou.value = false;
++			} else {
++				hasPendingFollowRequestFromYou.value = true;
++			}
+ 			emit('update:user', {
+ 				...props.user,
++				isFollowing: isFollowing.value,
++				hasPendingFollowRequestFromYou: hasPendingFollowRequestFromYou.value,
+ 				withReplies: prefer.s.defaultFollowWithReplies,
+ 			});
+-			hasPendingFollowRequestFromYou.value = true;
+ 
+ 			if ($i == null) {
+ 				wait.value = false;
