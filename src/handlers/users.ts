@@ -74,7 +74,14 @@ export const updateUser: Handler = async (db, body, _env, request) => {
 	if (typeof body.avatarId === 'string' && body.avatarId) {
 		const file = await db.prepare('SELECT * FROM drive_files WHERE id = ? AND user_id = ?').bind(body.avatarId, u.id).first<DbDriveFile>();
 		if (file) {
-			const origin = request ? new URL(request.url).origin : '';
+			let origin = '';
+			if (request) {
+				try {
+					origin = new URL(request.url).origin;
+				} catch {
+					origin = '';
+				}
+			}
 			const fallbackUrl = (!file.url && file.r2_key && origin) ? `${origin}/files/${file.r2_key}` : null;
 			const avatarUrl = file.url ?? fallbackUrl;
 			if (avatarUrl) {
