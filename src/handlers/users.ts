@@ -82,7 +82,8 @@ export const updateUser: Handler = async (db, body, _env, request) => {
 					origin = '';
 				}
 			}
-			const fallbackUrl = (!file.url && file.r2_key && origin) ? `${origin}/files/${file.r2_key}` : null;
+			const validR2Key = file.r2_key && /^files\/[0-9a-z]+\/[0-9a-z]+$/i.test(file.r2_key);
+			const fallbackUrl = (!file.url && validR2Key && origin) ? `${origin}/files/${file.r2_key}` : null;
 			const avatarUrl = file.url ?? fallbackUrl;
 			if (avatarUrl) {
 				sets.push('avatar_url = ?');

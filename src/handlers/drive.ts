@@ -16,7 +16,6 @@ function inferMimeTypeFromName(name: string): string {
 	if (lower.endsWith('.gif')) return 'image/gif';
 	if (lower.endsWith('.webp')) return 'image/webp';
 	if (lower.endsWith('.avif')) return 'image/avif';
-	if (lower.endsWith('.svg')) return 'image/svg+xml';
 	if (lower.endsWith('.bmp')) return 'image/bmp';
 	if (lower.endsWith('.ico')) return 'image/x-icon';
 	return 'application/octet-stream';
@@ -51,10 +50,6 @@ function inferImageMimeFromContent(bytes: Uint8Array): string | null {
 		&& bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70
 		&& bytes[8] === 0x61 && bytes[9] === 0x76 && bytes[10] === 0x69 && bytes[11] === 0x66) {
 		return 'image/avif';
-	}
-	const textPrefix = new TextDecoder().decode(bytes.slice(0, 64)).trimStart().toLowerCase();
-	if (textPrefix.startsWith('<svg')) {
-		return 'image/svg+xml';
 	}
 	return null;
 }
@@ -166,7 +161,9 @@ export const driveFilesCreate: Handler = async (db, body, env, request) => {
 	const inferredTypeByName = inferMimeTypeFromName(name || fileBlob.name || '');
 	const inferredTypeByContent = inferImageMimeFromContent(bytes);
 	const inferredType = inferredTypeByContent ?? inferredTypeByName;
-	const fileType = (!originalType || originalType === 'application/octet-stream') ? inferredType : originalType;
+	const fileType = inferredTypeByContent
+		? inferredTypeByContent
+		: ((!originalType || originalType === 'application/octet-stream') ? inferredType : originalType);
 	const fileSize = fileBuffer.byteLength;
 	if (!name) name = fileBlob.name || 'file';
 

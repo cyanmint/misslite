@@ -255,7 +255,7 @@ expect(status).toBe(400);
 it('drive/files/create infers image MIME from filename and serves image content type', async () => {
 const form = new FormData();
 form.append('i', userToken);
-form.append('file', new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'avatar.png'));
+form.append('file', new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], 'avatar.png'));
 const { status, data } = await callApiMultipart('drive/files/create', form);
 expect(status).toBe(200);
 expect(data.type).toBe('image/png');
