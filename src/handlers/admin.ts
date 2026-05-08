@@ -4,7 +4,7 @@
 
 import type { Handler } from '../types.js';
 import type { DbUser, DbAnnouncement } from '../types.js';
-import { json, err, generateId, packUser, requireUser, hashPassword, getMeta, setMeta } from '../helpers.js';
+import { json, err, generateId, packUser, requireUser, hashPassword, getMeta, setMeta, generateRandomPassword, getUserRoles } from '../helpers.js';
 
 async function logAction(db: D1Database, actorId: string, type: string, targetId?: string, note?: string): Promise<void> {
 	await db.prepare('INSERT INTO moderation_logs (id, actor_id, type, target_id, note) VALUES (?, ?, ?, ?, ?)')
@@ -135,18 +135,18 @@ export const resetPassword: Handler = async (db, body) => {
 	if (!u.is_admin) return err('Forbidden', 403);
 
 	const targetId = body.userId as string;
-	const newPassword = (body.newPassword ?? '') as string;
 	if (!targetId) return err('userId required');
-	if (!newPassword) return err('newPassword required');
 
 	const target = await db.prepare('SELECT * FROM users WHERE id = ?').bind(targetId).first<DbUser>();
 	if (!target) return err('No such user', 404);
 
+	// Accept an explicit newPassword for programmatic use, otherwise generate a random one
+	const newPassword = ((body.newPassword ?? '') as string) || generateRandomPassword();
 	const pwHash = await hashPassword(target.username + newPassword);
 	await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(pwHash, targetId).run();
 	await db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(targetId).run();
 	await logAction(db, u.id, 'resetPassword', targetId);
-	return json({});
+	return json({ password: newPassword });
 };
 
 export const updateMeta: Handler = async (db, body) => {
@@ -272,8 +272,10 @@ export const adminShowUser: Handler = async (db, body) => {
 	const target = await db.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<DbUser>();
 	if (!target) return err('No such user', 404);
 
+	const roles = await getUserRoles(db, userId);
 	return json({
 		...packUser(target, true),
+		roles,
 		email: null,
 		emailVerified: false,
 		autoAcceptFollowed: true,

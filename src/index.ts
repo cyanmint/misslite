@@ -7,6 +7,7 @@
 
 import type { Env, Handler } from './types.js';
 import { cors, json, err } from './helpers.js';
+import type { DbUser } from './types.js';
 import { ensureSchema } from './schema.js';
 import { meta, adminAccountsCreate, signin, signinFlow, signout, signup, changePassword } from './handlers/auth.js';
 import {
@@ -768,6 +769,34 @@ export default {
 			});
 		}
 
+		// .well-known/webfinger — ActivityPub user discovery
+		if (url.pathname === '/.well-known/webfinger') {
+			const resource = url.searchParams.get('resource') ?? '';
+			const match = resource.match(/^acct:([^@]+)@(.+)$/);
+			if (!match) return new Response('Bad Request', { status: 400, headers: cors() });
+			const [, username] = match;
+			const user = await env.DB.prepare('SELECT id, username FROM users WHERE username = ? AND is_suspended = 0').bind(username).first<{ id: string; username: string }>().catch(() => null);
+			if (!user) return new Response('Not Found', { status: 404, headers: cors() });
+			return new Response(JSON.stringify({
+				subject: resource,
+				links: [
+					{
+						rel: 'self',
+						type: 'application/activity+json',
+						href: `${url.origin}/users/${user.id}`,
+					},
+					{
+						rel: 'http://webfinger.net/rel/profile-page',
+						type: 'text/html',
+						href: `${url.origin}/@${user.username}`,
+					},
+				],
+			}), {
+				status: 200,
+				headers: { ...cors(), 'Content-Type': 'application/jrd+json; charset=utf-8' },
+			});
+		}
+
 		// R2 file serving — GET /files/*
 		if (url.pathname.startsWith('/files/') && request.method === 'GET') {
 			const r2Key = url.pathname.slice('/files/'.length);
@@ -781,6 +810,36 @@ export default {
 			headers.set('Content-Type', contentType);
 			headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 			return new Response(obj.body, { headers });
+		}
+
+		// ActivityPub actor profile — GET /users/{id} (serves AP JSON for federation)
+		if (url.pathname.startsWith('/users/') && request.method === 'GET' && !url.pathname.includes('/inbox') && !url.pathname.includes('/outbox')) {
+			const accept = request.headers.get('Accept') ?? '';
+			if (accept.includes('application/activity+json') || accept.includes('application/ld+json')) {
+				const userId = url.pathname.split('/')[2];
+				if (userId) {
+					const user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<DbUser>().catch(() => null);
+					if (user) {
+						return new Response(JSON.stringify({
+							'@context': ['https://www.w3.org/ns/activitystreams', 'https://w3id.org/security/v1'],
+							id: `${url.origin}/users/${user.id}`,
+							type: 'Person',
+							preferredUsername: user.username,
+							name: user.name ?? user.username,
+							summary: user.description ?? '',
+							inbox: `${url.origin}/users/${user.id}/inbox`,
+							outbox: `${url.origin}/users/${user.id}/outbox`,
+							followers: `${url.origin}/users/${user.id}/followers`,
+							following: `${url.origin}/users/${user.id}/following`,
+							url: `${url.origin}/@${user.username}`,
+						}), {
+							status: 200,
+							headers: { ...cors(), 'Content-Type': 'application/activity+json; charset=utf-8' },
+						});
+					}
+					return new Response('Not Found', { status: 404, headers: cors() });
+				}
+			}
 		}
 
 		const path = url.pathname.replace(/^\/api\//, '').replace(/\/$/, '');

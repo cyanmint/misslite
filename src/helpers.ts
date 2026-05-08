@@ -13,6 +13,13 @@ export function generateId(): string {
 	return id;
 }
 
+export function generateRandomPassword(length = 8): string {
+	const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+	const arr = new Uint8Array(length);
+	crypto.getRandomValues(arr);
+	return Array.from(arr, b => chars[b % chars.length]).join('');
+}
+
 const PBKDF2_ITERATIONS = 100_000;
 const PBKDF2_HASH = 'SHA-256';
 const PBKDF2_BITS = 256;
@@ -340,6 +347,31 @@ export async function getMetaAll(db: D1Database): Promise<Record<string, string>
 
 export async function setMeta(db: D1Database, key: string, value: string): Promise<void> {
 	await db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').bind(key, value).run();
+}
+
+/** Fetch the RoleLite objects assigned to a user. */
+export async function getUserRoles(db: D1Database, userId: string): Promise<Record<string, unknown>[]> {
+	const rows = await db.prepare(
+		`SELECT r.id, r.name, r.color, r.icon_url, r.description,
+		        r.is_moderator, r.is_administrator, r.display_order
+		 FROM roles r
+		 JOIN role_assignments ra ON ra.role_id = r.id
+		 WHERE ra.user_id = ?
+		 ORDER BY r.display_order ASC`
+	).bind(userId).all<{
+		id: string; name: string; color: string | null; icon_url: string | null;
+		description: string; is_moderator: number; is_administrator: number; display_order: number;
+	}>();
+	return (rows.results ?? []).map(r => ({
+		id: r.id,
+		name: r.name,
+		color: r.color,
+		iconUrl: r.icon_url,
+		description: r.description,
+		isModerator: !!r.is_moderator,
+		isAdministrator: !!r.is_administrator,
+		displayOrder: r.display_order,
+	}));
 }
 
 export async function getUser(db: D1Database, body: Record<string, unknown>): Promise<DbUser | null> {

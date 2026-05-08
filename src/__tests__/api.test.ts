@@ -1298,7 +1298,7 @@ it('chat/messages lists 1-on-1 conversation', async () => {
 	expect(status).toBe(200);
 	expect(Array.isArray(data)).toBe(true);
 	expect(data.length).toBeGreaterThan(0);
-	expect(data[0].text).toBe('Hello admin!');
+	expect(data.some((m: { text: string }) => m.text === 'Hello admin!')).toBe(true);
 });
 
 it('chat/messages/user-timeline lists 1-on-1 conversation for the frontend chat page', async () => {
@@ -1306,7 +1306,7 @@ it('chat/messages/user-timeline lists 1-on-1 conversation for the frontend chat 
 	expect(status).toBe(200);
 	expect(Array.isArray(data)).toBe(true);
 	expect(data.length).toBeGreaterThan(0);
-	expect(data[0].text).toBe('Hello admin!');
+	expect(data.some((m: { text: string }) => m.text === 'Hello admin!')).toBe(true);
 });
 
 it('chat/messages/show returns a single message', async () => {

@@ -4,7 +4,7 @@
 
 import type { Handler } from '../types.js';
 import type { DbUser, DbDriveFile } from '../types.js';
-import { json, err, packUser, packSelf, requireUser } from '../helpers.js';
+import { json, err, packUser, packSelf, requireUser, getUserRoles } from '../helpers.js';
 import { getUser } from '../helpers.js';
 
 type UserProfileData = Record<string, unknown>;
@@ -188,7 +188,10 @@ export const showUser: Handler = async (db, body) => {
 	if (!user) return err('No such user', 404);
 	const packed = await applyViewerRelation(user);
 	const profile = await getUserProfile(db, user.id);
-	return json(applyProfileToPacked(packed, profile, false));
+	const roles = await getUserRoles(db, user.id);
+	const result = applyProfileToPacked(packed, profile, false);
+	result.roles = roles;
+	return json(result);
 };
 
 export const searchUsers: Handler = async (db, body) => {
