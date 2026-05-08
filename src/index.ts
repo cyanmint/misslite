@@ -809,7 +809,10 @@ export default {
 			if (!r2Key) return err('Not found', 404);
 			if (!env.R2) return err('File storage not configured', 503);
 			await ensureSchema(env.DB);
-			const obj = await env.R2.get(r2Key);
+			let obj = await env.R2.get(r2Key);
+			if (!obj && !r2Key.startsWith('files/')) {
+				obj = await env.R2.get(`files/${r2Key}`);
+			}
 			if (!obj) return err('Not found', 404);
 			const headers = new Headers({ 'Access-Control-Allow-Origin': '*' });
 			const contentType = obj.httpMetadata?.contentType ?? 'application/octet-stream';

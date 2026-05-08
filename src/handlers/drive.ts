@@ -160,10 +160,9 @@ export const driveFilesCreate: Handler = async (db, body, env, request) => {
 	const originalType = (fileBlob.type || '').trim();
 	const inferredTypeByName = inferMimeTypeFromName(name || fileBlob.name || '');
 	const inferredTypeByContent = inferImageMimeFromContent(bytes);
-	const inferredType = inferredTypeByContent ?? inferredTypeByName;
 	const fileType = inferredTypeByContent
 		? inferredTypeByContent
-		: ((!originalType || originalType === 'application/octet-stream') ? inferredType : originalType);
+		: ((!originalType || originalType === 'application/octet-stream') ? inferredTypeByName : originalType);
 	const fileSize = fileBuffer.byteLength;
 	if (!name) name = fileBlob.name || 'file';
 
@@ -176,7 +175,8 @@ export const driveFilesCreate: Handler = async (db, body, env, request) => {
 	}
 
 	const origin = request ? new URL(request.url).origin : '';
-	const fileUrl = origin && env.R2 ? `${origin}/files/${r2Key}` : null;
+	const publicPath = r2Key.startsWith('files/') ? r2Key.slice('files/'.length) : r2Key;
+	const fileUrl = origin && env.R2 ? `${origin}/files/${publicPath}` : null;
 	const now = new Date().toISOString();
 
 	await db.prepare('INSERT INTO drive_files (id, user_id, name, type, size, is_sensitive, folder_id, r2_key, url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
