@@ -60,7 +60,7 @@ export const currentUser: Handler = async (db, body) => {
 	return json(applyProfileToPacked(packed, profile, true));
 };
 
-export const updateUser: Handler = async (db, body) => {
+export const updateUser: Handler = async (db, body, _env, request) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
 
@@ -73,7 +73,15 @@ export const updateUser: Handler = async (db, body) => {
 	if (typeof body.avatarUrl === 'string') { sets.push('avatar_url = ?'); vals.push(body.avatarUrl); }
 	if (typeof body.avatarId === 'string' && body.avatarId) {
 		const file = await db.prepare('SELECT * FROM drive_files WHERE id = ? AND user_id = ?').bind(body.avatarId, u.id).first<DbDriveFile>();
-		if (file?.url) { sets.push('avatar_url = ?'); vals.push(file.url); }
+		if (file) {
+			const origin = request ? new URL(request.url).origin : '';
+			const fallbackUrl = (!file.url && file.r2_key && origin) ? `${origin}/files/${file.r2_key}` : null;
+			const avatarUrl = file.url ?? fallbackUrl;
+			if (avatarUrl) {
+				sets.push('avatar_url = ?');
+				vals.push(avatarUrl);
+			}
+		}
 	}
 	if (body.avatarId === null) { sets.push('avatar_url = ?'); vals.push(null); }
 

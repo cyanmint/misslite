@@ -19,6 +19,18 @@ const data = await response.json();
 return { status: response.status, data };
 }
 
+async function callApiMultipart(path: string, form: FormData): Promise<{ status: number; data: any }> {
+const request = new Request(`${BASE_URL}/api/${path}`, {
+method: 'POST',
+body: form,
+});
+const ctx = createExecutionContext();
+const response = await worker.fetch(request, env as unknown as WorkerEnv, ctx);
+await waitOnExecutionContext(ctx);
+const data = await response.json();
+return { status: response.status, data };
+}
+
 // All tests run sequentially in a single describe block sharing state
 describe('Misslite Worker API', () => {
 // ---- Instance ----
@@ -207,6 +219,7 @@ expect(status).toBe(404);
 let inviteCode: string;
 let userToken: string;
 let userId: string;
+let uploadedAvatarFileId: string;
 let announcementId: string;
 let stateNoteId: string;
 
@@ -237,6 +250,36 @@ const { status } = await callApi('signup', {
 username: 'another', password: 'pass', invitationCode: inviteCode,
 });
 expect(status).toBe(400);
+});
+
+it('drive/files/create infers image MIME from filename and serves image content type', async () => {
+const form = new FormData();
+form.append('i', userToken);
+form.append('file', new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'avatar.png'));
+const { status, data } = await callApiMultipart('drive/files/create', form);
+expect(status).toBe(200);
+expect(data.type).toBe('image/png');
+uploadedAvatarFileId = data.id as string;
+
+if (typeof data.url === 'string') {
+	const request = new Request(data.url, { method: 'GET' });
+	const ctx = createExecutionContext();
+	const response = await worker.fetch(request, env as unknown as WorkerEnv, ctx);
+	await waitOnExecutionContext(ctx);
+	expect(response.status).toBe(200);
+	expect(response.headers.get('content-type')).toContain('image/png');
+}
+});
+
+it('i/update can set avatar from uploaded image file', async () => {
+const { status } = await callApi('i/update', { i: userToken, avatarId: uploadedAvatarFileId });
+expect(status).toBe(200);
+const me = await callApi('i', { i: userToken });
+expect(me.status).toBe(200);
+expect(me.data.avatarUrl === null || typeof me.data.avatarUrl === 'string').toBe(true);
+if (typeof me.data.avatarUrl === 'string') {
+	expect(me.data.avatarUrl.length).toBeGreaterThan(0);
+}
 });
 
 // ---- Notes ----

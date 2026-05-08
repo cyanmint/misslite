@@ -1,10 +1,8 @@
 diff --git a/packages/frontend-shared/js/config.ts b/packages/frontend-shared/js/config.ts
-index 8021c4f..eae4c5f 100644
+index 8021c4f..5f55192 100644
 --- a/packages/frontend-shared/js/config.ts
 +++ b/packages/frontend-shared/js/config.ts
-@@ -1,23 +1,103 @@
- /*
-  * SPDX-FileCopyrightText: syuilo and misskey-project
+@@ -3,21 +3,118 @@
   * SPDX-License-Identifier: AGPL-3.0-only
   */
  
@@ -13,9 +11,22 @@ index 8021c4f..eae4c5f 100644
 +const address = new URL(window.location.href);
  const siteName = window.document.querySelector<HTMLMetaElement>('meta[property="og:site_name"]')?.content;
  
++type RuntimeConfig = {
++	defaultApiUrl?: string;
++};
++
++type MissliteWindow = Window & {
++	MISSKEY_CONFIG?: RuntimeConfig;
++	__missliteScopedGet?: (key: string) => string | null;
++	__missliteScopedSet?: (key: string, value: string) => void;
++	__missliteScopedRemove?: (key: string) => void;
++};
++
++const missliteWindow = window as MissliteWindow;
++
 +// Get runtime configuration from config.js (if available)
-+const runtimeConfig = (window as any).MISSKEY_CONFIG || {};
-+const defaultApiUrl = runtimeConfig.defaultApiUrl || '';
++const runtimeConfig = missliteWindow.MISSKEY_CONFIG ?? {};
++const defaultApiUrl = runtimeConfig.defaultApiUrl ?? '';
 +
 +// Determine API domain from the search string.
 +// Format: https://frontend.com/?misskey.io
@@ -24,15 +35,15 @@ index 8021c4f..eae4c5f 100644
 +
 +// Fallback: handle pathname-embedded query (/?domain)
 +if (!queryDomain && window.location.pathname.startsWith('/?') && window.location.pathname.length > 2) {
-+queryDomain = window.location.pathname.substring(2).trim();
++	queryDomain = window.location.pathname.substring(2).trim();
 +}
 +
 +// If no search string but a defaultApiUrl is configured, redirect to include it.
 +// If neither is set, leave queryDomain empty — index.html will show the landing page.
 +if (!queryDomain && defaultApiUrl) {
-+queryDomain = defaultApiUrl;
-+const newUrl = window.location.origin + window.location.pathname + '?' + queryDomain + window.location.hash;
-+window.history.replaceState({}, '', newUrl);
++	queryDomain = defaultApiUrl;
++	const newUrl = `${window.location.origin}${window.location.pathname}?${queryDomain}${window.location.hash}`;
++	window.history.replaceState({}, '', newUrl);
 +}
 +
 +// The API domain is always derived from the search string — no localStorage involved.
@@ -45,43 +56,47 @@ index 8021c4f..eae4c5f 100644
 +// Scoped localStorage helpers used by the rest of the frontend.
 +// Every key stored via miLocalStorage will be prefixed with the domain key.
 +function scopedGet(key: string): string | null {
-+return localStorage.getItem(`${domainKey}::${key}`);
++	return localStorage.getItem(`${domainKey}::${key}`);
 +}
 +
 +function scopedSet(key: string, value: string): void {
-+localStorage.setItem(`${domainKey}::${key}`, value);
++	localStorage.setItem(`${domainKey}::${key}`, value);
 +}
 +
 +// Expose scoped helpers globally so miLocalStorage can use them
-+(window as any).__missliteScopedGet = scopedGet;
-+(window as any).__missliteScopedSet = scopedSet;
-+(window as any).__missliteScopedRemove = (key: string) => localStorage.removeItem(`${domainKey}::${key}`);
++missliteWindow.__missliteScopedGet = scopedGet;
++missliteWindow.__missliteScopedSet = scopedSet;
++missliteWindow.__missliteScopedRemove = (key: string) => localStorage.removeItem(`${domainKey}::${key}`);
 +
 +// Construct API URL from domain
 +const determineApiUrl = (): string => {
-+const domain = apiDomain;
-+if (!domain) return '';
-+if (domain.startsWith('http') && domain.includes('/api')) {
-+return domain;
-+}
-+if (domain === window.location.hostname) {
-+return `${window.location.origin}/api`;
-+}
-+const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-+return `https://${cleanDomain}/api`;
++	const domain = apiDomain;
++	if (!domain) return '';
++	if (domain.startsWith('http') && domain.includes('/api')) {
++		return domain;
++	}
++	if (domain === window.location.hostname) {
++		return `${window.location.origin}/api`;
++	}
++	const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
++	return `https://${cleanDomain}/api`;
 +};
 +
 +const determineWsOrigin = (): string => {
-+const domain = apiDomain;
-+if (!domain) return '';
-+if (domain.startsWith('http')) {
-+try { return new URL(domain).origin; } catch { return window.location.origin; }
-+}
-+if (domain === window.location.hostname) {
-+return window.location.origin;
-+}
-+const cleanDomain = domain.replace(/\/.*$/, '');
-+return `https://${cleanDomain}`;
++	const domain = apiDomain;
++	if (!domain) return '';
++	if (domain.startsWith('http')) {
++		try {
++			return new URL(domain).origin;
++		} catch {
++			return window.location.origin;
++		}
++	}
++	if (domain === window.location.hostname) {
++		return window.location.origin;
++	}
++	const cleanDomain = domain.replace(/\/.*$/, '');
++	return `https://${cleanDomain}`;
 +};
 +
  export const host = address.host;
@@ -96,10 +111,11 @@ index 8021c4f..eae4c5f 100644
 +export const lang = scopedGet('lang') ?? localStorage.getItem('lang') ?? 'en-US';
  export const langs = _LANGS_;
  export const version = _VERSION_;
- export const instanceName = (siteName === 'Misskey' || siteName == null) ? host : siteName;
+-export const instanceName = (siteName === 'Misskey' || siteName == null) ? host : siteName;
 -export const ui = localStorage.getItem('ui');
 -export const debug = localStorage.getItem('debug') === 'true';
 -export const isSafeMode = localStorage.getItem('isSafeMode') === 'true';
++export const instanceName = siteName === 'Misskey' || siteName == null ? host : siteName;
 +export const ui = scopedGet('ui') ?? localStorage.getItem('ui');
 +export const debug = (scopedGet('debug') ?? localStorage.getItem('debug')) === 'true';
 +export const isSafeMode = (scopedGet('isSafeMode') ?? localStorage.getItem('isSafeMode')) === 'true';
@@ -108,9 +124,9 @@ index 8021c4f..eae4c5f 100644
 +// The API server hostname — used for displaying user addresses (@user@server)
 +// instead of the web frontend hostname.
 +export const apiHost = (() => {
-+try {
-+return new URL(apiUrl).hostname;
-+} catch {
-+return hostname;
-+}
++	try {
++		return new URL(apiUrl).hostname;
++	} catch {
++		return hostname;
++	}
 +})();

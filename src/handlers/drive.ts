@@ -9,6 +9,19 @@ import { json, err, requireUser, generateId, packUser } from '../helpers.js';
 const noContent = (): Response =>
 	new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
 
+function inferMimeTypeFromName(name: string): string {
+	const lower = name.toLowerCase();
+	if (lower.endsWith('.png')) return 'image/png';
+	if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+	if (lower.endsWith('.gif')) return 'image/gif';
+	if (lower.endsWith('.webp')) return 'image/webp';
+	if (lower.endsWith('.avif')) return 'image/avif';
+	if (lower.endsWith('.svg')) return 'image/svg+xml';
+	if (lower.endsWith('.bmp')) return 'image/bmp';
+	if (lower.endsWith('.ico')) return 'image/x-icon';
+	return 'application/octet-stream';
+}
+
 function packDriveFile(row: DbDriveFile, user?: Record<string, unknown> | null): Record<string, unknown> {
 	return {
 		id: row.id, createdAt: row.created_at,
@@ -110,7 +123,11 @@ export const driveFilesCreate: Handler = async (db, body, env, request) => {
 	}
 
 	const fileId = generateId();
-	const fileType = fileBlob.type || 'application/octet-stream';
+	const originalType = (fileBlob.type || '').trim();
+	const inferredType = inferMimeTypeFromName(name || fileBlob.name || '');
+	const fileType = (!originalType || originalType === 'application/octet-stream')
+		? inferredType
+		: originalType;
 	const fileBuffer = await fileBlob.arrayBuffer();
 	const fileSize = fileBuffer.byteLength;
 	if (!name) name = fileBlob.name || 'file';
@@ -242,4 +259,3 @@ export const driveStream: Handler = async (db, body) => {
 	if (u instanceof Response) return u;
 	return json([]);
 };
-
