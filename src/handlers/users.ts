@@ -5,6 +5,7 @@
 import type { Handler } from '../types.js';
 import type { DbUser, DbDriveFile } from '../types.js';
 import { json, err, packUser, packSelf, requireUser } from '../helpers.js';
+import { getUser } from '../helpers.js';
 
 type UserProfileData = Record<string, unknown>;
 
@@ -109,12 +110,36 @@ export const showUser: Handler = async (db, body) => {
 	const userId = body.userId as string | undefined;
 	const userIds = body.userIds as string[] | undefined;
 	const username = body.username as string | undefined;
+	const viewer = await getUser(db, body);
+
+	const applyViewerRelation = async (target: DbUser): Promise<Record<string, unknown>> => {
+		const packed = packUser(target, true);
+		if (!viewer || viewer.id === target.id) return packed;
+		const [following, followedBy, blocking, blocked, muting, renoteMuting] = await Promise.all([
+			db.prepare('SELECT 1 FROM following WHERE follower_id = ? AND followee_id = ?').bind(viewer.id, target.id).first(),
+			db.prepare('SELECT 1 FROM following WHERE follower_id = ? AND followee_id = ?').bind(target.id, viewer.id).first(),
+			db.prepare('SELECT 1 FROM blocking WHERE blocker_id = ? AND blockee_id = ?').bind(viewer.id, target.id).first(),
+			db.prepare('SELECT 1 FROM blocking WHERE blocker_id = ? AND blockee_id = ?').bind(target.id, viewer.id).first(),
+			db.prepare('SELECT 1 FROM muting WHERE muter_id = ? AND mutee_id = ?').bind(viewer.id, target.id).first(),
+			db.prepare('SELECT 1 FROM renote_muting WHERE muter_id = ? AND mutee_id = ?').bind(viewer.id, target.id).first(),
+		]);
+		packed.isFollowing = !!following;
+		packed.isFollowed = !!followedBy;
+		packed.hasPendingFollowRequestFromYou = false;
+		packed.hasPendingFollowRequestToYou = false;
+		packed.isBlocking = !!blocking;
+		packed.isBlocked = !!blocked;
+		packed.isMuted = !!muting;
+		packed.isRenoteMuted = !!renoteMuting;
+		return packed;
+	};
+
 	// Batch lookup
 	if (Array.isArray(userIds)) {
 		const results = await Promise.all(userIds.map(id =>
 			db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<DbUser>()
 		));
-		return json(results.filter(Boolean).map(u => packUser(u!, true)));
+		return json(await Promise.all(results.filter(Boolean).map(u => applyViewerRelation(u!))));
 	}
 	if (!userId && !username) return json([]);
 	let user: DbUser | null = null;
@@ -124,7 +149,7 @@ export const showUser: Handler = async (db, body) => {
 		user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first<DbUser>();
 	}
 	if (!user) return err('No such user', 404);
-	const packed = packUser(user, true);
+	const packed = await applyViewerRelation(user);
 	const profile = await getUserProfile(db, user.id);
 	return json(applyProfileToPacked(packed, profile, false));
 };
@@ -143,7 +168,7 @@ export const searchUsers: Handler = async (db, body) => {
 
 // ── Additional user endpoints ─────────────────────────────────────────────────
 
-import { generateId, getUser } from '../helpers.js';
+import { generateId } from '../helpers.js';
 
 export const userRelation: Handler = async (db, body) => {
 const u = await requireUser(db, body);

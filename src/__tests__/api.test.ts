@@ -1242,6 +1242,34 @@ expect(status).toBe(200);
 expect(Array.isArray(data)).toBe(true);
 });
 
+it('following/create updates relation and users/show follow fields', async () => {
+	const followRes = await callApi('following/create', { i: userToken, userId: adminId });
+	expect(followRes.status).toBe(200);
+
+	const relation = await callApi('users/relation', { i: userToken, userId: adminId });
+	expect(relation.status).toBe(200);
+	expect(relation.data.isFollowing).toBe(true);
+
+	const show = await callApi('users/show', { i: userToken, userId: adminId });
+	expect(show.status).toBe(200);
+	expect(show.data.isFollowing).toBe(true);
+	expect(show.data.isFollowed).toBe(false);
+	expect(show.data.hasPendingFollowRequestFromYou).toBe(false);
+});
+
+it('following/delete clears relation and users/show follow fields', async () => {
+	const unfollowRes = await callApi('following/delete', { i: userToken, userId: adminId });
+	expect(unfollowRes.status).toBe(200);
+
+	const relation = await callApi('users/relation', { i: userToken, userId: adminId });
+	expect(relation.status).toBe(200);
+	expect(relation.data.isFollowing).toBe(false);
+
+	const show = await callApi('users/show', { i: userToken, userId: adminId });
+	expect(show.status).toBe(200);
+	expect(show.data.isFollowing).toBe(false);
+});
+
 // ---- Chat messaging ----
 
 let chatMsgId = '';
@@ -1254,6 +1282,15 @@ it('chat/messages/create sends a 1-on-1 message', async () => {
 	expect(data.fromUserId).toBeDefined();
 	expect(data.toUserId).toBe(adminId);
 	chatMsgId = data.id;
+});
+
+it('chat/messages/create-to-user sends a 1-on-1 message for frontend composer', async () => {
+	const { status, data } = await callApi('chat/messages/create-to-user', {
+		i: userToken, toUserId: adminId, text: 'Hello admin alias!',
+	});
+	expect(status).toBe(200);
+	expect(data.text).toBe('Hello admin alias!');
+	expect(data.toUserId).toBe(adminId);
 });
 
 it('chat/messages lists 1-on-1 conversation', async () => {
@@ -1321,6 +1358,13 @@ it('chat/messages/create sends a room message', async () => {
 	const { status, data } = await callApi('chat/messages/create', { i: userToken, roomId: chatRoomId, text: 'Hello room!' });
 	expect(status).toBe(200);
 	expect(data.text).toBe('Hello room!');
+	expect(data.toRoomId).toBe(chatRoomId);
+});
+
+it('chat/messages/create-to-room sends a room message for frontend composer', async () => {
+	const { status, data } = await callApi('chat/messages/create-to-room', { i: userToken, toRoomId: chatRoomId, text: 'Hello room alias!' });
+	expect(status).toBe(200);
+	expect(data.text).toBe('Hello room alias!');
 	expect(data.toRoomId).toBe(chatRoomId);
 });
 

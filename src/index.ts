@@ -718,6 +718,8 @@ const routes: Record<string, Handler> = {
 	// Chat (1-on-1 and rooms)
 	'chat/messages': chatMessages,
 	'chat/messages/create': chatMessagesCreate,
+	'chat/messages/create-to-room': chatMessagesCreate,
+	'chat/messages/create-to-user': chatMessagesCreate,
 	'chat/messages/delete': chatMessagesDelete,
 	'chat/messages/read': chatMessagesRead,
 	'chat/messages/room-timeline': chatMessagesRoomTimeline,
