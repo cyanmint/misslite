@@ -279,6 +279,7 @@ expect(me.status).toBe(200);
 expect(me.data.avatarUrl === null || typeof me.data.avatarUrl === 'string').toBe(true);
 if (typeof me.data.avatarUrl === 'string') {
 	expect(me.data.avatarUrl.length).toBeGreaterThan(0);
+	expect(me.data.avatarUrl).toContain(uploadedAvatarFileId);
 }
 });
 
