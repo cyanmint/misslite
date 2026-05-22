@@ -8,7 +8,7 @@ on:
       - 'copilot/**'
     paths:
       - 'patches/**'
-      - 'build.sh'
+      - 'scripts/build-frontend.sh'
       - '.github/workflows/build-frontend.yml'
   workflow_dispatch:
 
@@ -69,8 +69,9 @@ jobs:
           mkdir -p misskey-build/webroot
           # Vite frontend output (index.html, scripts/, assets/, manifest.json)
           cp -r misskey-build/built/_frontend_vite_/. misskey-build/webroot/
-          # Service worker
-          cp misskey-build/built/_sw_dist_/sw.js misskey-build/webroot/sw.js
+          # Service worker (path can vary by upstream)
+          SW_PATH=$(find misskey-build/built -type f -path '*/sw.js' | head -n 1 || true)
+          [ -n "$SW_PATH" ] && cp "$SW_PATH" misskey-build/webroot/sw.js || echo "WARN: sw.js not found; skipping"
           # Locales at /assets/locales/ to match original Misskey path (no patch needed)
           mkdir -p misskey-build/webroot/assets/locales
           cp misskey-build/built/_frontend_dist_/locales/*.json misskey-build/webroot/assets/locales/

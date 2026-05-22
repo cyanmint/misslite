@@ -8,7 +8,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "setup": "npm i",
-    "frontend": "./build.sh",
+    "frontend": "./scripts/build-frontend.sh",
     "test": "vitest run",
     "test:watch": "vitest"
   },

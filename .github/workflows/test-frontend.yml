@@ -10,12 +10,12 @@ on:
       - 'copilot/**'
     paths:
       - 'patches/**'
-      - 'build.sh'
+      - 'scripts/build-frontend.sh'
       - '.github/workflows/test-frontend.yml'
   pull_request:
     paths:
       - 'patches/**'
-      - 'build.sh'
+      - 'scripts/build-frontend.sh'
       - '.github/workflows/test-frontend.yml'
   workflow_dispatch:
 
@@ -82,7 +82,8 @@ jobs:
         run: |
           mkdir -p misskey-build/webroot
           cp -r misskey-build/built/_frontend_vite_/. misskey-build/webroot/
-          cp misskey-build/built/_sw_dist_/sw.js misskey-build/webroot/sw.js
+          SW_PATH=$(find misskey-build/built -type f -path '*/sw.js' | head -n 1 || true)
+          [ -n "$SW_PATH" ] && cp "$SW_PATH" misskey-build/webroot/sw.js || echo "WARN: sw.js not found; skipping"
           mkdir -p misskey-build/webroot/assets/locales
           cp misskey-build/built/_frontend_dist_/locales/*.json misskey-build/webroot/assets/locales/
           [ -d misskey-build/built/_frontend_dist_/fluent-emoji ] && cp -r misskey-build/built/_frontend_dist_/fluent-emoji misskey-build/webroot/fluent-emoji || true

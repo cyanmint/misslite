@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: CC0-1.0
 # Adapted from https://github.com/misskey-dev/misskey/blob/develop/.github/workflows/get-api-diff.yml
 #
-# Saves the api.json from the base and head branches of a PR as artifacts
+# Saves the specs/api.json from the base and head branches of a PR as artifacts
 # so that report-api-diff.yml can post a diff comment.
 # this name is used in report-api-diff.yml so be careful when changing it
 name: Get api.json diff
@@ -11,7 +11,7 @@ on:
     branches:
       - default
     paths:
-      - api.json
+      - specs/api.json
       - .github/workflows/get-api-diff.yml
 
 jobs:
@@ -33,10 +33,10 @@ jobs:
     - uses: actions/checkout@v4
       with:
         ref: ${{ matrix.ref }}
-    - name: Copy api.json
+    - name: Copy specs/api.json
       run: |
-        if [ -f api.json ]; then
-          cp api.json ${{ matrix.api-json-name }}
+        if [ -f specs/api.json ]; then
+          cp specs/api.json ${{ matrix.api-json-name }}
         else
           echo '{}' > ${{ matrix.api-json-name }}
         fi

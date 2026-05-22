@@ -2,15 +2,16 @@
 # SPDX-License-Identifier: CC0-1.0
 # Misslite frontend build script
 # Clones misskey, applies patches, builds only the frontend.
-# Usage: ./build.sh [misskey-ref]
+# Usage: ./scripts/build-frontend.sh [misskey-ref]
 #   misskey-ref: git ref to clone (default: develop)
 # Output: misskey-build/webroot/ directory with built frontend
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 MISSKEY_REF="${1:-develop}"
-BUILD_DIR="${SCRIPT_DIR}/misskey-build"
+BUILD_DIR="${REPO_ROOT}/misskey-build"
 
 echo "[build] Starting misslite frontend build"
 echo "[build] Misskey ref: ${MISSKEY_REF}"
@@ -35,8 +36,8 @@ git submodule update --init --depth=1
 
 # Step 2: Apply per-file patches (with fuzz for upstream compatibility)
 echo "[build] Applying patches..."
-find "${SCRIPT_DIR}/patches" -name '*.patch' -type f | sort | while read -r patchfile; do
-  relpath="${patchfile#${SCRIPT_DIR}/patches/}"
+find "${REPO_ROOT}/patches" -name '*.patch' -type f | sort | while read -r patchfile; do
+  relpath="${patchfile#${REPO_ROOT}/patches/}"
   echo "[build]   Applying: ${relpath}"
   patch -p1 --fuzz=3 < "${patchfile}"
 done

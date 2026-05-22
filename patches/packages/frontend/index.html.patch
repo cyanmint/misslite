@@ -2,7 +2,7 @@ diff --git a/packages/frontend/index.html b/packages/frontend/index.html
 new file mode 100644
 --- /dev/null
 +++ b/packages/frontend/index.html
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,28 @@
 +<!DOCTYPE html>
 +<!--
 +SPDX-FileCopyrightText: syuilo and misskey-project
@@ -23,23 +23,8 @@ new file mode 100644
 +<link rel="manifest" href="/app.webmanifest">
 +<script src="/config.js"></script>
 +<title>Misslite</title>
-+<style id="splash-style">
-+#splash {
-+background: #86b300;
-+}
-+</style>
 +</head>
 +<body>
-+<div id="splash">
-+<div id="splashIcon" style="display:flex;justify-content:center;align-items:center;height:100vh;">
-+<svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-+<circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" opacity="0.3"/>
-+<path d="M12 2a10 10 0 0 1 10 10" stroke="white" stroke-width="2" stroke-linecap="round">
-+<animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
-+</path>
-+</svg>
-+</div>
-+</div>
 +<div id="misskey_app"></div>
 +<script type="module">
 +import('./src/_boot_.ts');

@@ -1,235 +1,128 @@
 # Misslite CF
 
-A lightweight, Cloudflare Workers-based implementation of the Misskey API, designed for minimal hosting costs and maximum compatibility with the official Misskey frontend.
+Misslite is a lightweight Misskey-compatible backend running on **Cloudflare Workers + D1 + R2**, with a patched Misskey frontend built in CI and deployed as static assets.
+
+## What this repository contains
+
+- A Worker API implementation (`src/**`) compatible with a practical subset of Misskey endpoints
+- A frontend patch set (`patches/**`) applied to upstream `misskey-dev/misskey` during CI builds
+- CI workflows that:
+  - validate API spec files
+  - run Worker tests
+  - verify frontend patches apply and build
+  - build/deploy frontend assets to GitHub Pages
 
 ## Architecture
 
-```
-┌───────────────────┐     ┌────────────────────┐
-│  Misskey Frontend │────▶│  Cloudflare Worker │
-│  (Static Assets)  │     │  (API Handlers)    │
-└───────────────────┘     └────────┬───────────┘
-                                   │
-                              ┌────▼─────┐
-                              │ D1 (SQL) │
-                              └──────────┘
+```text
+Misskey Frontend (patched, static)  --->  Cloudflare Worker API (/api/*)
+                                           |-- D1 (relational app data)
+                                           |-- R2 (drive file objects)
+                                           |-- SEND_EMAIL binding
 ```
 
-- **Frontend**: Pre-built Misskey frontend served as static assets via Cloudflare Pages or the worker itself.
-- **Worker**: A single Cloudflare Worker handles all `/api/*` routes, implementing the Misskey API surface against D1.
-- **Database**: Cloudflare D1 (SQLite-compatible) stores users, notes, reactions, notifications, and all other persistent data.
+## Repository layout
 
-## CI / Testing Pipeline
-
-The project runs two CI stages on every push:
-
-1. **Unit Tests** (`vitest run`) — 91+ handler-level tests covering authentication, CRUD operations, and edge cases.
-2. **API Coverage Report** (`worker/scripts/api-coverage.mjs`) — automatically probes every endpoint in `api.json` (the Misskey OpenAPI spec) and classifies each one.
-
-### API Status Definitions
-
-Every endpoint receives one of four statuses:
-
-| Status | Symbol | Meaning |
-|--------|--------|---------|
-| **Correct** | ✓ | Handler exists, response matches the OpenAPI spec, AND data persists across worker restarts. |
-| **Stub** | ⊘ | Handler exists and returns a schema-valid response, but the data is hardcoded, not persisted, or non-functional. |
-| **Malfunction** | ~ | Handler exists but the response body does not match the OpenAPI spec (wrong type, missing required fields). |
-| **Missing** | ✗ | No handler — the endpoint returns HTTP 404. |
-
-### Stub Detection
-
-Stub detection uses a multi-phase approach:
-
-1. **Phase 1 — Schema Probe**: Every endpoint is called and the response is validated against `api.json`.
-2. **Phase 2 — Behavioural Verification**: For endpoints marked "correct" in Phase 1, seed data is created via mutation endpoints and then verified via read endpoints.
-3. **Phase 3 — Persistence Check**: The worker is restarted and the same read endpoints are re-verified to confirm that data persists across restarts.
-
-If either Phase 2 or Phase 3 fails for an endpoint, it is downgraded from Correct to Stub.
-
-### API Grouping & Collective Attribution
-
-Endpoints are organized into **test groups** defined in `endpoint_info.json` under the `__groups` key. Each group represents a functional lifecycle, for example:
-
-```
-Notes Lifecycle:
-  notes/create → notes/show → notes/timeline → users/notes
+```text
+.
+├── .github/workflows/           # CI and deployment workflows
+├── db/
+│   └── schema.sql               # SQL schema artifact/reference
+├── patches/                     # Frontend patches applied to upstream Misskey
+├── scripts/
+│   ├── api-coverage.mjs         # Endpoint coverage/stub/malfunction report
+│   └── build-frontend.sh        # Local frontend build helper (patch + build)
+├── specs/
+│   ├── api.json                 # OpenAPI source of truth used by CI/reporting
+│   └── endpoint_info.json       # Coverage grouping/diagnostic metadata
+├── src/
+│   ├── __tests__/               # Vitest API tests
+│   ├── handlers/                # Endpoint handler modules
+│   ├── helpers.ts               # Shared utility functions
+│   ├── index.ts                 # Router and endpoint registration
+│   ├── schema.ts                # Runtime DB schema/bootstrap logic
+│   └── types.ts                 # Shared types
+├── LICENSE.txt
+├── package.json
+├── vitest.config.ts
+└── wrangler.jsonc
 ```
 
-**Collective Stub Rule**: If any endpoint within a group fails the stub test, **all** endpoints in that group are marked as Stub. This is because a failed lifecycle test cannot determine which specific endpoint is at fault — both the mutation and the query must be flagged for developer investigation.
+## Worker backend
 
-### Diagnostic Endpoints (Control Group)
+- Entry router: `src/index.ts`
+- Data model/schema: `src/schema.ts`
+- Major domains are separated under `src/handlers/` (auth, users, notes, drive, chat, admin, etc.)
+- Tests: `src/__tests__/api.test.ts`
 
-Four diagnostic endpoints exist solely for CI validation:
+### Notable implemented areas
 
-| Endpoint | Purpose |
-|----------|---------|
-| `test/list-stub` | Returns `[]` — valid schema, zero DB ops. Must be detected as **Stub**. |
-| `test/post-stub` | Returns `{ id, createdAt }` — valid schema, zero DB ops. Must be detected as **Stub**. |
-| `test/list-malfunction` | Returns an object when an array is expected. Must be detected as **Malfunction**. |
-| `test/post-malfunction` | Returns an array when an object is expected. Must be detected as **Malfunction**. |
+- Authentication and basic account/session flows
+- Notes/timeline/reactions and related user-facing reads
+- Chat rooms/messages endpoints
+- Drive metadata + R2-backed file serving
+- Admin/moderation basics
+- Various compatibility/stub endpoints to satisfy frontend/client expectations
 
-These are grouped together in the "Stub Control Group" to verify that the Stub Detector correctly identifies non-functional code.
+## Frontend pipeline
 
-### Orphan Detection
+Misslite does **not** build frontend code directly from this repository source tree.
+Instead, CI:
 
-The coverage report identifies all endpoints that are **not assigned to any test group** (orphans). This ensures that as new endpoints are added to `api.json`, they are tracked and eventually assigned to a group for full test coverage.
+1. Clones upstream `misskey-dev/misskey`
+2. Applies all patch files in `patches/**` (sorted)
+3. Builds frontend workspaces
+4. Collects built static assets to `webroot/`
 
-## Project Structure
+`patches/packages/frontend/index.html.patch` is intentionally minimal and keeps boot behavior close to upstream Misskey style.
 
-```
-├── api.json              # Misskey OpenAPI specification (source of truth)
-├── endpoint_info.json    # Testing metadata: groups, diagnostic endpoints
-├── worker/               # Cloudflare Worker source
-│   ├── src/
-│   │   ├── index.ts      # Route table
-│   │   ├── handlers/     # API handler modules
-│   │   ├── helpers.ts    # Shared utilities
-│   │   ├── types.ts      # TypeScript interfaces
-│   │   └── __tests__/    # Vitest unit tests
-│   ├── scripts/
-│   │   └── api-coverage.mjs  # Coverage report generator
-│   └── wrangler.toml     # Cloudflare config
-├── patches/              # Frontend build patches
-└── .github/workflows/    # CI definitions
-```
+## CI workflows
 
-## License
+- `test-worker.yml`: Worker unit tests + API coverage report
+- `validate-api-json.yml`: validates `specs/api.json`
+- `get-api-diff.yml`: uploads base/head API spec artifacts for PR diff reporting
+- `test-frontend.yml`: verifies patches apply and frontend build succeeds
+- `build-frontend.yml`: builds/deploys frontend assets (GitHub Pages)
+- `lint.yml`: runs frontend lint/typecheck against patched upstream clone
 
-The misskey project is AGPL-3.0-only.
+## Local development
 
-All files in this repo are generated by the GitHub Copilot coding agent, thus these contents are not applicable for copyright protection. All these stuff should be considered in the public domain. There is no license for this repo. — see [LICENSE.txt](LICENSE.txt).
-
-# Misslite CF Worker
-
-Minimal Misskey-compatible API backend running on Cloudflare Workers with D1 (SQLite).
-
-## Structure
-
-```
-worker/src/
-├── index.ts          # Request router and main handler
-├── types.ts          # Env, DbUser, DbNote, Handler type definitions
-├── helpers.ts        # Shared utilities (id gen, hashing, CORS, JSON, packing, auth)
-├── schema.ts         # D1 database schema and migration
-└── handlers/
-    ├── auth.ts       # meta, admin/accounts/create, signin, signup
-    ├── users.ts      # i, i/update, users/show
-    ├── notes.ts      # notes/create, show, delete, timeline, reactions
-    ├── admin.ts      # suspend, moderators, show-users, invites
-    └── misc.ts       # emojis, stats, ping
-```
-
-## API Coverage
-
-Misskey API endpoints implemented vs TODO. Checked = implemented, unchecked = not yet.
-
-### Instance
-- [x] `meta` — Instance metadata
-- [x] `ping` — Health check
-- [x] `stats` — Instance statistics
-- [x] `emojis` — Custom emoji list (returns empty)
-- [x] `endpoints` — List available API endpoints
-- [ ] `announcements` — Instance announcements
-- [ ] `server-info` — Server resource info
-- [ ] `.well-known/nodeinfo` — NodeInfo for federation discovery
-
-### Authentication
-- [x] `admin/accounts/create` — Initial admin setup
-- [x] `signin` — User login (returns token)
-- [x] `signup` — Register with invite code
-- [ ] `signout` — Invalidate session token
-- [ ] `i/change-password` — Change password
-- [ ] `i/2fa/*` — Two-factor authentication
-
-### Users
-- [x] `i` — Current authenticated user
-- [x] `i/update` — Update profile (name, description, avatar)
-- [x] `users/show` — Get user by ID or username
-- [ ] `users/search` — Search users
-- [ ] `users/followers` — User's followers
-- [ ] `users/following` — User's following
-- [ ] `following/create` — Follow a user
-- [ ] `following/delete` — Unfollow a user
-- [ ] `blocking/create` — Block a user
-- [ ] `blocking/delete` — Unblock a user
-- [ ] `mute/create` — Mute a user
-- [ ] `mute/delete` — Unmute a user
-- [ ] `i/favorites` — User's favorited notes
-- [ ] `i/pin` — Pin a note
-- [ ] `i/unpin` — Unpin a note
-
-### Notes
-- [x] `notes/create` — Create a note (text, CW, visibility, reply, renote)
-- [x] `notes/show` — Get note by ID
-- [x] `notes/delete` — Delete a note (owner or admin/mod)
-- [x] `notes/timeline` — Public timeline (with pagination)
-- [x] `notes/local-timeline` — Alias for timeline
-- [x] `notes/global-timeline` — Alias for timeline
-- [x] `users/notes` — User's notes
-- [ ] `notes/search` — Full-text note search
-- [ ] `notes/favorites/create` — Favorite a note
-- [ ] `notes/favorites/delete` — Unfavorite a note
-- [ ] `notes/polls/vote` — Vote on a poll
-- [ ] `notes/state` — Note read/reaction state for current user
-- [ ] `notes/mentions` — Notes mentioning current user
-- [ ] `notes/conversation` — Thread view (reply chain)
-
-### Reactions
-- [x] `notes/reactions/create` — Add reaction to a note
-- [x] `notes/reactions/delete` — Remove reaction from a note
-- [ ] `notes/reactions` — List reactions on a note
-
-### Admin / Moderation
-- [x] `admin/suspend-user` — Suspend a user
-- [x] `admin/unsuspend-user` — Unsuspend a user
-- [x] `admin/moderators/add` — Grant moderator role
-- [x] `admin/moderators/remove` — Revoke moderator role
-- [x] `admin/show-users` — List all users (admin/mod)
-- [x] `invite/create` — Generate invite code
-- [x] `invite/list` — List invite codes (admin/mod)
-- [ ] `admin/delete-account` — Delete a user account
-- [ ] `admin/reset-password` — Reset user password
-- [ ] `admin/update-meta` — Update instance metadata
-- [ ] `admin/show-moderation-logs` — Moderation audit log
-
-### Drive (File Upload)
-- [ ] `drive/files/create` — Upload a file
-- [ ] `drive/files/show` — Get file info
-- [ ] `drive/files/delete` — Delete a file
-- [ ] `drive/files` — List user's files
-
-### Notifications
-- [ ] `i/notifications` — User notifications
-- [ ] `notifications/mark-all-as-read` — Mark all read
-
-### Streaming (WebSocket)
-- [ ] WebSocket streaming API for real-time updates
-
-### Federation (ActivityPub)
-- [ ] Outbox / Inbox for federation
-- [ ] WebFinger (`.well-known/webfinger`)
-- [ ] Actor endpoints
-
-## Development
+### Install
 
 ```bash
-cd worker
 npm install
-npx wrangler dev          # Local dev server
-npx wrangler deploy       # Deploy to Cloudflare
 ```
 
-## Testing
+### Run Worker locally
 
 ```bash
-cd worker
-npm test                  # Run vitest tests
+npm run dev
 ```
 
-## API Coverage Report
+### Run tests
 
-The latest API Coverage Report is generated automatically on every CI run and published as a
-[GitHub Actions job summary](../../actions/workflows/test-worker.yml).
-It classifies every `api.json` endpoint as **Correct**, **Stub**, **Malfunction**, or **Missing** —
-see the [root README](../README.md) for full definitions.
+```bash
+npm test
+```
+
+### Build frontend locally (patched upstream clone)
+
+```bash
+npm run frontend
+# or
+./scripts/build-frontend.sh
+```
+
+## Configuration
+
+Main runtime config is in `wrangler.jsonc`:
+
+- D1 binding: `DB`
+- R2 binding: `R2`
+- Email binding: `SEND_EMAIL`
+- Instance metadata vars (`INSTANCE_NAME`, `INSTANCE_DESCRIPTION`, etc.)
+
+## Notes
+
+- Branding is **Misslite**.
+- Frontend CI builds from upstream Misskey + local patches, so patch validity is a critical quality gate.

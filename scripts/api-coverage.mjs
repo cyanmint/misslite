@@ -3,7 +3,7 @@
  * api-coverage.mjs
  *
  * Starts the worker via wrangler unstable_dev, creates a test admin account,
- * then probes every endpoint listed in api.json (Misskey OpenAPI spec).
+ * then probes every endpoint listed in specs/api.json (Misskey OpenAPI spec).
  *
  * Each endpoint is classified as one of four statuses:
  *
@@ -27,8 +27,8 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKER_DIR = resolve(__dirname, '..');
-const API_JSON   = resolve(__dirname, '../api.json');
-const ENDPOINT_INFO = resolve(__dirname, '../endpoint_info.json');
+const API_JSON   = resolve(__dirname, '../specs/api.json');
+const ENDPOINT_INFO = resolve(__dirname, '../specs/endpoint_info.json');
 
 // ── Load spec ─────────────────────────────────────────────────────────────────
 const apiSpec  = JSON.parse(readFileSync(API_JSON, 'utf-8'));
