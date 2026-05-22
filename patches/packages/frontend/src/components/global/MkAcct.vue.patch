@@ -1,9 +1,0 @@
-diff --git a/packages/frontend/src/components/global/MkAcct.vue b/packages/frontend/src/components/global/MkAcct.vue
-index ff794d9..c875a0d 100644
---- a/packages/frontend/src/components/global/MkAcct.vue
-+++ b/packages/frontend/src/components/global/MkAcct.vue
-@@ -15,3 +15,3 @@ import * as Misskey from 'misskey-js';
- import { toUnicode } from 'punycode.js';
--import { host as hostRaw } from '@@/js/config.js';
-+import { apiHost as hostRaw } from '@@/js/config.js';
- 

@@ -1,7 +1,7 @@
 diff --git a/packages/frontend-shared/js/config.ts b/packages/frontend-shared/js/config.ts
 --- a/packages/frontend-shared/js/config.ts
 +++ b/packages/frontend-shared/js/config.ts
-@@ -3,21 +3,35 @@
+@@ -3,21 +3,36 @@
   * SPDX-License-Identifier: AGPL-3.0-only
   */
  
@@ -17,8 +17,13 @@ diff --git a/packages/frontend-shared/js/config.ts b/packages/frontend-shared/js
 +return normalized.replace(/\/$/, '') + '/api';
 +};
 +
++const _apiOrigin = _configuredApiUrl
++? (/^https?:\/\//.test(_configuredApiUrl) ? _configuredApiUrl : `https://${_configuredApiUrl}`).replace(/\/$/, '')
++: window.location.origin;
++
  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
- const address = new URL(window.document.querySelector<HTMLMetaElement>('meta[property="instance_url"]')?.content || window.location.href);
+-const address = new URL(window.document.querySelector<HTMLMetaElement>('meta[property="instance_url"]')?.content || window.location.href);
++const address = new URL(window.document.querySelector<HTMLMetaElement>('meta[property="instance_url"]')?.content || _apiOrigin);
  const siteName = window.document.querySelector<HTMLMetaElement>('meta[property="og:site_name"]')?.content;
  
  export const host = address.host;
@@ -38,5 +43,3 @@ diff --git a/packages/frontend-shared/js/config.ts b/packages/frontend-shared/js
  export const debug = localStorage.getItem('debug') === 'true';
  export const isSafeMode = localStorage.getItem('isSafeMode') === 'true';
  export const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion)').matches;
-+
-+export const apiHost = (() => { try { return new URL(apiUrl).hostname; } catch { return hostname; } })();

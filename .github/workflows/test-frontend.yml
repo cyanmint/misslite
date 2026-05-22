@@ -60,8 +60,6 @@ jobs:
           grep -q "base: '/'" packages/frontend/vite.config.ts || { echo "FAIL: vite base not set to /"; exit 1; }
           test -f packages/frontend/public/config.js || { echo "FAIL: config.js missing"; exit 1; }
           test -f packages/frontend/public/app.webmanifest || { echo "FAIL: app.webmanifest missing"; exit 1; }
-          test -f packages/frontend/src/utility/domain-sanitize.ts || { echo "FAIL: domain-sanitize.ts missing"; exit 1; }
-          test -f scripts/copy-to-webroot.mjs || { echo "FAIL: copy-to-webroot.mjs missing"; exit 1; }
           echo "All patched files verified."
 
       - name: Install dependencies
@@ -80,10 +78,14 @@ jobs:
           corepack pnpm -F icons-subsetter build
           corepack pnpm -F frontend build
 
-      - name: Copy to webroot
+      - name: Collect build artifacts
         run: |
-          cd misskey-build
-          node scripts/copy-to-webroot.mjs
+          mkdir -p misskey-build/webroot
+          cp -r misskey-build/built/_frontend_vite_/. misskey-build/webroot/
+          cp misskey-build/built/_sw_dist_/sw.js misskey-build/webroot/sw.js
+          mkdir -p misskey-build/webroot/assets/locales
+          cp misskey-build/built/_frontend_dist_/locales/*.json misskey-build/webroot/assets/locales/
+          [ -d misskey-build/built/_frontend_dist_/fluent-emoji ] && cp -r misskey-build/built/_frontend_dist_/fluent-emoji misskey-build/webroot/fluent-emoji || true
 
       - name: Verify build output
         run: |
@@ -92,4 +94,5 @@ jobs:
           ls built/_frontend_vite_/scripts/*.js > /dev/null 2>&1 || { echo "FAIL: no JS bundles in vite output"; exit 1; }
           test -f webroot/index.html || { echo "FAIL: webroot/index.html not generated"; exit 1; }
           ls webroot/scripts/*.js > /dev/null 2>&1 || { echo "FAIL: no JS bundles in webroot"; exit 1; }
+          test -f webroot/assets/locales/en-US.*.json 2>/dev/null || ls webroot/assets/locales/*.json > /dev/null 2>&1 || { echo "FAIL: no locale files in webroot/assets/locales"; exit 1; }
           echo "Build output verified."

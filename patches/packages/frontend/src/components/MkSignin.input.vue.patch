@@ -1,9 +1,0 @@
-diff --git a/packages/frontend/src/components/MkSignin.input.vue b/packages/frontend/src/components/MkSignin.input.vue
-index 89ec637..7eaf9f2 100644
---- a/packages/frontend/src/components/MkSignin.input.vue
-+++ b/packages/frontend/src/components/MkSignin.input.vue
-@@ -59,3 +59,3 @@ import { toUnicode } from 'punycode.js';
- import { query, extractDomain } from '@@/js/url.js';
--import { host as configHost } from '@@/js/config.js';
-+import { apiHost as configHost } from '@@/js/config.js';
- import type { OpenOnRemoteOptions } from '@/utility/please-login.js';

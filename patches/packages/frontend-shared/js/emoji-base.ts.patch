@@ -1,9 +1,0 @@
-diff --git a/packages/frontend-shared/js/emoji-base.ts b/packages/frontend-shared/js/emoji-base.ts
-index 5fbbc4e..1151bfc 100644
---- a/packages/frontend-shared/js/emoji-base.ts
-+++ b/packages/frontend-shared/js/emoji-base.ts
-@@ -5,3 +5,3 @@
- 
--const twemojiSvgBase = '/twemoji';
-+const twemojiSvgBase = 'https://cdn.jsdelivr.net/npm/@discordapp/twemoji@16.0.1/dist/svg';
- const fluentEmojiPngBase = '/fluent-emoji';

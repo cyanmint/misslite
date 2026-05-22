@@ -64,10 +64,33 @@ jobs:
           corepack pnpm -F icons-subsetter build
           corepack pnpm -F frontend build
 
-      - name: Copy to webroot
+      - name: Collect build artifacts
         run: |
-          cd misskey-build
-          node scripts/copy-to-webroot.mjs
+          mkdir -p misskey-build/webroot
+          # Vite frontend output (index.html, scripts/, assets/, manifest.json)
+          cp -r misskey-build/built/_frontend_vite_/. misskey-build/webroot/
+          # Service worker
+          cp misskey-build/built/_sw_dist_/sw.js misskey-build/webroot/sw.js
+          # Locales at /assets/locales/ to match original Misskey path (no patch needed)
+          mkdir -p misskey-build/webroot/assets/locales
+          cp misskey-build/built/_frontend_dist_/locales/*.json misskey-build/webroot/assets/locales/
+          # Fluent emoji
+          [ -d misskey-build/built/_frontend_dist_/fluent-emoji ] && cp -r misskey-build/built/_frontend_dist_/fluent-emoji misskey-build/webroot/fluent-emoji || true
+          # Frontend client assets
+          [ -d misskey-build/built/_frontend_dist_/client ] && cp -r misskey-build/built/_frontend_dist_/client misskey-build/webroot/client || true
+          # Static frontend assets (bubble game images, etc.)
+          [ -d misskey-build/packages/frontend/assets ] && cp -r misskey-build/packages/frontend/assets misskey-build/webroot/client-assets || true
+          # Favicon and icons from backend
+          [ -f misskey-build/packages/backend/assets/favicon.ico ] && cp misskey-build/packages/backend/assets/favicon.ico misskey-build/webroot/favicon.ico || true
+          [ -f misskey-build/packages/backend/assets/apple-touch-icon.png ] && cp misskey-build/packages/backend/assets/apple-touch-icon.png misskey-build/webroot/apple-touch-icon.png || true
+          [ -d misskey-build/packages/backend/assets/icons ] && cp -r misskey-build/packages/backend/assets/icons misskey-build/webroot/icons || true
+
+      - name: Download twemoji
+        run: |
+          npm install --prefix /tmp/twemoji-pkg --no-package-lock --no-save @discordapp/twemoji@16.0.1
+          SVG_DIR=$(find /tmp/twemoji-pkg/node_modules/@discordapp/twemoji -type d -name svg | head -1)
+          mkdir -p misskey-build/webroot/twemoji
+          cp -r "$SVG_DIR"/. misskey-build/webroot/twemoji/
 
       - name: Prepare pages output
         run: |
