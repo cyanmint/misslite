@@ -1,7 +1,7 @@
 diff --git a/packages/frontend-shared/js/config.ts b/packages/frontend-shared/js/config.ts
 --- a/packages/frontend-shared/js/config.ts
 +++ b/packages/frontend-shared/js/config.ts
-@@ -3,21 +3,36 @@
+@@ -3,21 +3,37 @@
   * SPDX-License-Identifier: AGPL-3.0-only
   */
  
