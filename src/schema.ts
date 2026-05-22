@@ -417,11 +417,33 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_1on1 ON chat_messages(from_user_id,
 CREATE INDEX IF NOT EXISTS idx_chat_messages_to_user ON chat_messages(to_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_room ON chat_messages(to_room_id, created_at DESC);
 `;
-export async function ensureSchema(db: D1Database): Promise<void> {
+const schemaInitPromises = new WeakMap<D1Database, Promise<void>>();
+
+async function applySchema(db: D1Database): Promise<void> {
 	const statements = SCHEMA.split(';').map(s => s.trim()).filter(Boolean);
 	for (const sql of statements) {
 		await db.prepare(sql).run();
 	}
 	try { await db.prepare('ALTER TABLE users ADD COLUMN is_bot INTEGER NOT NULL DEFAULT 0').run(); } catch {}
 	try { await db.prepare('ALTER TABLE users ADD COLUMN is_cat INTEGER NOT NULL DEFAULT 0').run(); } catch {}
+}
+
+export async function ensureSchema(db: D1Database): Promise<void> {
+	const existing = schemaInitPromises.get(db);
+	if (existing) {
+		await existing;
+		return;
+	}
+
+	const pending = applySchema(db);
+	schemaInitPromises.set(db, pending);
+
+	try {
+		await pending;
+	} catch (error) {
+		if (schemaInitPromises.get(db) === pending) {
+			schemaInitPromises.delete(db);
+		}
+		throw error;
+	}
 }
