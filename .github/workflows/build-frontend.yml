@@ -93,13 +93,6 @@ jobs:
           mkdir -p misskey-build/webroot/twemoji
           cp -r "$SVG_DIR"/. misskey-build/webroot/twemoji/
 
-      - name: Prepare pages output
-        run: |
-          cd misskey-build/webroot
-          touch .nojekyll
-          cp index.html 404.html
-          echo misslite-cf.cyanmint.net > CNAME
-
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
