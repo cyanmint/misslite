@@ -1,9 +1,8 @@
 diff --git a/packages/frontend/index.html b/packages/frontend/index.html
 new file mode 100644
-index 0000000..e18b145
 --- /dev/null
 +++ b/packages/frontend/index.html
-@@ -0,0 +1,313 @@
+@@ -0,0 +1,126 @@
 +<!DOCTYPE html>
 +<!--
 +SPDX-FileCopyrightText: syuilo and misskey-project
@@ -22,17 +21,6 @@ index 0000000..e18b145
 +<link rel="icon" href="/favicon.ico">
 +<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 +<link rel="manifest" href="/app.webmanifest">
-+<script>
-+// Normalize URL format: /?domain should be treated as / with ?domain query string
-+(function() {
-+const pathname = window.location.pathname;
-+if (pathname.startsWith('/?') && pathname.length > 2) {
-+const domain = pathname.substring(2);
-+const newUrl = window.location.origin + '/?' + domain + window.location.hash;
-+window.history.replaceState({}, '', newUrl);
-+}
-+})();
-+</script>
 +<script src="/config.js"></script>
 +<title>Misslite</title>
 +<style id="splash-style">
@@ -40,119 +28,13 @@ index 0000000..e18b145
 +background: #86b300;
 +}
 +</style>
-+<style id="landing-style">
-+#server-select-landing {
-+display: none;
-+position: fixed;
-+top: 0;
-+left: 0;
-+width: 100%;
-+height: 100%;
-+background: #86b300;
-+z-index: 9999;
-+flex-direction: column;
-+align-items: center;
-+justify-content: center;
-+font-family: 'Helvetica Neue', Arial, sans-serif;
-+box-sizing: border-box;
-+padding: 24px;
-+}
-+.misslite-card {
-+background: #fff;
-+border-radius: 16px;
-+padding: 40px 36px;
-+max-width: 440px;
-+width: 100%;
-+box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-+text-align: center;
-+box-sizing: border-box;
-+}
-+.misslite-title {
-+font-size: 28px;
-+font-weight: 700;
-+color: #86b300;
-+margin: 0 0 6px;
-+letter-spacing: -0.5px;
-+}
-+.misslite-subtitle {
-+color: #888;
-+font-size: 14px;
-+margin: 0 0 28px;
-+line-height: 1.5;
-+}
-+.misslite-error {
-+display: none;
-+background: #fff0f0;
-+color: #c33;
-+font-size: 13px;
-+text-align: left;
-+border-radius: 8px;
-+padding: 10px 14px;
-+margin: 0 0 16px;
-+line-height: 1.5;
-+word-break: break-word;
-+}
-+.misslite-input-row {
-+display: flex;
-+gap: 8px;
-+}
-+#misslite-server-input {
-+flex: 1;
-+padding: 11px 14px;
-+border: 2px solid #e0e0e0;
-+border-radius: 8px;
-+font-size: 15px;
-+outline: none;
-+transition: border-color 0.2s;
-+min-width: 0;
-+color: #333;
-+}
-+#misslite-server-input:focus {
-+border-color: #86b300;
-+}
-+#misslite-connect-btn {
-+padding: 11px 22px;
-+background: #86b300;
-+color: #fff;
-+border: none;
-+border-radius: 8px;
-+font-size: 15px;
-+font-weight: 600;
-+cursor: pointer;
-+white-space: nowrap;
-+transition: background 0.15s;
-+}
-+#misslite-connect-btn:hover {
-+background: #6d9400;
-+}
-+#misslite-connect-btn:active {
-+background: #5a7b00;
-+}
-+.misslite-hint {
-+color: #bbb;
-+font-size: 12px;
-+margin: 12px 0 0;
-+line-height: 1.5;
-+}
-+</style>
 +<script>
-+// Apply default theme immediately, using domain-scoped localStorage keys when a
-+// server domain is present in the query string (e.g. /?misskey.io).
++// Apply default theme immediately to avoid flash of unstyled content.
 +(function() {
-+var _qs = (window.location.search || '').slice(1).trim();
-+var _dk = _qs ? _qs.replace(/[^a-zA-Z0-9.-]/g, '_') : '';
-+var _get = function(k) {
-+if (_dk) { var v = localStorage.getItem(_dk + '::' + k); if (v !== null) return v; }
-+return localStorage.getItem(k);
-+};
-+var _removeCacheMarker = function(k) {
-+if (_dk) localStorage.removeItem(_dk + '::' + k);
-+else localStorage.removeItem(k);
-+};
 +// Always force runtime theme regeneration to avoid stale/incomplete cached
 +// variable sets from older sessions that can leave menus partially unstyled.
-+_removeCacheMarker('themeCachedVersion');
-+const colorScheme = _get('colorScheme') || 'light';
++localStorage.removeItem('themeCachedVersion');
++const colorScheme = localStorage.getItem('colorScheme') || 'light';
 +document.documentElement.setAttribute('data-color-scheme', colorScheme);
 +document.documentElement.style.setProperty('color-scheme', colorScheme);
 +const defaultLightTheme = {
@@ -200,7 +82,7 @@ index 0000000..e18b145
 +const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 +if (themeColorMeta) themeColorMeta.setAttribute('content', defaultTheme.htmlThemeColor);
 +const loadCustomTheme = () => {
-+const theme = _get('theme');
++const theme = localStorage.getItem('theme');
 +if (theme) {
 +try {
 +const themeObj = JSON.parse(theme);
@@ -212,18 +94,18 @@ index 0000000..e18b145
 +themeColorMeta.setAttribute('content', themeObj.htmlThemeColor);
 +}
 +} else {
-+_removeCacheMarker('themeId');
-+_removeCacheMarker('themeCachedVersion');
++localStorage.removeItem('themeId');
++localStorage.removeItem('themeCachedVersion');
 +}
 +} catch (e) {
 +console.warn('Failed to apply cached theme:', e);
-+_removeCacheMarker('themeId');
-+_removeCacheMarker('themeCachedVersion');
++localStorage.removeItem('themeId');
++localStorage.removeItem('themeCachedVersion');
 +}
 +} else {
 +// Force runtime theme initialization when cache payload is missing.
-+_removeCacheMarker('themeId');
-+_removeCacheMarker('themeCachedVersion');
++localStorage.removeItem('themeId');
++localStorage.removeItem('themeCachedVersion');
 +}
 +};
 +loadCustomTheme();
@@ -241,79 +123,9 @@ index 0000000..e18b145
 +</svg>
 +</div>
 +</div>
-+<div id="server-select-landing">
-+<div class="misslite-card">
-+<p class="misslite-title">🌿 Misslite</p>
-+<p class="misslite-subtitle">A lightweight Misskey frontend.<br>Enter your server's domain to get started.</p>
-+<p id="misslite-server-error" class="misslite-error"></p>
-+<div class="misslite-input-row">
-+<input id="misslite-server-input" type="text" placeholder="misskey.io" autocomplete="off" spellcheck="false" inputmode="url" />
-+<button id="misslite-connect-btn" type="button">Connect</button>
-+</div>
-+<p class="misslite-hint">Examples: misskey.io &middot; sushi.ski &middot; calckey.jp</p>
-+</div>
-+</div>
 +<div id="misskey_app"></div>
 +<script type="module">
-+// Misslite boot: show server-selection landing page when no server is configured,
-+// or when the configured server fails to respond within the timeout.
-+const _qd = (window.location.search || '').slice(1).trim();
-+const _cfg = window.MISSKEY_CONFIG || {};
-+const _currentDomain = _qd.replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
-+
-+// Wire up the landing page connect button and input (shared for both entry paths).
-+function _initLanding(errorMsg) {
-+document.getElementById('splash').style.display = 'none';
-+document.getElementById('server-select-landing').style.display = 'flex';
-+const _input = document.getElementById('misslite-server-input');
-+const _errEl = document.getElementById('misslite-server-error');
-+if (errorMsg) {
-+_errEl.textContent = errorMsg;
-+_errEl.style.display = 'block';
-+}
-+function _connect() {
-+const _raw = (_input.value || '').trim();
-+const _domain = _raw.replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
-+if (!_domain) {
-+_errEl.textContent = 'Please enter a server address.';
-+_errEl.style.display = 'block';
-+_input.focus();
-+return;
-+}
-+window.location.href = window.location.origin + '/?' + _domain;
-+}
-+document.getElementById('misslite-connect-btn').addEventListener('click', _connect);
-+_input.addEventListener('keydown', function(e) { if (e.key === 'Enter') _connect(); });
-+_input.focus();
-+}
-+
-+if (!_qd && !_cfg.defaultApiUrl) {
-+// No server configured — show landing page immediately without loading Vue.
-+_initLanding(null);
-+} else {
-+// Server is configured — boot the app.
-+// Safety net: if Vue hasn't mounted anything after 10 s, assume the server is
-+// unreachable and show the landing page with an informational error message.
-+const _appEl = document.getElementById('misskey_app');
-+const _timeoutId = setTimeout(function() {
-+if (!_appEl.firstChild) {
-+const _msg = _currentDomain
-+? 'Could not connect to \u2018' + _currentDomain + '\u2019. The server may be unavailable or the address may be incorrect.'
-+: 'Could not connect to the server. Please check the address and try again.';
-+if (_currentDomain) document.getElementById('misslite-server-input').value = _currentDomain;
-+_initLanding(_msg);
-+}
-+}, 10000);
-+// Cancel the timeout once Vue mounts (first child appended to #misskey_app).
-+const _obs = new MutationObserver(function() {
-+if (_appEl.firstChild) {
-+clearTimeout(_timeoutId);
-+_obs.disconnect();
-+}
-+});
-+_obs.observe(_appEl, { childList: true });
 +import('./src/_boot_.ts');
-+}
 +</script>
 +</body>
 +</html>
