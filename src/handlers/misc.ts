@@ -498,7 +498,7 @@ export const requestResetPassword: Handler = async (db, body, env) => {
 		if (env.SEND_EMAIL) {
 			try {
 				const instanceName = await getMeta(db, 'name') ?? env.INSTANCE_NAME ?? 'Misslite';
-				const from = env.SEND_EMAIL_FROM ?? 'noreply@misslite.example';
+				const from = (await getMeta(db, 'email')) ?? env.SEND_EMAIL_FROM ?? 'noreply@misslite.example';
 				await sendWorkerEmail(env.SEND_EMAIL, {
 					to: email,
 					from,

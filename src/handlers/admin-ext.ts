@@ -361,7 +361,7 @@ export const adminSendEmail: Handler = async (db, body, env) => {
 	if (!text && !html) return err('text or html required');
 	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return err('Invalid to email address format');
 	if (replyTo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(replyTo)) return err('Invalid replyTo email address format');
-	const from = env.SEND_EMAIL_FROM ?? 'noreply@misslite.example';
+	const from = (await getMeta(db, 'email')) ?? env.SEND_EMAIL_FROM ?? 'noreply@misslite.example';
 	const fromName = (await getMeta(db, 'name')) ?? env.INSTANCE_NAME ?? 'Misslite';
 	try {
 		await sendWorkerEmail(env.SEND_EMAIL, {
