@@ -21,12 +21,13 @@ async function getUserProfile(db: D1Database, userId: string): Promise<UserProfi
 	}
 }
 
-async function saveUserProfile(db: D1Database, userId: string, patch: UserProfileData): Promise<void> {
+async function saveUserProfile(db: D1Database, userId: string, patch: UserProfileData): Promise<UserProfileData> {
 	const current = await getUserProfile(db, userId);
 	const next = { ...current, ...patch };
 	await db.prepare(
 		'INSERT INTO user_profiles (user_id, data, updated_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at'
 	).bind(userId, JSON.stringify(next), new Date().toISOString()).run();
+	return next;
 }
 
 function applyProfileToPacked(packed: Record<string, unknown>, profile: UserProfileData, isSelf = false): Record<string, unknown> {
@@ -66,10 +67,13 @@ export const currentUser: Handler = async (db, body) => {
  * Build the full MeDetailed response for an authenticated user:
  * packSelf + profile settings + pinned notes + live counts.
  * Used by currentUser, updateUser, iUpdateEmail, iPin, iUnpin.
+ *
+ * Pass `profileOverride` to skip re-reading user_profiles from D1 (avoids
+ * read-after-write staleness when the caller just saved the profile).
  */
-export async function packCurrentUser(db: D1Database, u: DbUser, token: string): Promise<Record<string, unknown>> {
+export async function packCurrentUser(db: D1Database, u: DbUser, token: string, profileOverride?: UserProfileData): Promise<Record<string, unknown>> {
 	const packed = packSelf(u, token);
-	const profile = await getUserProfile(db, u.id);
+	const profile = profileOverride ?? await getUserProfile(db, u.id);
 	applyProfileToPacked(packed, profile, true);
 	// Live counts
 	const [notesRow, followingRow, followersRow] = await Promise.all([
@@ -174,8 +178,9 @@ export const updateUser: Handler = async (db, body, _env, request) => {
 	for (const key of profileKeys) {
 		if (key in body) profilePatch[key] = body[key] as unknown;
 	}
+	let savedProfile: UserProfileData | undefined;
 	if (Object.keys(profilePatch).length > 0) {
-		await saveUserProfile(db, u.id, profilePatch);
+		savedProfile = await saveUserProfile(db, u.id, profilePatch);
 	}
 
 	// Bulk-replace pinned notes when caller provides `pinned` array
@@ -194,7 +199,8 @@ export const updateUser: Handler = async (db, body, _env, request) => {
 
 	const updated = await db.prepare('SELECT * FROM users WHERE id = ?').bind(u.id).first<DbUser>();
 	const token = (body.i ?? body.token ?? '') as string;
-	return json(await packCurrentUser(db, updated!, token));
+	// Pass savedProfile to avoid reading potentially-stale data from a D1 replica
+	return json(await packCurrentUser(db, updated!, token, savedProfile));
 };
 
 export const showUser: Handler = async (db, body) => {
