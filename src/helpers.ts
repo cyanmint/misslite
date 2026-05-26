@@ -2,6 +2,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+// @ts-ignore — cloudflare:email is a Cloudflare Workers built-in module
+import { EmailMessage } from 'cloudflare:email';
+
 import type { DbUser, DbNote } from './types.js';
 
 export function generateId(): string {
@@ -231,6 +234,8 @@ export function packSelf(u: DbUser, token: string): Record<string, unknown> {
 	return {
 		...packUser(u, true),
 		token,
+		email: u.email ?? null,
+		emailVerified: false,
 		twoFactorEnabled: false,
 		twoFactorBackupCodesStock: 'none',
 		usePasswordLessLogin: false,
@@ -262,6 +267,7 @@ export function packSelf(u: DbUser, token: string): Record<string, unknown> {
 		autoAcceptFollowed: false,
 		noCrawle: false,
 		preventAiLearning: false,
+		noIndex: false,
 		showMediaInAllLanguages: false,
 		showHashtagsInAllLanguages: false,
 		postingLang: null,
@@ -416,7 +422,9 @@ export async function sendWorkerEmail(binding: SendEmailBinding, opts: WorkerEma
 	const { to, from, fromName, subject, text, html, replyTo } = opts;
 	const contentType = html ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8';
 	const fromHeader = fromName ? `${fromName} <${from}>` : from;
+	const date = new Date().toUTCString();
 	const headerLines = [
+		`Date: ${date}`,
 		`From: ${fromHeader}`,
 		`To: ${to}`,
 		`Subject: ${subject}`,
@@ -427,14 +435,8 @@ export async function sendWorkerEmail(binding: SendEmailBinding, opts: WorkerEma
 	const payload = html ?? text ?? '';
 	const raw = `${headerLines.join('\r\n')}\r\n\r\n${payload}`;
 
-	const { readable, writable } = new TransformStream();
-	const writer = writable.getWriter();
-	await writer.write(new TextEncoder().encode(raw));
-	await writer.close();
-
-	// @ts-ignore — cloudflare:email is a Cloudflare Workers runtime module
-	const { EmailMessage } = await import('cloudflare:email');
-	const message = new EmailMessage(from, to, readable);
+	// @ts-ignore — EmailMessage is statically imported from cloudflare:email above
+	const message = new EmailMessage(from, to, raw);
 	await binding.send(message);
 }
 
