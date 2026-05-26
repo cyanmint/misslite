@@ -93,6 +93,9 @@ jobs:
           mkdir -p misskey-build/webroot/twemoji
           cp -r "$SVG_DIR"/. misskey-build/webroot/twemoji/
 
+      - name: 404 hack
+        run: mv misskey-build/webroot/index.html misskey-build/webroot/404.html
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
