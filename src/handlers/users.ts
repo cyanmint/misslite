@@ -4,8 +4,9 @@
 
 import type { Handler } from '../types.js';
 import type { DbUser, DbDriveFile } from '../types.js';
-import { json, err, packUser, packSelf, requireUser, getUserRoles } from '../helpers.js';
+import { json, err, packUser, packSelf, packNote, requireUser, getUserRoles } from '../helpers.js';
 import { getUser } from '../helpers.js';
+import type { DbNote } from '../types.js';
 
 type UserProfileData = Record<string, unknown>;
 
@@ -38,6 +39,7 @@ function applyProfileToPacked(packed: Record<string, unknown>, profile: UserProf
 		'mutedWords', 'hardMutedWords', 'mutedInstances', 'notificationRecieveConfig', 'notificationReceiveConfig',
 		'emailNotificationTypes', 'alsoKnownAs', 'requireSigninToViewContents',
 		'makeNotesFollowersOnlyBefore', 'makeNotesHiddenBefore', 'avatarDecorations', 'noIndex',
+		'twoFactorEnabled', 'usePasswordLessLogin', 'securityKeys',
 	];
 	for (const key of mappedKeys) {
 		if (key in profile) packed[key] = profile[key];
@@ -47,6 +49,8 @@ function applyProfileToPacked(packed: Record<string, unknown>, profile: UserProf
 		delete packed.hideOnlineStatus;
 		delete packed.notificationRecieveConfig;
 		delete packed.emailNotificationTypes;
+		delete packed.usePasswordLessLogin;
+		delete packed.securityKeys;
 	}
 	return packed;
 }
@@ -55,10 +59,40 @@ export const currentUser: Handler = async (db, body) => {
 	const u = await requireUser(db, body);
 	if (u instanceof Response) return u;
 	const token = (body.i ?? body.token ?? '') as string;
+	return json(await packCurrentUser(db, u, token));
+};
+
+/**
+ * Build the full MeDetailed response for an authenticated user:
+ * packSelf + profile settings + pinned notes + live counts.
+ * Used by currentUser, updateUser, iUpdateEmail, iPin, iUnpin.
+ */
+export async function packCurrentUser(db: D1Database, u: DbUser, token: string): Promise<Record<string, unknown>> {
 	const packed = packSelf(u, token);
 	const profile = await getUserProfile(db, u.id);
-	return json(applyProfileToPacked(packed, profile, true));
-};
+	applyProfileToPacked(packed, profile, true);
+	// Live counts
+	const [notesRow, followingRow, followersRow] = await Promise.all([
+		db.prepare('SELECT COUNT(*) as c FROM notes WHERE user_id = ?').bind(u.id).first<{ c: number }>(),
+		db.prepare('SELECT COUNT(*) as c FROM following WHERE follower_id = ?').bind(u.id).first<{ c: number }>(),
+		db.prepare('SELECT COUNT(*) as c FROM following WHERE followee_id = ?').bind(u.id).first<{ c: number }>(),
+	]);
+	packed.notesCount = notesRow?.c ?? 0;
+	packed.followingCount = followingRow?.c ?? 0;
+	packed.followersCount = followersRow?.c ?? 0;
+	// Pinned notes
+	const pinnedRows = await db.prepare(
+		'SELECT note_id FROM pinned_notes WHERE user_id = ? ORDER BY created_at DESC LIMIT 5'
+	).bind(u.id).all<{ note_id: string }>();
+	const pinnedIds = (pinnedRows.results ?? []).map(r => r.note_id);
+	packed.pinnedNoteIds = pinnedIds;
+	const pinnedNotes = await Promise.all(pinnedIds.map(async id => {
+		const note = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(id).first<DbNote>();
+		return note ? packNote(db, note) : null;
+	}));
+	packed.pinnedNotes = pinnedNotes.filter(Boolean);
+	return packed;
+}
 
 export const updateUser: Handler = async (db, body, _env, request) => {
 	const u = await requireUser(db, body);
@@ -144,11 +178,23 @@ export const updateUser: Handler = async (db, body, _env, request) => {
 		await saveUserProfile(db, u.id, profilePatch);
 	}
 
+	// Bulk-replace pinned notes when caller provides `pinned` array
+	if (Array.isArray(body.pinned)) {
+		const noteIds = (body.pinned as unknown[]).filter((id): id is string => typeof id === 'string').slice(0, 5);
+		await db.prepare('DELETE FROM pinned_notes WHERE user_id = ?').bind(u.id).run();
+		for (const noteId of noteIds) {
+			const noteRow = await db.prepare('SELECT id FROM notes WHERE id = ? AND user_id = ?').bind(noteId, u.id).first<{ id: string }>();
+			if (noteRow) {
+				try {
+					await db.prepare('INSERT INTO pinned_notes (id, user_id, note_id) VALUES (?, ?, ?)').bind(generateId(), u.id, noteId).run();
+				} catch { /* ignore duplicate */ }
+			}
+		}
+	}
+
 	const updated = await db.prepare('SELECT * FROM users WHERE id = ?').bind(u.id).first<DbUser>();
 	const token = (body.i ?? body.token ?? '') as string;
-	const packed = packSelf(updated!, token);
-	const profile = await getUserProfile(db, u.id);
-	return json(applyProfileToPacked(packed, profile, true));
+	return json(await packCurrentUser(db, updated!, token));
 };
 
 export const showUser: Handler = async (db, body) => {
@@ -236,6 +282,26 @@ export const showUser: Handler = async (db, body) => {
 	const roles = await getUserRoles(db, user.id);
 	const result = applyProfileToPacked(packed, profile, false);
 	result.roles = roles;
+	// Live counts
+	const [notesRow, followingRow, followersRow] = await Promise.all([
+		db.prepare('SELECT COUNT(*) as c FROM notes WHERE user_id = ?').bind(user.id).first<{ c: number }>(),
+		db.prepare('SELECT COUNT(*) as c FROM following WHERE follower_id = ?').bind(user.id).first<{ c: number }>(),
+		db.prepare('SELECT COUNT(*) as c FROM following WHERE followee_id = ?').bind(user.id).first<{ c: number }>(),
+	]);
+	result.notesCount = notesRow?.c ?? 0;
+	result.followingCount = followingRow?.c ?? 0;
+	result.followersCount = followersRow?.c ?? 0;
+	// Pinned notes
+	const pinnedRows = await db.prepare(
+		'SELECT note_id FROM pinned_notes WHERE user_id = ? ORDER BY created_at DESC LIMIT 5'
+	).bind(user.id).all<{ note_id: string }>();
+	const pinnedIds = (pinnedRows.results ?? []).map(r => r.note_id);
+	result.pinnedNoteIds = pinnedIds;
+	const pinnedNotes = await Promise.all(pinnedIds.map(async id => {
+		const note = await db.prepare('SELECT * FROM notes WHERE id = ?').bind(id).first<DbNote>();
+		return note ? packNote(db, note) : null;
+	}));
+	result.pinnedNotes = pinnedNotes.filter(Boolean);
 	return json(result);
 };
 

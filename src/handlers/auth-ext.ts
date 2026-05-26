@@ -5,6 +5,7 @@
 import type { Handler } from '../types.js';
 import type { DbUser } from '../types.js';
 import { json, err, requireUser, getUser, packUser, packSelf, generateId } from '../helpers.js';
+import { packCurrentUser } from './users.js';
 
 const noContent = (): Response =>
 	new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
@@ -231,5 +232,5 @@ export const iUpdateEmail: Handler = async (db, body) => {
 	await db.prepare('UPDATE users SET email = ? WHERE id = ?').bind(email, u.id).run();
 	const updated = await db.prepare('SELECT * FROM users WHERE id = ?').bind(u.id).first<DbUser>();
 	const token = (body.i ?? body.token ?? '') as string;
-	return json(packSelf(updated ?? u, token));
+	return json(await packCurrentUser(db, updated ?? u, token));
 };

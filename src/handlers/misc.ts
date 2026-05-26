@@ -5,6 +5,7 @@
 import type { Handler } from '../types.js';
 import type { DbNotification, DbUser, DbNote, DbAnnouncement, DbSwSubscription, DbPasswordResetToken } from '../types.js';
 import { json, err, generateId, requireUser, getUser, packUser, packNote, getMeta, setMeta, hashPassword, DEFAULT_POLICIES, sendWorkerEmail } from '../helpers.js';
+import { packCurrentUser } from './users.js';
 
 export const emojis: Handler = async () => json({ emojis: [] });
 
@@ -293,8 +294,7 @@ await db.prepare('INSERT INTO pinned_notes (id, user_id, note_id) VALUES (?, ?, 
 .bind(generateId(), u.id, noteId).run();
 } catch { /* already pinned */ }
 const token = (body.i ?? body.token ?? '') as string;
-const { packSelf } = await import('../helpers.js');
-return json(packSelf(u, token));
+return json(await packCurrentUser(db, u, token));
 };
 
 export const iUnpin: Handler = async (db, body) => {
@@ -304,8 +304,7 @@ const noteId = (body.noteId ?? '') as string;
 if (!noteId) return err('noteId required');
 await db.prepare('DELETE FROM pinned_notes WHERE user_id = ? AND note_id = ?').bind(u.id, noteId).run();
 const token = (body.i ?? body.token ?? '') as string;
-const { packSelf } = await import('../helpers.js');
-return json(packSelf(u, token));
+return json(await packCurrentUser(db, u, token));
 };
 
 export const iDeleteAccount: Handler = async (db, body) => {
