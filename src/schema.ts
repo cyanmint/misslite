@@ -426,6 +426,8 @@ async function applySchema(db: D1Database): Promise<void> {
 	}
 	try { await db.prepare('ALTER TABLE users ADD COLUMN is_bot INTEGER NOT NULL DEFAULT 0').run(); } catch {}
 	try { await db.prepare('ALTER TABLE users ADD COLUMN is_cat INTEGER NOT NULL DEFAULT 0').run(); } catch {}
+	try { await db.prepare('ALTER TABLE users ADD COLUMN email TEXT').run(); } catch {}
+	try { await db.prepare('ALTER TABLE users ADD COLUMN banner_url TEXT').run(); } catch {}
 }
 
 export async function ensureSchema(db: D1Database): Promise<void> {

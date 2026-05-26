@@ -69,8 +69,10 @@ export async function verifyPassword(pw: string, stored: string): Promise<boolea
 export function cors(headers?: HeadersInit): Headers {
 	const h = new Headers(headers);
 	h.set('Access-Control-Allow-Origin', '*');
-	h.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-	h.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+	h.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+	h.set('Access-Control-Allow-Headers', '*');
+	h.set('Access-Control-Expose-Headers', '*');
+	h.set('Access-Control-Max-Age', '86400');
 	return h;
 }
 
@@ -147,7 +149,7 @@ export function packUser(u: DbUser, detail = false): Record<string, unknown> {
 		packed.followersCount = 0;
 		packed.followingCount = 0;
 		packed.notesCount = 0;
-		packed.bannerUrl = null;
+		packed.bannerUrl = u.banner_url ?? null;
 		packed.bannerBlurhash = null;
 		packed.fields = [];
 		packed.verifiedLinks = [];

@@ -96,6 +96,32 @@ export const updateUser: Handler = async (db, body, _env, request) => {
 	}
 	if (body.avatarId === null) { sets.push('avatar_url = ?'); vals.push(null); }
 
+	if (typeof body.bannerUrl === 'string') { sets.push('banner_url = ?'); vals.push(body.bannerUrl); }
+	if (typeof body.bannerId === 'string' && body.bannerId) {
+		const file = await db.prepare('SELECT * FROM drive_files WHERE id = ? AND user_id = ?').bind(body.bannerId, u.id).first<DbDriveFile>();
+		if (file) {
+			let origin = '';
+			if (request) {
+				try {
+					origin = new URL(request.url).origin;
+				} catch {
+					origin = '';
+				}
+			}
+			const validR2Key = file.r2_key && /^(files\/)?[0-9a-z]+\/[0-9a-z]+$/i.test(file.r2_key);
+			const publicPath = validR2Key && file.r2_key
+				? (file.r2_key.startsWith('files/') ? file.r2_key.slice('files/'.length) : file.r2_key)
+				: null;
+			const fallbackUrl = (!file.url && publicPath && origin) ? `${origin}/files/${publicPath}` : null;
+			const bannerUrl = file.url ?? fallbackUrl;
+			if (bannerUrl) {
+				sets.push('banner_url = ?');
+				vals.push(bannerUrl);
+			}
+		}
+	}
+	if (body.bannerId === null) { sets.push('banner_url = ?'); vals.push(null); }
+
 	if (sets.length > 0) {
 		vals.push(u.id);
 		await db.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...vals).run();

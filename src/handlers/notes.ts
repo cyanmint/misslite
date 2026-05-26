@@ -157,14 +157,14 @@ export const timeline: Handler = async (db, body) => {
 
 	if (untilId) {
 		const ref = await db.prepare('SELECT created_at FROM notes WHERE id = ?').bind(untilId).first<{ created_at: string }>();
-		if (ref) { sql += ' AND created_at < ?'; params.push(ref.created_at); }
+		if (ref) { sql += ' AND n.created_at < ?'; params.push(ref.created_at); }
 	}
 	if (sinceId) {
 		const ref = await db.prepare('SELECT created_at FROM notes WHERE id = ?').bind(sinceId).first<{ created_at: string }>();
-		if (ref) { sql += ' AND created_at > ?'; params.push(ref.created_at); }
+		if (ref) { sql += ' AND n.created_at > ?'; params.push(ref.created_at); }
 	}
 
-	sql += ' ORDER BY created_at DESC LIMIT ?';
+	sql += ' ORDER BY n.created_at DESC LIMIT ?';
 	params.push(limit);
 
 	const notes = await db.prepare(sql).bind(...params).all<DbNote>();
