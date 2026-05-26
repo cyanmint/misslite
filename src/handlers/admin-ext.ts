@@ -373,8 +373,9 @@ export const adminSendEmail: Handler = async (db, body, env) => {
 			...(replyTo ? { replyTo } : {}),
 		});
 		return json({});
-	} catch {
-		return err('Failed to send email', 502);
+	} catch (e: unknown) {
+		const msg = e instanceof Error ? e.message : String(e);
+		return err(`Failed to send email: ${msg}`, 502);
 	}
 };
 
