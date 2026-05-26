@@ -435,10 +435,13 @@ export async function sendWorkerEmail(binding: SendEmailBinding, opts: WorkerEma
 	const payload = html ?? text ?? '';
 	const raw = `${headerLines.join('\r\n')}\r\n\r\n${payload}`;
 
-	const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
-	const writer = writable.getWriter();
-	await writer.write(new TextEncoder().encode(raw));
-	await writer.close();
+	const encoded = new TextEncoder().encode(raw);
+	const readable = new ReadableStream({
+		start(controller) {
+			controller.enqueue(encoded);
+			controller.close();
+		},
+	});
 
 	// @ts-ignore — EmailMessage is statically imported from cloudflare:email above
 	const message = new EmailMessage(from, to, readable);
