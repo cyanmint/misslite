@@ -199,6 +199,44 @@ it('i/update persists extended profile settings', async () => {
 	expect(data.canChat).toBe(true);
 });
 
+it('i/update persists privacy settings', async () => {
+	await callApi('i/update', {
+		i: adminToken,
+		isLocked: true,
+		isExplorable: false,
+		publicReactions: false,
+		followingVisibility: 'followers',
+		followersVisibility: 'followers',
+		hideOnlineStatus: true,
+		noCrawle: true,
+		preventAiLearning: true,
+		requireSigninToViewContents: true,
+	});
+	const { data } = await callApi('i', { i: adminToken });
+	expect(data.isLocked).toBe(true);
+	expect(data.isExplorable).toBe(false);
+	expect(data.publicReactions).toBe(false);
+	expect(data.followingVisibility).toBe('followers');
+	expect(data.followersVisibility).toBe('followers');
+	expect(data.hideOnlineStatus).toBe(true);
+	expect(data.noCrawle).toBe(true);
+	expect(data.preventAiLearning).toBe(true);
+	expect(data.requireSigninToViewContents).toBe(true);
+});
+
+it('i/update persists email notification settings', async () => {
+	await callApi('i/update', {
+		i: adminToken,
+		emailNotificationTypes: ['follow', 'mention', 'reply'],
+		receiveAnnouncementEmail: true,
+		notificationReceiveConfig: { follow: { type: 'all' } },
+	});
+	const { data } = await callApi('i', { i: adminToken });
+	expect(data.emailNotificationTypes).toEqual(['follow', 'mention', 'reply']);
+	expect(data.receiveAnnouncementEmail).toBe(true);
+	expect(data.notificationReceiveConfig).toMatchObject({ follow: { type: 'all' } });
+});
+
 it('users/show by userId', async () => {
 const { data } = await callApi('users/show', { userId: adminId });
 expect(data.username).toBe('admin');
